@@ -1,0 +1,51 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #1a1a1a;
+
+  /* Brand: deep/dark green + warm gold, per the COD Commerce design system */
+  --brand-green-50: #eef5f1;
+  --brand-green-100: #d3e6db;
+  --brand-green-600: #14513c;
+  --brand-green-700: #0f3d2e;
+  --brand-green-800: #0b2e23;
+  --brand-green-900: #071f18;
+
+  --brand-gold-400: #dcb968;
+  --brand-gold-500: #c9a24b;
+  --brand-gold-600: #a9843a;
+
+  --brand-cream: #faf7f1;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+
+  --color-brand-green-50: var(--brand-green-50);
+  --color-brand-green-100: var(--brand-green-100);
+  --color-brand-green-600: var(--brand-green-600);
+  --color-brand-green-700: var(--brand-green-700);
+  --color-brand-green-800: var(--brand-green-800);
+  --color-brand-green-900: var(--brand-green-900);
+
+  --color-brand-gold-400: var(--brand-gold-400);
+  --color-brand-gold-500: var(--brand-gold-500);
+  --color-brand-gold-600: var(--brand-gold-600);
+
+  --color-brand-cream: var(--brand-cream);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+/* Safe-area padding for sticky mobile CTAs on notched devices. */
+.pb-safe {
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+}

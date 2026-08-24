@@ -1,0 +1,663 @@
+// COD Commerce — core schema
+// See ARCHITECTURE.md for the reasoning behind each entity.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Users, roles, audit
+// ---------------------------------------------------------------------------
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  ORDER_MANAGER
+  INVENTORY_MANAGER
+  MARKETING_MANAGER
+  SUPPORT_STAFF
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(SUPPORT_STAFF)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  auditLogs AuditLog[]
+  orderStatusChanges OrderStatusHistory[]
+
+  @@map("users")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action     String
+  resource   String
+  resourceId String?
+  before     Json?
+  after      Json?
+  createdAt  DateTime @default(now())
+
+  @@index([resource, resourceId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// ---------------------------------------------------------------------------
+// Office / country configuration — the multi-country engine
+// ---------------------------------------------------------------------------
+
+enum InventoryStrategy {
+  RESERVATION // deduct on order submission
+  CONFIRMATION // deduct on order confirmation
+  DISPATCH // deduct on dispatch
+}
+
+model Office {
+  id                String   @id @default(cuid())
+  name              String // "Nigeria"
+  countryCode       String   @unique // ISO-2, e.g. "NG"
+  isActive          Boolean  @default(true)
+
+  // Currency engine (one currency per office; see ARCHITECTURE.md §Known gaps)
+  currencyCode      String // "NGN"
+  currencySymbol    String // "₦"
+  symbolPosition    String   @default("before") // "before" | "after"
+  decimalDigits     Int      @default(2)
+  thousandSeparator String   @default(",")
+  decimalSeparator  String   @default(".")
+
+  // Location hierarchy label + phone
+  divisionLabel     String   @default("State") // "State" | "County" | "Region" | ...
+  phoneCountryCode  String // "+234"
+  phoneRegex        String // regex customers' phone must match (national format)
+
+  // Order numbering
+  orderPrefix       String // "NG-AF"
+  nextOrderSequence Int      @default(1)
+
+  // Locale / formatting
+  timezone          String   @default("UTC")
+  dateFormat        String   @default("dd MMM yyyy")
+  language          String   @default("en")
+
+  // Delivery defaults
+  freeDeliveryThreshold Decimal? @db.Decimal(12, 2)
+  defaultDeliveryFee    Decimal  @default(0) @db.Decimal(12, 2)
+
+  // Inventory
+  inventoryStrategy InventoryStrategy @default(RESERVATION)
+
+  // Branding / office identity
+  officeAddress String?
+  officePhone   String?
+  officeEmail   String?
+  whatsappNumber String?
+  logoUrl       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  divisions      LocationDivision[]
+  deliveryZones  DeliveryZone[]
+  productOffices ProductOffice[]
+  offerOffices   OfferOffice[]
+  landingPages   LandingPage[]
+  customers      Customer[]
+  orders         Order[]
+  smtpSetting    SmtpSetting?
+  trackingSetting TrackingSetting?
+
+  @@map("offices")
+}
+
+// First-level administrative division (State / County / Region)
+model LocationDivision {
+  id       String @id @default(cuid())
+  officeId String
+  office   Office @relation(fields: [officeId], references: [id], onDelete: Cascade)
+  name     String
+  sortOrder Int   @default(0)
+
+  cities        City[]
+  deliveryZones DeliveryZone[]
+
+  @@unique([officeId, name])
+  @@map("location_divisions")
+}
+
+model City {
+  id         String           @id @default(cuid())
+  divisionId String
+  division   LocationDivision @relation(fields: [divisionId], references: [id], onDelete: Cascade)
+  name       String
+  sortOrder  Int              @default(0)
+
+  deliveryZones DeliveryZone[]
+
+  @@unique([divisionId, name])
+  @@map("cities")
+}
+
+// Delivery charge configuration by division/city (falls back to office default)
+model DeliveryZone {
+  id         String            @id @default(cuid())
+  officeId   String
+  office     Office            @relation(fields: [officeId], references: [id], onDelete: Cascade)
+  divisionId String?
+  division   LocationDivision? @relation(fields: [divisionId], references: [id], onDelete: Cascade)
+  cityId     String?
+  city       City?             @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  name       String
+  fee        Decimal           @db.Decimal(12, 2)
+  isFree     Boolean           @default(false)
+  estimatedDays String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("delivery_zones")
+}
+
+// ---------------------------------------------------------------------------
+// Media library
+// ---------------------------------------------------------------------------
+
+model Media {
+  id        String   @id @default(cuid())
+  url       String
+  filename  String
+  mimeType  String
+  size      Int
+  width     Int?
+  height    Int?
+  altText   String?
+  createdAt DateTime @default(now())
+
+  @@map("media")
+}
+
+// ---------------------------------------------------------------------------
+// Products & offers
+// ---------------------------------------------------------------------------
+
+enum ProductStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+model Product {
+  id               String        @id @default(cuid())
+  name             String
+  slug             String        @unique
+  sku              String        @unique
+  category         String?
+  brand            String?
+  shortDescription String?
+  longDescription  String?       @db.Text
+  benefits         Json? // string[]
+  ingredients      Json? // { name, description, imageUrl }[]
+  faq              Json? // { question, answer }[]
+  guarantee        String?       @db.Text
+  deliveryInfo     String?       @db.Text
+  disclaimer       String?       @db.Text
+  seoTitle         String?
+  seoDescription   String?
+  ogImageUrl       String?
+  heroImageUrl     String?
+  galleryImageUrls Json? // string[]
+  status           ProductStatus @default(DRAFT)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  offices      ProductOffice[]
+  offers       Offer[]
+  landingPages LandingPage[]
+  orderItems   OrderItem[]
+
+  @@map("products")
+}
+
+// Per-office price/cost/inventory-config for a product
+model ProductOffice {
+  id            String   @id @default(cuid())
+  productId     String
+  product       Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  officeId      String
+  office        Office   @relation(fields: [officeId], references: [id], onDelete: Cascade)
+  costPrice     Decimal  @db.Decimal(12, 2)
+  sellingPrice  Decimal  @db.Decimal(12, 2)
+  compareAtPrice Decimal? @db.Decimal(12, 2)
+  lowStockThreshold Int   @default(10)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  inventory Inventory?
+
+  @@unique([productId, officeId])
+  @@map("product_offices")
+}
+
+enum OfferType {
+  FIXED_QUANTITY // buy exactly N units at a set price
+  BUY_X_GET_Y_FREE // pay for X, receive X+Y
+  PERCENTAGE_DISCOUNT
+  FIXED_DISCOUNT
+}
+
+model Offer {
+  id            String    @id @default(cuid())
+  productId     String
+  product       Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  type          OfferType
+  title         String // "Buy 3 Get 1 Free"
+  subtitle      String?
+  description   String?
+  badge         String? // "Most Popular"
+  badgeColor    String?  @default("gold")
+  paidQuantity  Int // units customer pays for
+  freeQuantity  Int      @default(0)
+  discountPercent Decimal? @db.Decimal(5, 2)
+  discountAmount  Decimal? @db.Decimal(12, 2)
+  isDefault     Boolean   @default(false)
+  isActive      Boolean   @default(true)
+  sortOrder     Int       @default(0)
+  startsAt      DateTime?
+  endsAt        DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  officePricing OfferOffice[]
+  orderItems    OrderItem[]
+
+  @@map("offers")
+}
+
+// Per-office override for an offer's price/compare-at (falls back to computed pricing if absent)
+model OfferOffice {
+  id            String   @id @default(cuid())
+  offerId       String
+  offer         Offer    @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  officeId      String
+  office        Office   @relation(fields: [officeId], references: [id], onDelete: Cascade)
+  price         Decimal  @db.Decimal(12, 2)
+  compareAtPrice Decimal? @db.Decimal(12, 2)
+  isActive      Boolean  @default(true)
+
+  @@unique([offerId, officeId])
+  @@map("offer_offices")
+}
+
+// ---------------------------------------------------------------------------
+// Inventory
+// ---------------------------------------------------------------------------
+
+model Inventory {
+  id              String        @id @default(cuid())
+  productOfficeId String        @unique
+  productOffice   ProductOffice @relation(fields: [productOfficeId], references: [id], onDelete: Cascade)
+  quantityOnHand  Int           @default(0)
+  quantityReserved Int          @default(0)
+  updatedAt       DateTime      @updatedAt
+
+  movements InventoryMovement[]
+
+  @@map("inventory")
+}
+
+enum InventoryMovementType {
+  PURCHASE
+  STOCK_ADDITION
+  MANUAL_ADJUSTMENT
+  ORDER_RESERVATION
+  ORDER_CANCELLATION
+  ORDER_CONFIRMATION_DEDUCTION
+  ORDER_DISPATCH_DEDUCTION
+  RETURN
+  DAMAGED
+  OTHER
+}
+
+model InventoryMovement {
+  id          String                @id @default(cuid())
+  inventoryId String
+  inventory   Inventory             @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+  type        InventoryMovementType
+  quantity    Int // positive = stock in, negative = stock out
+  reason      String?
+  orderId     String?
+  order       Order?                @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  createdByUserId String?
+  createdAt   DateTime              @default(now())
+
+  @@index([inventoryId])
+  @@map("inventory_movements")
+}
+
+// ---------------------------------------------------------------------------
+// Landing pages (CMS)
+// ---------------------------------------------------------------------------
+
+enum LandingPageStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model LandingPage {
+  id             String            @id @default(cuid())
+  productId      String
+  product        Product           @relation(fields: [productId], references: [id], onDelete: Cascade)
+  officeId       String?
+  office         Office?           @relation(fields: [officeId], references: [id], onDelete: SetNull)
+  slug           String            @unique
+  title          String
+  status         LandingPageStatus @default(DRAFT)
+  seoTitle       String?
+  seoDescription String?
+  ogImageUrl     String?
+  stickyCtaText  String? // e.g. "ORDER FROM {price} • PAY ON DELIVERY"
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  publishedAt    DateTime?
+
+  sections LandingPageSection[]
+
+  @@map("landing_pages")
+}
+
+enum SectionType {
+  ANNOUNCEMENT_BAR
+  HERO
+  TRUST_BADGES
+  PROBLEM
+  FORMULA
+  HOW_IT_WORKS
+  BENEFITS
+  COMPARISON
+  GUARANTEE
+  TESTIMONIALS
+  FAQ
+  ORDER
+  FOOTER
+  CUSTOM_HTML
+}
+
+model LandingPageSection {
+  id            String      @id @default(cuid())
+  landingPageId String
+  landingPage   LandingPage @relation(fields: [landingPageId], references: [id], onDelete: Cascade)
+  type          SectionType
+  sortOrder     Int         @default(0)
+  isEnabled     Boolean     @default(true)
+  content       Json // structured, type-specific payload
+
+  @@index([landingPageId])
+  @@map("landing_page_sections")
+}
+
+// ---------------------------------------------------------------------------
+// Customers
+// ---------------------------------------------------------------------------
+
+model Customer {
+  id        String   @id @default(cuid())
+  officeId  String
+  office    Office   @relation(fields: [officeId], references: [id], onDelete: Cascade)
+  name      String
+  phone     String
+  email     String?
+  address   String?
+  city      String?
+  division  String?
+  notes     String?  @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orders Order[]
+
+  @@unique([officeId, phone])
+  @@map("customers")
+}
+
+// ---------------------------------------------------------------------------
+// Orders
+// ---------------------------------------------------------------------------
+
+enum OrderStatus {
+  NEW
+  PENDING_CONFIRMATION
+  CONFIRMED
+  PROCESSING
+  PACKED
+  DISPATCHED
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+  RETURNED
+  FAILED_DELIVERY
+}
+
+enum PaymentStatus {
+  COD_PENDING
+  COD_COLLECTED
+  REFUNDED
+  NOT_APPLICABLE
+}
+
+model Order {
+  id             String        @id @default(cuid())
+  orderNumber    String        @unique
+  officeId       String
+  office         Office        @relation(fields: [officeId], references: [id], onDelete: Restrict)
+  customerId     String
+  customer       Customer      @relation(fields: [customerId], references: [id], onDelete: Restrict)
+
+  // snapshot of customer/delivery details at time of order (customer record can change later)
+  customerName   String
+  customerPhone  String
+  customerEmail  String?
+  deliveryAddress String
+  city           String
+  division       String
+  currencyCode   String
+  currencySymbol String
+
+  subtotal   Decimal @db.Decimal(12, 2)
+  discount   Decimal @default(0) @db.Decimal(12, 2)
+  shipping   Decimal @default(0) @db.Decimal(12, 2)
+  tax        Decimal @default(0) @db.Decimal(12, 2)
+  total      Decimal @db.Decimal(12, 2)
+
+  status        OrderStatus   @default(NEW)
+  paymentStatus PaymentStatus @default(COD_PENDING)
+
+  customerNotes String? @db.Text
+  internalNotes String? @db.Text
+
+  // marketing attribution
+  utmSource   String?
+  utmMedium   String?
+  utmCampaign String?
+  utmContent  String?
+  utmTerm     String?
+  fbclid      String?
+  gclid       String?
+  fbp         String?
+  fbc         String?
+  landingPageSlug String?
+  referrer    String?
+  userAgent   String?
+  ipAddress   String?
+  eventId     String? // for Pixel/CAPI dedup
+
+  idempotencyKey String? @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items             OrderItem[]
+  statusHistory     OrderStatusHistory[]
+  inventoryMovements InventoryMovement[]
+
+  @@index([officeId, createdAt])
+  @@index([status])
+  @@map("orders")
+}
+
+model OrderItem {
+  id           String   @id @default(cuid())
+  orderId      String
+  order        Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId    String
+  product      Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+  offerId      String?
+  offer        Offer?   @relation(fields: [offerId], references: [id], onDelete: SetNull)
+  productName  String
+  offerTitle   String?
+  paidQuantity Int
+  freeQuantity Int      @default(0)
+  unitPrice    Decimal  @db.Decimal(12, 2)
+  lineTotal    Decimal  @db.Decimal(12, 2)
+
+  @@map("order_items")
+}
+
+model OrderStatusHistory {
+  id        String      @id @default(cuid())
+  orderId   String
+  order     Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status    OrderStatus
+  note      String?
+  changedByUserId String?
+  changedByUser   User?  @relation(fields: [changedByUserId], references: [id], onDelete: SetNull)
+  createdAt DateTime    @default(now())
+
+  @@map("order_status_history")
+}
+
+// ---------------------------------------------------------------------------
+// Email
+// ---------------------------------------------------------------------------
+
+enum EmailTemplateKey {
+  NEW_ORDER_ADMIN
+  ORDER_CONFIRMATION_CUSTOMER
+  ORDER_CONFIRMED
+  ORDER_DISPATCHED
+  ORDER_OUT_FOR_DELIVERY
+  ORDER_DELIVERED
+  ORDER_CANCELLED
+  ORDER_FAILED_DELIVERY
+}
+
+model EmailTemplate {
+  id          String           @id @default(cuid())
+  key         EmailTemplateKey @unique
+  name        String
+  subject     String
+  previewText String?
+  brandName   String  @default("Wellness247")
+  logoUrl     String?
+  headerColor String  @default("#0f3d2e")
+  accentColor String  @default("#c9a24b")
+  bodyHtml    String  @db.Text
+  buttonText  String?
+  buttonUrl   String?
+  footerText  String?
+  isActive    Boolean @default(true)
+  updatedAt   DateTime @updatedAt
+
+  @@map("email_templates")
+}
+
+enum SmtpEncryption {
+  NONE
+  SSL
+  TLS
+}
+
+model SmtpSetting {
+  id                String         @id @default(cuid())
+  officeId          String?        @unique
+  office            Office?        @relation(fields: [officeId], references: [id], onDelete: Cascade)
+  host              String
+  port              Int            @default(587)
+  username          String
+  passwordEncrypted String
+  encryption        SmtpEncryption @default(TLS)
+  fromName          String
+  fromEmail         String
+  replyTo           String?
+  isActive          Boolean        @default(true)
+  lastTestedAt      DateTime?
+  lastTestResult    String?
+  updatedAt         DateTime       @updatedAt
+
+  @@map("smtp_settings")
+}
+
+// ---------------------------------------------------------------------------
+// Tracking
+// ---------------------------------------------------------------------------
+
+model TrackingSetting {
+  id                    String   @id @default(cuid())
+  officeId              String?  @unique
+  office                Office?  @relation(fields: [officeId], references: [id], onDelete: Cascade)
+  metaPixelId           String?
+  metaAccessTokenEncrypted String?
+  metaDatasetId         String?
+  metaCapiEnabled       Boolean  @default(false)
+  ga4MeasurementId      String?
+  updatedAt             DateTime @updatedAt
+
+  @@map("tracking_settings")
+}
+
+model AnalyticsEvent {
+  id             String   @id @default(cuid())
+  eventName      String // page_view, view_content, select_item, begin_checkout, purchase, etc.
+  officeId       String?
+  productId      String?
+  landingPageSlug String?
+  orderId        String?
+  eventId        String? // dedup key shared with pixel/CAPI
+  value          Decimal? @db.Decimal(12, 2)
+  currencyCode   String?
+  utmSource      String?
+  utmMedium      String?
+  utmCampaign    String?
+  metadata       Json?
+  createdAt      DateTime @default(now())
+
+  @@index([eventName, createdAt])
+  @@index([landingPageSlug])
+  @@map("analytics_events")
+}
+
+// ---------------------------------------------------------------------------
+// Generic settings bag (brand-wide, not office-specific)
+// ---------------------------------------------------------------------------
+
+model Setting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+
+  @@map("settings")
+}
