@@ -18,7 +18,7 @@ export const orderItemInputSchema = z.object({
 })
 
 export const createOrderSchema = z.object({
-  source: z.enum(['website', 'whatsapp', 'phone', 'facebook', 'instagram', 'tiktok', 'walk_in', 'staff', 'other']),
+  source: z.enum(['website', 'whatsapp', 'phone', 'facebook', 'instagram', 'tiktok', 'walk_in', 'manual', 'affiliate', 'other']),
   sourceDetail: z.string(),
   customerName: z.string().min(2, 'Enter the customer’s full name'),
   customerPhone: phoneSchema,

@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase'
 import type {
   Order,
+  OrderDailyStat,
   OrderEvent,
   OrderItem,
   OrderNote,
@@ -23,7 +24,7 @@ export async function fetchOrders(
   const from = (page - 1) * pageSize
   const to = from + pageSize - 1
 
-  let matchingIds: string[] | null = null
+  let searchIds: string[] | null = null
 
   if (filters.search) {
     const term = filters.search.trim()
@@ -58,13 +59,42 @@ export async function fetchOrders(
     if (byFields.error) throw byFields.error
     if (byItems.error) throw byItems.error
 
-    matchingIds = Array.from(
+    searchIds = Array.from(
       new Set([...(byFields.data ?? []).map((r) => r.id), ...(byItems.data ?? []).map((r) => r.order_id)]),
     )
 
-    if (matchingIds.length === 0) {
+    if (searchIds.length === 0) {
       return { rows: [], totalCount: 0 }
     }
+  }
+
+  let productIds: string[] | null = null
+
+  if (filters.productId && filters.productId !== 'all') {
+    const { data, error } = await supabase
+      .from('order_items')
+      .select('order_id')
+      .eq('workspace_id', workspaceId)
+      .eq('brand_id', brandId)
+      .eq('product_id', filters.productId)
+
+    if (error) throw error
+    productIds = Array.from(new Set((data ?? []).map((r) => r.order_id)))
+
+    if (productIds.length === 0) {
+      return { rows: [], totalCount: 0 }
+    }
+  }
+
+  // Search and the product filter narrow the same order-id space from two
+  // independent queries — intersect them (AND) rather than letting the
+  // product filter widen a search the user already typed.
+  let matchingIds: string[] | null = null
+  if (searchIds && productIds) {
+    matchingIds = searchIds.filter((id) => productIds!.includes(id))
+    if (matchingIds.length === 0) return { rows: [], totalCount: 0 }
+  } else {
+    matchingIds = searchIds ?? productIds
   }
 
   let query = supabase
@@ -92,7 +122,10 @@ export async function fetchOrders(
     query = query.gte('created_at', filters.dateFrom)
   }
   if (filters.dateTo) {
-    query = query.lte('created_at', filters.dateTo)
+    // A bare "YYYY-MM-DD" date is midnight — treat it as end-of-day so
+    // the day the user picked is actually included in the range.
+    const dateTo = filters.dateTo.length === 10 ? `${filters.dateTo}T23:59:59.999` : filters.dateTo
+    query = query.lte('created_at', dateTo)
   }
 
   query = query
@@ -161,6 +194,16 @@ export async function fetchOrderStats(workspaceId: string, brandId: string): Pro
     .single()
   if (error) throw error
   return data as OrderStats
+}
+
+export async function fetchOrderDailyStats(workspaceId: string, brandId: string, days = 7): Promise<OrderDailyStat[]> {
+  const { data, error } = await supabase.rpc('get_order_daily_stats', {
+    p_workspace_id: workspaceId,
+    p_brand_id: brandId,
+    p_days: days,
+  })
+  if (error) throw error
+  return (data ?? []) as OrderDailyStat[]
 }
 
 export async function createOrder(workspaceId: string, brandId: string, input: CreateOrderOutput): Promise<Order> {

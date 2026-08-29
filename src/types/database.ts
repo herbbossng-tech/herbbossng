@@ -317,7 +317,7 @@ export type OrderStatus =
   | 'RETURNED'
   | 'CANCELLED'
 
-export type OrderSource = 'website' | 'whatsapp' | 'phone' | 'facebook' | 'instagram' | 'tiktok' | 'walk_in' | 'staff' | 'other'
+export type OrderSource = 'website' | 'whatsapp' | 'phone' | 'facebook' | 'instagram' | 'tiktok' | 'walk_in' | 'manual' | 'affiliate' | 'other'
 export type OrderPriority = 'normal' | 'high' | 'urgent'
 export type CashCollectionStatus = 'pending' | 'collected' | 'failed' | 'partial'
 
@@ -374,6 +374,8 @@ export interface Order {
   internal_notes: string | null
   tags: string[]
   idempotency_key: string | null
+  /** Computed once, server-side, by create_order() from prior orders with a matching phone number. Never a status. */
+  is_repeat_customer: boolean
 
   created_at: string
   updated_at: string
@@ -455,11 +457,25 @@ export interface OrderStats {
   delivered_count: number
   returned_count: number
   cancelled_count: number
+  /** All-time sum of total_amount for every non-cancelled order. Not the same as delivered_revenue. */
+  total_sales_value: number
+  /** total_sales_value scoped to orders created today. */
+  today_sales_value: number
+  /** All-time. Only status=DELIVERED with cash_collection_status=collected. Must not collapse to 0 just because nothing delivered today. */
   delivered_revenue: number
+  /** delivered_revenue scoped to orders delivered today (by delivered_at, not created_at). */
+  today_delivered_revenue: number
   pending_revenue: number
   returned_value: number
   cancelled_value: number
   delivery_success_rate: number
+}
+
+/** One row of get_order_daily_stats() — powers dashboard trend charts. */
+export interface OrderDailyStat {
+  day: string
+  order_count: number
+  delivered_revenue: number
 }
 
 /**

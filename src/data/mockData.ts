@@ -1,88 +1,16 @@
-export const marketPulse = {
-  country: 'Nigeria',
-  code: 'NG',
-  activeOrders: 64,
-}
-
-export const heroKpis = [
-  {
-    label: 'Total Active Orders',
-    value: '64',
-    unit: 'submissions',
-    delta: '+100%',
-    deltaLabel: 'across direct funnels',
-    trend: 'up' as const,
-    icon: 'cart' as const,
-  },
-  {
-    label: 'Delivered Revenue',
-    value: '652,000',
-    prefix: '₦',
-    sub: 'Strict Delivered Rule · 14 Paid',
-    icon: 'wallet' as const,
-    highlight: true,
-  },
-  {
-    label: 'Pending Confirmation',
-    value: '43',
-    unit: 'calls required',
-    sub: 'Agents calling customer numbers',
-    icon: 'phone' as const,
-  },
-  {
-    label: 'Delivery Success Rate',
-    value: '93%',
-    sub: 'Successful cash collections',
-    deltaLabel: 'fulfillment',
-    icon: 'check' as const,
-  },
-]
-
-export const secondaryKpis = [
-  { label: "Today's Orders", value: '18', delta: '+12%', icon: 'cart' as const },
-  { label: "Today's Revenue", value: '₦194,000', delta: '+8%', icon: 'dollar' as const },
-  { label: 'Pending Revenue', value: '₦282,000', icon: 'clock' as const },
-  { label: 'Completed Orders', value: '46', delta: '+5%', icon: 'check' as const },
+// Order/revenue figures (hero + "today at a glance" order metrics, the
+// revenue/orders-by-day trend charts, the delivery funnel, and recent
+// orders) are no longer mocked here — Dashboard.tsx derives them from
+// get_order_stats()/get_order_daily_stats()/fetchOrders() instead. These
+// four metrics genuinely have no backing module yet in this phase
+// (products' own sell-through, affiliates, and marketing conversion are
+// out of Orders Operations Engine scope), so they stay mock and are
+// clearly labelled as such in the Dashboard.
+export const nonOrderKpis = [
   { label: 'Inventory Alerts', value: '5', tone: 'warning' as const, icon: 'boxes' as const },
   { label: 'Active Products', value: '38', icon: 'percent' as const },
   { label: 'Conversion Rate', value: '4.2%', delta: '-1%', trend: 'down' as const, icon: 'percent' as const },
   { label: 'Active Affiliates', value: '28', delta: '+3', icon: 'userCheck' as const },
-]
-
-export const revenueTrend = [
-  { day: 'Mon', revenue: 62000 },
-  { day: 'Tue', revenue: 81000 },
-  { day: 'Wed', revenue: 74000 },
-  { day: 'Thu', revenue: 98000 },
-  { day: 'Fri', revenue: 121000 },
-  { day: 'Sat', revenue: 108000 },
-  { day: 'Sun', revenue: 108000 },
-]
-
-export const ordersByDay = [
-  { day: 'Mon', orders: 6 },
-  { day: 'Tue', orders: 9 },
-  { day: 'Wed', orders: 8 },
-  { day: 'Thu', orders: 11 },
-  { day: 'Fri', orders: 13 },
-  { day: 'Sat', orders: 10 },
-  { day: 'Sun', orders: 7 },
-]
-
-export const deliveryFunnel = [
-  { stage: 'Orders Submitted', count: 64, tone: 'info' as const },
-  { stage: 'Confirmed by Call', count: 52, tone: 'default' as const },
-  { stage: 'Out for Delivery', count: 47, tone: 'warning' as const },
-  { stage: 'Delivered & Paid', count: 43, tone: 'success' as const },
-]
-
-export const recentOrders = [
-  { id: '#GC-1042', customer: 'Amaka Obi', city: 'Lagos', product: 'Herbal Detox Pack', amount: 15500, status: 'Delivered' as const },
-  { id: '#GC-1041', customer: 'Chinedu Eze', city: 'Abuja', product: 'Vita Boost Combo', amount: 22000, status: 'Out for Delivery' as const },
-  { id: '#GC-1040', customer: 'Fatima Bello', city: 'Kano', product: 'Slim Tea 30-Day', amount: 9500, status: 'Pending Call' as const },
-  { id: '#GC-1039', customer: 'Tunde Alabi', city: 'Ibadan', product: 'Joint Relief Oil', amount: 12000, status: 'Delivered' as const },
-  { id: '#GC-1038', customer: 'Ngozi Umeh', city: 'Enugu', product: 'Herbal Detox Pack', amount: 15500, status: 'Cancelled' as const },
-  { id: '#GC-1037', customer: 'Ibrahim Sani', city: 'Kaduna', product: 'Vita Boost Combo', amount: 22000, status: 'Delivered' as const },
 ]
 
 export const topProducts = [

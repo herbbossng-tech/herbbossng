@@ -9,6 +9,7 @@ import {
   assignOrder,
   createOrder,
   fetchOrder,
+  fetchOrderDailyStats,
   fetchOrderItems,
   fetchOrderNotes,
   fetchOrders,
@@ -31,6 +32,7 @@ export const orderKeys = {
   timeline: (id: string) => ['order-timeline', id] as const,
   notes: (id: string) => ['order-notes', id] as const,
   stats: (workspaceId: string, brandId: string) => ['order-stats', workspaceId, brandId] as const,
+  dailyStats: (workspaceId: string, brandId: string, days: number) => ['order-daily-stats', workspaceId, brandId, days] as const,
   transitions: () => ['order-status-transitions'] as const,
 }
 
@@ -93,6 +95,17 @@ export function useOrderStats() {
   return useQuery({
     queryKey: orderKeys.stats(activeWorkspace.id, brandId),
     queryFn: () => fetchOrderStats(activeWorkspace.id, brandId),
+    enabled: Boolean(brandId),
+  })
+}
+
+export function useOrderDailyStats(days = 7) {
+  const { activeWorkspace, activeBrand } = useWorkspace()
+  const brandId = activeBrand?.id ?? ''
+
+  return useQuery({
+    queryKey: orderKeys.dailyStats(activeWorkspace.id, brandId, days),
+    queryFn: () => fetchOrderDailyStats(activeWorkspace.id, brandId, days),
     enabled: Boolean(brandId),
   })
 }

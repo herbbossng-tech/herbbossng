@@ -19,7 +19,7 @@ import { useProducts } from '@/features/products/hooks'
 import { formatCurrency } from '@/lib/currency'
 
 const defaultFormValues: CreateOrderInput = {
-  source: 'phone',
+  source: 'manual',
   sourceDetail: '',
   customerName: '',
   customerPhone: '',

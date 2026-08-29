@@ -34,7 +34,14 @@ export function buildOrderColumns(): ColumnDef<OrderListItem, unknown>[] {
       header: 'Customer',
       cell: ({ row }) => (
         <div className="min-w-0">
-          <p className="truncate font-medium text-foreground">{row.original.customer_name}</p>
+          <div className="flex items-center gap-1.5">
+            <p className="truncate font-medium text-foreground">{row.original.customer_name}</p>
+            {row.original.is_repeat_customer && (
+              <Badge variant="info" className="shrink-0 px-1.5 py-0 text-[10px]">
+                Repeat
+              </Badge>
+            )}
+          </div>
           <p className="truncate text-xs text-muted-foreground">{row.original.customer_city || row.original.customer_state || '—'}</p>
         </div>
       ),

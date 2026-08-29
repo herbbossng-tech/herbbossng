@@ -17,9 +17,25 @@ import { OrderStats } from '@/features/orders/components/OrderStats'
 import { useOrders } from '@/features/orders/hooks'
 import { orderSourceLabels, orderStatuses, orderStatusLabels } from '@/features/orders/statusMeta'
 import type { OrderFilters, OrderListItem } from '@/features/orders/types'
+import { useProducts } from '@/features/products/hooks'
 import { exportToCsv } from '@/lib/csv'
 
 const PAGE_SIZE = 25
+
+interface SortOption {
+  value: string
+  label: string
+  sortBy: NonNullable<OrderFilters['sortBy']>
+  sortDirection: 'asc' | 'desc'
+}
+
+const sortOptions: SortOption[] = [
+  { value: 'newest', label: 'Newest first', sortBy: 'created_at', sortDirection: 'desc' },
+  { value: 'oldest', label: 'Oldest first', sortBy: 'created_at', sortDirection: 'asc' },
+  { value: 'value_high', label: 'Highest value', sortBy: 'total_amount', sortDirection: 'desc' },
+  { value: 'value_low', label: 'Lowest value', sortBy: 'total_amount', sortDirection: 'asc' },
+  { value: 'recently_updated', label: 'Recently updated', sortBy: 'updated_at', sortDirection: 'desc' },
+]
 
 export function OrdersPage() {
   const navigate = useNavigate()
@@ -43,6 +59,7 @@ export function OrdersPage() {
   }
 
   const { data, isLoading, isError, refetch } = useOrders(appliedFilters)
+  const { data: products } = useProducts({})
   const canCreate = usePermission('orders.create')
   const canExport = usePermission('orders.export')
   const canAssign = usePermission('orders.assign')
@@ -52,6 +69,11 @@ export function OrdersPage() {
   const rows = data?.rows ?? []
   const selectedIds = Object.keys(rowSelection).filter((id) => rowSelection[id])
   const selectedRows = rows.filter((r) => selectedIds.includes(r.id))
+
+  const currentSort =
+    sortOptions.find(
+      (o) => o.sortBy === (sorting[0]?.id ?? 'created_at') && o.sortDirection === (sorting[0]?.desc === false ? 'asc' : 'desc'),
+    )?.value ?? 'newest'
 
   function handleExport(orders: OrderListItem[]) {
     exportToCsv(
@@ -117,8 +139,8 @@ export function OrdersPage() {
 
       <OrderStats />
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-1 flex-col gap-2 sm:flex-row sm:items-center">
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="relative max-w-sm flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -128,8 +150,18 @@ export function OrdersPage() {
               onChange={(e) => setSearchInput(e.target.value)}
             />
           </div>
+
+          {canExport && rows.length > 0 && (
+            <Button variant="outline" size="sm" onClick={() => handleExport(rows)}>
+              <Download className="h-4 w-4" />
+              Export page
+            </Button>
+          )}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
           <Select value={filters.status ?? 'all'} onValueChange={(v) => setFilters((f) => ({ ...f, status: v as OrderFilters['status'], page: 1 }))}>
-            <SelectTrigger className="w-full sm:w-44">
+            <SelectTrigger className="w-40">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
@@ -142,7 +174,7 @@ export function OrdersPage() {
             </SelectContent>
           </Select>
           <Select value={filters.source ?? 'all'} onValueChange={(v) => setFilters((f) => ({ ...f, source: v as OrderFilters['source'], page: 1 }))}>
-            <SelectTrigger className="w-full sm:w-40">
+            <SelectTrigger className="w-36">
               <SelectValue placeholder="Source" />
             </SelectTrigger>
             <SelectContent>
@@ -154,14 +186,71 @@ export function OrdersPage() {
               ))}
             </SelectContent>
           </Select>
+          <Select
+            value={filters.productId ?? 'all'}
+            onValueChange={(v) => setFilters((f) => ({ ...f, productId: v as OrderFilters['productId'], page: 1 }))}
+          >
+            <SelectTrigger className="w-40">
+              <SelectValue placeholder="Product" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All products</SelectItem>
+              {(products ?? []).map((p) => (
+                <SelectItem key={p.id} value={p.id}>
+                  {p.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select
+            value={filters.assignedTo ?? 'all'}
+            onValueChange={(v) => setFilters((f) => ({ ...f, assignedTo: v as OrderFilters['assignedTo'], page: 1 }))}
+          >
+            <SelectTrigger className="w-40">
+              <SelectValue placeholder="Assigned to" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Anyone</SelectItem>
+              {user && <SelectItem value={user.id}>Assigned to me</SelectItem>}
+              <SelectItem value="unassigned">Unassigned</SelectItem>
+            </SelectContent>
+          </Select>
+          <div className="flex items-center gap-1.5">
+            <Input
+              type="date"
+              className="w-36"
+              aria-label="From date"
+              value={filters.dateFrom ?? ''}
+              onChange={(e) => setFilters((f) => ({ ...f, dateFrom: e.target.value || undefined, page: 1 }))}
+            />
+            <span className="text-xs text-muted-foreground">to</span>
+            <Input
+              type="date"
+              className="w-36"
+              aria-label="To date"
+              value={filters.dateTo ?? ''}
+              onChange={(e) => setFilters((f) => ({ ...f, dateTo: e.target.value || undefined, page: 1 }))}
+            />
+          </div>
+          <Select
+            value={currentSort}
+            onValueChange={(v) => {
+              const option = sortOptions.find((o) => o.value === v)
+              if (option) setSorting([{ id: option.sortBy, desc: option.sortDirection === 'desc' }])
+            }}
+          >
+            <SelectTrigger className="w-44">
+              <SelectValue placeholder="Sort" />
+            </SelectTrigger>
+            <SelectContent>
+              {sortOptions.map((o) => (
+                <SelectItem key={o.value} value={o.value}>
+                  {o.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-
-        {canExport && rows.length > 0 && (
-          <Button variant="outline" size="sm" onClick={() => handleExport(rows)}>
-            <Download className="h-4 w-4" />
-            Export page
-          </Button>
-        )}
       </div>
 
       {selectedIds.length > 0 && (

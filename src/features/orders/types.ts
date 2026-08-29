@@ -5,9 +5,10 @@ export interface OrderFilters {
   status?: OrderStatus | 'all'
   source?: OrderSource | 'all'
   assignedTo?: string | 'all' | 'unassigned'
+  productId?: string | 'all'
   dateFrom?: string
   dateTo?: string
-  sortBy?: 'created_at' | 'order_number' | 'total_amount' | 'customer_name' | 'status'
+  sortBy?: 'created_at' | 'updated_at' | 'order_number' | 'total_amount' | 'customer_name' | 'status'
   sortDirection?: 'asc' | 'desc'
   page?: number
   pageSize?: number

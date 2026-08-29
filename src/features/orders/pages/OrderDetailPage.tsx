@@ -114,7 +114,10 @@ export function OrderDetailPage() {
             <CardContent className="grid grid-cols-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
               <div>
                 <p className="text-xs text-muted-foreground">Name</p>
-                <p className="font-medium text-foreground">{order.customer_name}</p>
+                <div className="flex items-center gap-1.5">
+                  <p className="font-medium text-foreground">{order.customer_name}</p>
+                  {order.is_repeat_customer && <Badge variant="info">Repeat customer</Badge>}
+                </div>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Phone</p>

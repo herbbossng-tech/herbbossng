@@ -67,7 +67,8 @@ export const orderSourceLabels: Record<string, string> = {
   instagram: 'Instagram',
   tiktok: 'TikTok',
   walk_in: 'Walk-in',
-  staff: 'Staff',
+  manual: 'Manual',
+  affiliate: 'Affiliate',
   other: 'Other',
 }
 

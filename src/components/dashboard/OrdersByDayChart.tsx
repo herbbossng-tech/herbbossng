@@ -1,11 +1,14 @@
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
-import { ordersByDay } from '@/data/mockData'
+export interface OrdersByDayPoint {
+  day: string
+  orders: number
+}
 
-export function OrdersByDayChart() {
+export function OrdersByDayChart({ data }: { data: OrdersByDayPoint[] }) {
   return (
     <ResponsiveContainer width="100%" height={240}>
-      <BarChart data={ordersByDay} margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>
+      <BarChart data={data} margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>
         <CartesianGrid strokeDasharray="3 6" stroke="var(--color-border)" vertical={false} />
         <XAxis
           dataKey="day"
