@@ -1,3 +1,4 @@
+import { useQuery } from '@tanstack/react-query'
 import {
   BarChart3,
   FilePlus2,
@@ -21,8 +22,10 @@ import {
   CommandSeparator,
   CommandShortcut,
 } from '@/components/ui/command'
+import { useWorkspace } from '@/contexts/WorkspaceContext'
 import { allNavItems } from '@/data/navigation'
-import { mediaBuyers, recentOrders, topProducts } from '@/data/mockData'
+import { mediaBuyers, topProducts } from '@/data/mockData'
+import { fetchOrders } from '@/features/orders/api'
 
 interface CommandPaletteProps {
   open: boolean
@@ -32,7 +35,7 @@ interface CommandPaletteProps {
 const quickActions = [
   { label: 'Create Product', href: '/products', icon: PlusCircle },
   { label: 'Create Landing Page', href: '/landing-pages', icon: FilePlus2 },
-  { label: 'New Order', href: '/orders', icon: ShoppingCart },
+  { label: 'New Order', href: '/orders/new', icon: ShoppingCart },
   { label: 'Open Analytics', href: '/analytics', icon: BarChart3 },
   { label: 'Open Reports', href: '/reports', icon: Rows3 },
   { label: 'Open Settings', href: '/settings', icon: SettingsIcon },
@@ -41,6 +44,9 @@ const quickActions = [
 
 export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const navigate = useNavigate()
+  const { activeWorkspace, activeBrand } = useWorkspace()
+  const brandId = activeBrand?.id ?? ''
+  const [search, setSearch] = React.useState('')
 
   React.useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -53,6 +59,16 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [open, onOpenChange])
 
+  React.useEffect(() => {
+    if (!open) setSearch('')
+  }, [open])
+
+  const { data: orderResults } = useQuery({
+    queryKey: ['command-order-search', activeWorkspace.id, brandId, search],
+    queryFn: () => fetchOrders(activeWorkspace.id, brandId, { search, pageSize: 6 }),
+    enabled: open && Boolean(brandId) && search.trim().length >= 2,
+  })
+
   const go = (href: string) => {
     onOpenChange(false)
     navigate(href)
@@ -60,7 +76,11 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
 
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange}>
-      <CommandInput placeholder="Search orders, customers, products, staff… or run a command" />
+      <CommandInput
+        placeholder="Search orders, customers, products, staff… or run a command"
+        value={search}
+        onValueChange={setSearch}
+      />
       <CommandList>
         <CommandEmpty>No results found.</CommandEmpty>
 
@@ -75,15 +95,26 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
 
         <CommandSeparator />
 
-        <CommandGroup heading="Orders">
-          {recentOrders.slice(0, 4).map((order) => (
-            <CommandItem key={order.id} value={`${order.id} ${order.customer}`} onSelect={() => go('/orders')}>
-              <ShoppingCart className="h-4 w-4 text-muted-foreground" />
-              <span className="font-mono text-xs text-muted-foreground">{order.id}</span>
-              {order.customer}
-            </CommandItem>
-          ))}
-        </CommandGroup>
+        {search.trim().length >= 2 && (
+          <CommandGroup heading="Orders">
+            {(orderResults?.rows.length ?? 0) === 0 && (
+              <CommandItem disabled value={`no-orders-${search}`}>
+                No matching orders
+              </CommandItem>
+            )}
+            {orderResults?.rows.map((order) => (
+              <CommandItem
+                key={order.id}
+                value={`${order.order_number} ${order.customer_name} ${order.customer_phone}`}
+                onSelect={() => go(`/orders/${order.id}`)}
+              >
+                <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+                <span className="font-mono text-xs text-muted-foreground">{order.order_number}</span>
+                {order.customer_name}
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        )}
 
         <CommandGroup heading="Products">
           {topProducts.map((product) => (

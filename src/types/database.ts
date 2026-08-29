@@ -304,6 +304,164 @@ export interface MediaLibraryItem extends Timestamped {
   deleted_at: string | null
 }
 
+export type OrderStatus =
+  | 'NEW'
+  | 'PENDING'
+  | 'WILL_CALL_BACK'
+  | 'SCHEDULED'
+  | 'PROCESSING_FOR_DISPATCH'
+  | 'DISPATCHED'
+  | 'IN_TRANSIT'
+  | 'PARTIALLY_DELIVERED'
+  | 'DELIVERED'
+  | 'RETURNED'
+  | 'CANCELLED'
+
+export type OrderSource = 'website' | 'whatsapp' | 'phone' | 'facebook' | 'instagram' | 'tiktok' | 'walk_in' | 'staff' | 'other'
+export type OrderPriority = 'normal' | 'high' | 'urgent'
+export type CashCollectionStatus = 'pending' | 'collected' | 'failed' | 'partial'
+
+export interface Order {
+  id: string
+  workspace_id: string
+  brand_id: string
+  order_number: string
+  source: OrderSource
+  status: OrderStatus
+  priority: OrderPriority
+
+  customer_id: string | null
+  customer_name: string
+  customer_phone: string
+  customer_email: string | null
+  customer_country_code: string | null
+  customer_state: string | null
+  customer_city: string | null
+  customer_address: string
+  customer_address_2: string | null
+  customer_postal_code: string | null
+  customer_notes: string | null
+
+  currency_code: string
+  subtotal: number
+  shipping_fee: number
+  discount_amount: number
+  total_amount: number
+  cost_amount: number | null
+  expected_profit: number | null
+
+  payment_method: string
+  cash_collection_status: CashCollectionStatus
+  cash_collected_amount: number | null
+  cash_collected_at: string | null
+
+  landing_page_id: string | null
+  source_detail: string | null
+  referrer: string | null
+  metadata: Json
+
+  assigned_to: string | null
+  scheduled_at: string | null
+  callback_at: string | null
+  confirmed_at: string | null
+  dispatched_at: string | null
+  delivered_at: string | null
+  returned_at: string | null
+  cancelled_at: string | null
+  cancellation_reason: string | null
+  return_reason: string | null
+
+  internal_notes: string | null
+  tags: string[]
+  idempotency_key: string | null
+
+  created_at: string
+  updated_at: string
+  created_by: string | null
+  updated_by: string | null
+  deleted_at: string | null
+}
+
+export interface OrderItem {
+  id: string
+  order_id: string
+  workspace_id: string
+  brand_id: string
+  product_id: string | null
+  product_name: string
+  sku: string | null
+  package_id: string | null
+  package_name: string | null
+  quantity: number
+  unit_price: number
+  compare_price: number | null
+  discount_amount: number
+  total_amount: number
+  free_quantity: number | null
+  metadata: Json
+  created_at: string
+}
+
+export type OrderEventType =
+  | 'ORDER_CREATED'
+  | 'STATUS_CHANGED'
+  | 'ASSIGNED'
+  | 'TAGS_UPDATED'
+  | 'CASH_COLLECTED'
+  | 'NOTE_ADDED'
+
+export interface OrderEvent {
+  id: string
+  order_id: string
+  workspace_id: string
+  brand_id: string
+  event_type: OrderEventType | string
+  from_status: OrderStatus | null
+  to_status: OrderStatus | null
+  description: string
+  metadata: Json
+  created_by: string | null
+  created_at: string
+}
+
+export interface OrderNote {
+  id: string
+  order_id: string
+  workspace_id: string
+  brand_id: string
+  body: string
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface OrderStatusTransition {
+  from_status: OrderStatus
+  to_status: OrderStatus
+  requires_approval: boolean
+}
+
+export interface OrderStats {
+  total_orders: number
+  today_orders: number
+  new_count: number
+  pending_count: number
+  will_call_back_count: number
+  scheduled_count: number
+  processing_count: number
+  dispatched_count: number
+  in_transit_count: number
+  partially_delivered_count: number
+  delivered_count: number
+  returned_count: number
+  cancelled_count: number
+  delivered_revenue: number
+  pending_revenue: number
+  returned_value: number
+  cancelled_value: number
+  delivery_success_rate: number
+}
+
 /**
  * The Supabase client is intentionally NOT generically typed with a full
  * `Database` schema (see src/lib/supabase.ts). At this schema's size,

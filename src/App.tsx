@@ -5,6 +5,9 @@ import { AppLayout } from '@/components/layout/AppLayout'
 import { allNavItems } from '@/data/navigation'
 import { CategoriesPage } from '@/features/categories/pages/CategoriesPage'
 import { InventoryPage } from '@/features/inventory/pages/InventoryPage'
+import { CreateOrderPage } from '@/features/orders/pages/CreateOrderPage'
+import { OrderDetailPage } from '@/features/orders/pages/OrderDetailPage'
+import { OrdersPage } from '@/features/orders/pages/OrdersPage'
 import { ProductCreatePage } from '@/features/products/pages/ProductCreatePage'
 import { ProductEditPage } from '@/features/products/pages/ProductEditPage'
 import { ProductsListPage } from '@/features/products/pages/ProductsListPage'
@@ -17,7 +20,9 @@ import { Unauthorized } from '@/pages/auth/Unauthorized'
 import { Dashboard } from '@/pages/Dashboard'
 import { PlaceholderPage } from '@/pages/PlaceholderPage'
 
-const placeholderNavItems = allNavItems.filter((item) => item.href !== '/' && item.href !== '/products')
+const placeholderNavItems = allNavItems.filter(
+  (item) => item.href !== '/' && item.href !== '/products' && item.href !== '/orders',
+)
 
 function App() {
   return (
@@ -40,6 +45,12 @@ function App() {
             </Route>
             <Route path="new" element={<ProductCreatePage />} />
             <Route path=":id/edit" element={<ProductEditPage />} />
+          </Route>
+
+          <Route path="orders">
+            <Route index element={<OrdersPage />} />
+            <Route path="new" element={<CreateOrderPage />} />
+            <Route path=":id" element={<OrderDetailPage />} />
           </Route>
 
           {placeholderNavItems.map((item) => (
