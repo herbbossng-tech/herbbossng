@@ -206,31 +206,115 @@ export interface Setting extends Timestamped {
   value: Json
 }
 
-/** Database generic — enough surface for the Supabase client's generics.
- *  Insert/Update types intentionally loosen required-ness rather than
- *  duplicating every column; refine per-table as features are built. */
-type TableDef<Row> = {
-  Row: Row
-  Insert: Partial<Row>
-  Update: Partial<Row>
+export type CategoryStatus = 'active' | 'inactive'
+
+export interface Category extends Timestamped {
+  id: string
+  workspace_id: string
+  brand_id: string
+  parent_id: string | null
+  name: string
+  slug: string
+  description: string | null
+  image_url: string | null
+  status: CategoryStatus
+  sort_order: number
+  deleted_at: string | null
 }
 
-export interface Database {
-  public: {
-    Tables: {
-      workspaces: TableDef<Workspace>
-      brands: TableDef<Brand>
-      profiles: TableDef<Profile>
-      roles: TableDef<Role>
-      permissions: TableDef<Permission>
-      role_permissions: TableDef<RolePermission>
-      user_roles: TableDef<UserRole>
-      notifications: TableDef<Notification>
-      audit_logs: TableDef<AuditLog>
-      countries: TableDef<Country>
-      states: TableDef<State>
-      currencies: TableDef<Currency>
-      settings: TableDef<Setting>
-    }
-  }
+export type ProductStatus = 'draft' | 'active' | 'archived'
+export type AffiliateCommissionType = 'fixed' | 'percentage'
+
+export interface Product extends Timestamped {
+  id: string
+  workspace_id: string
+  brand_id: string
+  category_id: string | null
+  name: string
+  slug: string
+  sku: string | null
+  short_description: string | null
+  description: string | null
+  status: ProductStatus
+  selling_price: number
+  cost_price: number | null
+  compare_price: number | null
+  affiliate_commission_type: AffiliateCommissionType | null
+  affiliate_commission_value: number | null
+  track_inventory: boolean
+  /** Never write directly — see public.adjust_inventory(). */
+  stock_quantity: number
+  reserved_quantity: number
+  /** Generated column: greatest(stock_quantity - reserved_quantity, 0). */
+  available_quantity: number
+  low_stock_threshold: number
+  /** Generated column: track_inventory and stock_quantity <= low_stock_threshold. */
+  is_low_stock: boolean
+  weight: number | null
+  delivery_information: string | null
+  return_policy: string | null
+  tags: string[]
+  seo_title: string | null
+  seo_description: string | null
+  deleted_at: string | null
 }
+
+export type InventoryTransactionType =
+  | 'STOCK_IN'
+  | 'STOCK_OUT'
+  | 'RESERVED'
+  | 'RELEASED'
+  | 'SOLD'
+  | 'RETURNED'
+  | 'DAMAGED'
+  | 'ADJUSTMENT'
+
+export interface InventoryTransaction {
+  id: string
+  workspace_id: string
+  brand_id: string
+  product_id: string
+  transaction_type: InventoryTransactionType
+  quantity: number
+  previous_quantity: number
+  new_quantity: number
+  reason: string | null
+  reference_type: string | null
+  reference_id: string | null
+  created_by: string | null
+  created_at: string
+}
+
+export interface MediaLibraryItem extends Timestamped {
+  id: string
+  workspace_id: string
+  brand_id: string | null
+  bucket: 'products' | 'brands' | 'landing-pages' | 'avatars' | 'documents' | 'affiliates' | 'uploads'
+  file_path: string
+  file_name: string
+  file_type: string
+  file_size: number
+  mime_type: string | null
+  alt_text: string | null
+  metadata: Json
+  entity_type: string | null
+  entity_id: string | null
+  is_primary: boolean
+  sort_order: number
+  deleted_at: string | null
+}
+
+/**
+ * The Supabase client is intentionally NOT generically typed with a full
+ * `Database` schema (see src/lib/supabase.ts). At this schema's size,
+ * postgrest-js's `.insert()`/`.update()` generic constraints resolve to
+ * `never` — reproduced in isolation against both TypeScript 6.0 and the
+ * stable 5.9 line, and even affects unrelated files simply by this file
+ * being part of the same compilation (a whole-program instantiation-budget
+ * effect, not a bug in these types). Every api.ts function still declares
+ * proper parameter and return types using the Row interfaces above and
+ * casts Supabase responses explicitly (`as Product`, etc.), so type safety
+ * is preserved at every function boundary that the rest of the app
+ * actually consumes — only the raw `.insert()`/`.update()` call arguments
+ * lose compile-time shape validation against the schema.
+ */

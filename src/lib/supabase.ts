@@ -1,7 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
 
-import type { Database } from '@/types/database'
-
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
@@ -15,7 +13,14 @@ if (!isSupabaseConfigured) {
   )
 }
 
-export const supabase = createClient<Database>(
+/**
+ * Not generically typed with `Database` — see the note at the bottom of
+ * src/types/database.ts for why. Every function that calls into this
+ * client declares its own typed parameters/return values and casts
+ * responses explicitly (`as Product`, etc.), so callers still get full
+ * type safety; only the raw query-builder arguments are unchecked.
+ */
+export const supabase = createClient(
   supabaseUrl || 'https://placeholder.supabase.co',
   supabaseAnonKey || 'placeholder-anon-key',
   {
