@@ -55,6 +55,16 @@ export function Dashboard() {
         ))}
       </div>
 
+      {/* Secondary KPI grid — rich operational snapshot */}
+      <div>
+        <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-muted-foreground">Today at a Glance</h2>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {secondaryKpis.map((kpi) => (
+            <StatCard key={kpi.label} {...kpi} compact />
+          ))}
+        </div>
+      </div>
+
       {/* Charts row */}
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         <Card className="xl:col-span-2">
@@ -92,16 +102,6 @@ export function Dashboard() {
             <OrdersByDayChart />
           </CardContent>
         </Card>
-      </div>
-
-      {/* Secondary KPI grid — rich operational snapshot */}
-      <div>
-        <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-muted-foreground">Today at a Glance</h2>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {secondaryKpis.map((kpi) => (
-            <StatCard key={kpi.label} {...kpi} compact />
-          ))}
-        </div>
       </div>
 
       {/* Operations grid */}
