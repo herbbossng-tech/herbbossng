@@ -1,0 +1,672 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Users / RBAC / Audit
+// ---------------------------------------------------------------------------
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  ORDER_MANAGER
+  INVENTORY_MANAGER
+  MARKETING_MANAGER
+  SUPPORT_STAFF
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  passwordHash  String
+  role          Role      @default(SUPPORT_STAFF)
+  isActive      Boolean   @default(true)
+  lastLoginAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  orderStatusChanges OrderStatusHistory[]
+  inventoryMovements InventoryMovement[]
+  auditLogs          AuditLog[]
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id])
+  action     String
+  resource   String
+  resourceId String?
+  before     Json?
+  after      Json?
+  createdAt  DateTime @default(now())
+
+  @@index([resource, resourceId])
+  @@index([createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Offices (= country markets) and location hierarchy
+// ---------------------------------------------------------------------------
+
+enum InventoryStrategy {
+  RESERVE_ON_ORDER
+  DEDUCT_ON_CONFIRM
+  DEDUCT_ON_DISPATCH
+}
+
+enum CurrencySymbolPosition {
+  BEFORE
+  AFTER
+}
+
+model Office {
+  id                 String   @id @default(cuid())
+  name               String // e.g. "Nigeria"
+  countryCode        String   @unique // ISO 3166-1 alpha-2, e.g. "NG"
+  isActive           Boolean  @default(true)
+  sortOrder          Int      @default(0)
+
+  // Currency engine
+  currencyCode           String // "NGN"
+  currencySymbol          String // "₦"
+  currencySymbolPosition  CurrencySymbolPosition @default(BEFORE)
+  currencyDecimalPlaces   Int    @default(2)
+  currencyThousandSep     String @default(",")
+  currencyDecimalSep      String @default(".")
+
+  // Phone
+  phoneCountryCode String // "+234"
+  phoneRegex       String // validation pattern for local numbers
+
+  // Location hierarchy label (what the first admin division is called)
+  divisionLabel String @default("State") // "State" | "County" | "Region" | ...
+
+  // Locale / formatting
+  timezone     String @default("Africa/Lagos")
+  locale       String @default("en-NG")
+  dateFormat   String @default("dd MMM yyyy")
+
+  // Orders
+  orderNumberPrefix String @default("NG") // used as "NG-AF-000001"
+  orderNumberSeq    Int    @default(0)
+
+  // Delivery defaults
+  defaultDeliveryFee     Decimal @default(0) @db.Decimal(12, 2)
+  freeDeliveryThreshold  Decimal? @db.Decimal(12, 2)
+  estimatedDeliveryDays  String? // e.g. "2-4 business days"
+
+  // Tax
+  taxLabel String? // "VAT"
+  taxRate  Decimal @default(0) @db.Decimal(5, 2) // percent
+
+  // Inventory
+  inventoryStrategy InventoryStrategy @default(RESERVE_ON_ORDER)
+
+  // Office identity / branding
+  officeAddress String?
+  officeEmail   String?
+  officePhone   String?
+  logoUrl       String?
+
+  // Support
+  whatsappNumber  String?
+  whatsappCtaText String? @default("Chat with us on WhatsApp")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  divisions        Division[]
+  productOffices   ProductOffice[]
+  offerOffices     OfferOffice[]
+  landingPages     LandingPage[]
+  customers        Customer[]
+  orders           Order[]
+  smtpSettings     SmtpSetting?
+  emailTemplates   EmailTemplate[]
+  trackingSetting  TrackingSetting?
+  inventoryMoves   InventoryMovement[]
+  analyticsEvents  AnalyticsEvent[]
+}
+
+model Division {
+  id       String  @id @default(cuid())
+  officeId String
+  office   Office  @relation(fields: [officeId], references: [id], onDelete: Cascade)
+  name     String
+  sortOrder Int    @default(0)
+
+  cities City[]
+
+  @@unique([officeId, name])
+}
+
+model City {
+  id         String   @id @default(cuid())
+  divisionId String
+  division   Division @relation(fields: [divisionId], references: [id], onDelete: Cascade)
+  name       String
+  sortOrder  Int      @default(0)
+
+  deliveryAreas DeliveryArea[]
+  customers     Customer[]
+  orders        Order[]
+
+  @@unique([divisionId, name])
+}
+
+model DeliveryArea {
+  id       String  @id @default(cuid())
+  cityId   String
+  city     City    @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  name     String
+  fee      Decimal? @db.Decimal(12, 2) // overrides office default when set
+  sortOrder Int     @default(0)
+
+  orders Order[]
+
+  @@unique([cityId, name])
+}
+
+// ---------------------------------------------------------------------------
+// Catalog: Brand / Category / Product / Offer
+// ---------------------------------------------------------------------------
+
+model Brand {
+  id            String  @id @default(cuid())
+  name          String  @unique
+  logoUrl       String?
+  primaryColor  String? @default("#0f3d2e")
+  secondaryColor String? @default("#b6862c")
+
+  products     Product[]
+  landingPages LandingPage[]
+}
+
+model Category {
+  id   String @id @default(cuid())
+  name String @unique
+  slug String @unique
+
+  products Product[]
+}
+
+enum ProductStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+model Product {
+  id          String  @id @default(cuid())
+  brandId     String?
+  brand       Brand?  @relation(fields: [brandId], references: [id])
+  categoryId  String?
+  category    Category? @relation(fields: [categoryId], references: [id])
+
+  sku    String  @unique
+  slug   String  @unique
+  name   String
+  status ProductStatus @default(DRAFT)
+
+  shortDescription String?
+  longDescription  String? // markdown
+
+  benefits    Json? // string[]
+  ingredients Json? // {name, description}[]
+  faq         Json? // {question, answer}[]
+  disclaimer  String?
+  guaranteeText String?
+  deliveryInfo  String?
+
+  seoTitle       String?
+  seoDescription String?
+  ogImageUrl     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  images         ProductImage[]
+  productOffices ProductOffice[]
+  offers         Offer[]
+  landingPages   LandingPage[]
+  orders         Order[]
+}
+
+model ProductImage {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url       String
+  altText   String?
+  isPrimary Boolean @default(false)
+  sortOrder Int     @default(0)
+}
+
+// Per-office price/inventory/status for a product
+model ProductOffice {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  officeId  String
+  office    Office  @relation(fields: [officeId], references: [id], onDelete: Cascade)
+
+  price           Decimal @db.Decimal(12, 2)
+  compareAtPrice  Decimal? @db.Decimal(12, 2)
+  isActive        Boolean @default(true)
+
+  stockQuantity     Int @default(0)
+  lowStockThreshold Int @default(10)
+  trackInventory    Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([productId, officeId])
+}
+
+enum OfferType {
+  FIXED_QTY // pay for N, receive N
+  BUY_X_GET_Y // pay for X, receive X+Y
+  PERCENT_DISCOUNT
+  FIXED_DISCOUNT
+}
+
+model Offer {
+  id        String    @id @default(cuid())
+  productId String
+  product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  name     String // "Buy 3 Get 1 Free"
+  subtitle String? // "Most Popular pick"
+  type     OfferType @default(FIXED_QTY)
+
+  payQty  Int @default(1)
+  freeQty Int @default(0)
+
+  discountPercent Decimal? @db.Decimal(5, 2)
+  discountAmount  Decimal? @db.Decimal(12, 2)
+
+  badgeText  String? // "Most Popular"
+  badgeColor String? @default("#b6862c")
+
+  isDefault Boolean  @default(false)
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
+  startDate DateTime?
+  endDate   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  offerOffices OfferOffice[]
+  orders       Order[]
+}
+
+// Per-office price override for an offer (falls back to computed price from ProductOffice if absent)
+model OfferOffice {
+  id             String  @id @default(cuid())
+  offerId        String
+  offer          Offer   @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  officeId       String
+  office         Office  @relation(fields: [officeId], references: [id], onDelete: Cascade)
+  price          Decimal? @db.Decimal(12, 2)
+  compareAtPrice Decimal? @db.Decimal(12, 2)
+  isActive       Boolean  @default(true)
+
+  @@unique([offerId, officeId])
+}
+
+// ---------------------------------------------------------------------------
+// Landing pages (sections-as-data CMS)
+// ---------------------------------------------------------------------------
+
+enum LandingPageStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model LandingPage {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  officeId  String?
+  office    Office? @relation(fields: [officeId], references: [id])
+  brandId   String?
+  brand     Brand?  @relation(fields: [brandId], references: [id])
+
+  slug   String
+  title  String
+  status LandingPageStatus @default(DRAFT)
+
+  seoTitle       String?
+  seoDescription String?
+  ogImageUrl     String?
+
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  sections LandingPageSection[]
+  orders   Order[]
+
+  @@unique([slug, officeId])
+}
+
+enum LandingPageSectionType {
+  ANNOUNCEMENT_BAR
+  HERO
+  TRUST_BADGES
+  PROBLEM
+  FORMULA
+  HOW_IT_WORKS
+  BENEFITS
+  COMPARISON
+  TESTIMONIALS
+  GUARANTEE
+  FAQ
+  ORDER
+  FOOTER
+  CUSTOM
+}
+
+model LandingPageSection {
+  id            String                  @id @default(cuid())
+  landingPageId String
+  landingPage   LandingPage             @relation(fields: [landingPageId], references: [id], onDelete: Cascade)
+  type          LandingPageSectionType
+  isEnabled     Boolean                 @default(true)
+  sortOrder     Int                     @default(0)
+  data          Json
+
+  @@index([landingPageId, sortOrder])
+}
+
+model MediaAsset {
+  id        String   @id @default(cuid())
+  url       String
+  filename  String
+  mimeType  String
+  size      Int
+  width     Int?
+  height    Int?
+  altText   String?
+  createdAt DateTime @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// Customers / Orders
+// ---------------------------------------------------------------------------
+
+model Customer {
+  id       String  @id @default(cuid())
+  officeId String
+  office   Office  @relation(fields: [officeId], references: [id])
+
+  name    String
+  phone   String
+  email   String?
+  address String?
+  cityId  String?
+  city    City?   @relation(fields: [cityId], references: [id])
+
+  notes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orders Order[]
+
+  @@unique([officeId, phone])
+}
+
+enum OrderStatus {
+  NEW
+  PENDING_CONFIRMATION
+  CONFIRMED
+  PROCESSING
+  PACKED
+  DISPATCHED
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+  RETURNED
+  FAILED_DELIVERY
+}
+
+enum PaymentStatus {
+  COD_PENDING
+  COD_COLLECTED
+  REFUNDED
+  NOT_APPLICABLE
+}
+
+model Order {
+  id          String @id @default(cuid())
+  orderNumber String @unique
+
+  officeId String
+  office   Office @relation(fields: [officeId], references: [id])
+
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id])
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+
+  offerId String
+  offer   Offer  @relation(fields: [offerId], references: [id])
+
+  landingPageId String?
+  landingPage   LandingPage? @relation(fields: [landingPageId], references: [id])
+
+  // snapshot of customer contact/delivery info at order time
+  customerName String
+  phone        String
+  email        String?
+  deliveryAddress String
+  divisionName    String // snapshot label value, e.g. "Lagos"
+  cityId          String?
+  city            City? @relation(fields: [cityId], references: [id])
+  cityName        String
+  deliveryAreaId  String?
+  deliveryArea    DeliveryArea? @relation(fields: [deliveryAreaId], references: [id])
+
+  // pricing snapshot (server-computed, never trusted from client)
+  quantityPaid Int
+  quantityFree Int
+  unitPrice    Decimal @db.Decimal(12, 2)
+  subtotal     Decimal @db.Decimal(12, 2)
+  discount     Decimal @db.Decimal(12, 2) @default(0)
+  shipping     Decimal @db.Decimal(12, 2) @default(0)
+  tax          Decimal @db.Decimal(12, 2) @default(0)
+  total        Decimal @db.Decimal(12, 2)
+  currencyCode String
+
+  status        OrderStatus   @default(NEW)
+  paymentStatus PaymentStatus @default(COD_PENDING)
+
+  internalNotes String?
+  customerNotes String?
+
+  // attribution
+  source         String? // e.g. "landing_page"
+  utmSource      String?
+  utmMedium      String?
+  utmCampaign    String?
+  utmContent     String?
+  utmTerm        String?
+  fbclid         String?
+  gclid          String?
+  fbp            String?
+  fbc            String?
+  eventId        String? // shared between Pixel Purchase + CAPI for dedupe
+  landingPageUrl String?
+  referrer       String?
+  ipAddress      String?
+  userAgent      String?
+
+  idempotencyKey String? @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  statusHistory      OrderStatusHistory[]
+  inventoryMovements InventoryMovement[]
+
+  @@index([officeId, status])
+  @@index([createdAt])
+  @@index([phone])
+}
+
+model OrderStatusHistory {
+  id      String      @id @default(cuid())
+  orderId String
+  order   Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status  OrderStatus
+  note    String?
+  userId  String?
+  user    User?       @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// Inventory
+// ---------------------------------------------------------------------------
+
+enum InventoryMovementType {
+  PURCHASE
+  STOCK_ADDITION
+  MANUAL_ADJUSTMENT
+  ORDER_RESERVATION
+  ORDER_CANCELLATION
+  ORDER_CONFIRMATION_DEDUCTION
+  ORDER_DISPATCH_DEDUCTION
+  RETURN
+  DAMAGED
+  OTHER
+}
+
+model InventoryMovement {
+  id        String                 @id @default(cuid())
+  productId String
+  officeId  String
+  office    Office                 @relation(fields: [officeId], references: [id])
+  type      InventoryMovementType
+  quantity  Int // signed: + increases stock, - decreases
+  reason    String?
+  orderId   String?
+  order     Order?                 @relation(fields: [orderId], references: [id])
+  userId    String?
+  user      User?                  @relation(fields: [userId], references: [id])
+  createdAt DateTime               @default(now())
+
+  @@index([productId, officeId])
+}
+
+// ---------------------------------------------------------------------------
+// Communications
+// ---------------------------------------------------------------------------
+
+model SmtpSetting {
+  id       String  @id @default(cuid())
+  officeId String  @unique
+  office   Office  @relation(fields: [officeId], references: [id], onDelete: Cascade)
+
+  host              String
+  port              Int     @default(587)
+  username          String
+  encryptedPassword String
+  encryption        String  @default("tls") // "tls" | "ssl" | "none"
+  fromName          String
+  fromEmail         String
+  replyTo           String?
+  isActive          Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum EmailTemplateKey {
+  NEW_ORDER_ADMIN
+  ORDER_CONFIRMATION
+  ORDER_CONFIRMED
+  ORDER_DISPATCHED
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+  FAILED_DELIVERY
+}
+
+model EmailTemplate {
+  id       String  @id @default(cuid())
+  officeId String
+  office   Office  @relation(fields: [officeId], references: [id], onDelete: Cascade)
+  key      EmailTemplateKey
+
+  subject     String
+  previewText String?
+  headerText  String? @default("")
+  bodyHtml    String
+  footerText  String?
+  brandName   String  @default("")
+  logoUrl     String?
+  primaryColor String @default("#0f3d2e")
+  buttonText  String?
+  buttonUrl   String?
+  isActive    Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([officeId, key])
+}
+
+model TrackingSetting {
+  id       String @id @default(cuid())
+  officeId String @unique
+  office   Office @relation(fields: [officeId], references: [id], onDelete: Cascade)
+
+  metaPixelId           String?
+  metaEncryptedAccessToken String?
+  metaDatasetId         String?
+  metaCapiEnabled       Boolean @default(false)
+
+  ga4MeasurementId String?
+  ga4ApiSecret     String?
+
+  isActive Boolean @default(false)
+
+  updatedAt DateTime @updatedAt
+}
+
+model AnalyticsEvent {
+  id         String   @id @default(cuid())
+  officeId   String
+  office     Office   @relation(fields: [officeId], references: [id])
+  sessionId  String
+  eventType  String // page_view | view_content | select_item | begin_checkout | purchase
+  landingPageId String?
+  productId  String?
+  orderId    String?
+  utmSource  String?
+  utmMedium  String?
+  utmCampaign String?
+  createdAt  DateTime @default(now())
+
+  @@index([officeId, eventType, createdAt])
+}
+
+model Setting {
+  id    String @id @default(cuid())
+  key   String @unique
+  value Json
+}
