@@ -36,7 +36,7 @@ interface CommandPaletteProps {
 
 const quickActions = [
   { label: 'Create Product', href: '/products', icon: PlusCircle },
-  { label: 'Create Landing Page', href: '/landing-pages', icon: FilePlus2 },
+  { label: 'Create Landing Page', href: '/landing-pages/new', icon: FilePlus2 },
   { label: 'New Order', href: '/orders/new', icon: ShoppingCart },
   { label: 'Add Customer', href: '/customers/new', icon: Users },
   { label: 'Open Analytics', href: '/analytics', icon: BarChart3 },

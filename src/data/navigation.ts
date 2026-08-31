@@ -42,7 +42,7 @@ export const navSections: NavSection[] = [
     items: [
       { label: 'Orders', href: '/orders', icon: ShoppingCart, permission: 'orders.view' },
       { label: 'Products', href: '/products', icon: Package, permission: 'products.view' },
-      { label: 'Landing Pages', href: '/landing-pages', icon: Boxes, permission: 'landing_pages.view', badge: '5' },
+      { label: 'Landing Pages', href: '/landing-pages', icon: Boxes, permission: 'landing_pages.view' },
       { label: 'Customers', href: '/customers', icon: UserSquare2, permission: 'customers.view' },
     ],
   },

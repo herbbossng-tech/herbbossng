@@ -12,6 +12,7 @@ import { Progress } from '@/components/ui/progress'
 import { PermissionGate, usePermission } from '@/contexts/PermissionsContext'
 import { useWorkspace } from '@/contexts/WorkspaceContext'
 import { mediaBuyers, nonOrderKpis, notifications, topProducts } from '@/data/mockData'
+import { useLandingPages } from '@/features/landingPages/hooks'
 import { OrderStatusBadge } from '@/features/orders/components/OrderStatusBadge'
 import { useOrderDailyStats, useOrders, useOrderStats } from '@/features/orders/hooks'
 import { formatCurrency } from '@/lib/currency'
@@ -153,6 +154,7 @@ function OrderDrivenSections() {
   const { data: stats, isLoading: statsLoading } = useOrderStats()
   const { data: recentOrders, isLoading: recentLoading } = useOrders({ sortBy: 'created_at', sortDirection: 'desc', page: 1, pageSize: 5 })
   const { data: daily } = useOrderDailyStats(7)
+  const { data: publishedPages, isLoading: pagesLoading } = useLandingPages({ status: 'published', page: 1, pageSize: 1 })
 
   const money = (n: number | undefined) => (statsLoading || n === undefined ? '—' : formatCurrency(n, currency))
   const count = (n: number | undefined) => (statsLoading || n === undefined ? '—' : n.toLocaleString())
@@ -204,6 +206,7 @@ function OrderDrivenSections() {
           <StatCard label="Today's Sales Value" value={money(stats?.today_sales_value)} icon="dollar" compact />
           <StatCard label="Pending Revenue" value={money(stats?.pending_revenue)} icon="clock" compact />
           <StatCard label="Completed Orders" value={count(stats?.delivered_count)} icon="check" compact />
+          <StatCard label="Published Pages" value={pagesLoading ? '—' : (publishedPages?.totalCount ?? 0).toLocaleString()} icon="boxes" compact />
           {nonOrderKpis.map((kpi) => (
             <StatCard key={kpi.label} {...kpi} compact />
           ))}

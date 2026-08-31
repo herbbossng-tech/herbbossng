@@ -548,6 +548,143 @@ export interface CustomerStats {
   customers_with_pending_orders: number
 }
 
+export type LandingPageStatus = 'draft' | 'published' | 'unpublished' | 'archived'
+export type LandingPageType = 'product_sales' | 'direct_response'
+
+export interface WhatsappCtaConfig {
+  enabled: boolean
+  phone: string | null
+  message: string | null
+  label: string
+}
+
+export interface FloatingCtaConfig {
+  enabled: boolean
+  label: string
+}
+
+export interface LandingPageFormConfig {
+  collectEmail?: boolean
+  collectAlternatePhone?: boolean
+  collectLandmark?: boolean
+  collectNotes?: boolean
+}
+
+export interface LandingPageSeoConfig {
+  metaTitle?: string
+  metaDescription?: string
+  shareImageUrl?: string
+  noindex?: boolean
+}
+
+export interface LandingPage {
+  id: string
+  workspace_id: string
+  brand_id: string
+  product_id: string | null
+
+  name: string
+  slug: string
+  title: string | null
+  description: string | null
+
+  status: LandingPageStatus
+  page_type: LandingPageType
+
+  theme_config: Json
+  seo_config: LandingPageSeoConfig
+  form_config: LandingPageFormConfig
+  tracking_config: Json
+  whatsapp_config: WhatsappCtaConfig
+  floating_cta_config: FloatingCtaConfig
+  order_summary_enabled: boolean
+
+  /** Copied once from the owning workspace at creation time — see migration 0021. */
+  market_country_code: string | null
+  market_currency_code: string | null
+
+  published_at: string | null
+  created_at: string
+  updated_at: string
+  created_by: string | null
+  updated_by: string | null
+  deleted_at: string | null
+}
+
+export type LandingPageSectionType =
+  | 'HERO'
+  | 'TRUST_STRIP'
+  | 'TEXT'
+  | 'IMAGE_TEXT'
+  | 'BENEFITS'
+  | 'HOW_IT_WORKS'
+  | 'TESTIMONIALS'
+  | 'FAQ'
+  | 'CTA_BANNER'
+  | 'PACKAGE_SELECTOR'
+  | 'ORDER_FORM'
+
+export interface LandingPageSection {
+  id: string
+  landing_page_id: string
+  workspace_id: string
+  brand_id: string
+  type: LandingPageSectionType
+  position: number
+  enabled: boolean
+  config: Json
+  created_at: string
+  updated_at: string
+}
+
+/** {"type":"free"} | {"type":"fixed","amount":number} | {"type":"by_state","default":number,"rates":Record<string,number>} */
+export interface ShippingRule {
+  type: 'free' | 'fixed' | 'by_state'
+  amount?: number
+  default?: number
+  rates?: Record<string, number>
+}
+
+export interface LandingPagePackage {
+  id: string
+  landing_page_id: string
+  workspace_id: string
+  brand_id: string
+  name: string
+  quantity: number
+  price: number
+  compare_at_price: number | null
+  badge: string | null
+  savings_text: string | null
+  offer_text: string | null
+  shipping_rule: ShippingRule
+  position: number
+  enabled: boolean
+  is_default: boolean
+  created_at: string
+  updated_at: string
+}
+
+export type LandingPageEventType =
+  | 'page_view'
+  | 'cta_click'
+  | 'package_selected'
+  | 'form_started'
+  | 'form_submitted'
+  | 'order_created'
+  | 'thank_you_view'
+
+export interface LandingPageEvent {
+  id: string
+  landing_page_id: string
+  workspace_id: string
+  brand_id: string
+  event_type: LandingPageEventType
+  session_id: string | null
+  metadata: Json
+  created_at: string
+}
+
 /**
  * The Supabase client is intentionally NOT generically typed with a full
  * `Database` schema (see src/lib/supabase.ts). At this schema's size,

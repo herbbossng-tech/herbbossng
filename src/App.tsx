@@ -8,6 +8,12 @@ import { CreateCustomerPage } from '@/features/customers/pages/CreateCustomerPag
 import { CustomerDetailPage } from '@/features/customers/pages/CustomerDetailPage'
 import { CustomersPage } from '@/features/customers/pages/CustomersPage'
 import { InventoryPage } from '@/features/inventory/pages/InventoryPage'
+import { CreateLandingPagePage } from '@/features/landingPages/pages/CreateLandingPagePage'
+import { LandingPageEditorPage } from '@/features/landingPages/pages/LandingPageEditorPage'
+import { LandingPagePreviewPage } from '@/features/landingPages/pages/LandingPagePreviewPage'
+import { LandingPagesPage } from '@/features/landingPages/pages/LandingPagesPage'
+import { PublicLandingPage } from '@/features/landingPages/public/PublicLandingPage'
+import { ThankYouPage } from '@/features/landingPages/public/ThankYouPage'
 import { CreateOrderPage } from '@/features/orders/pages/CreateOrderPage'
 import { OrderDetailPage } from '@/features/orders/pages/OrderDetailPage'
 import { OrdersPage } from '@/features/orders/pages/OrdersPage'
@@ -24,7 +30,12 @@ import { Dashboard } from '@/pages/Dashboard'
 import { PlaceholderPage } from '@/pages/PlaceholderPage'
 
 const placeholderNavItems = allNavItems.filter(
-  (item) => item.href !== '/' && item.href !== '/products' && item.href !== '/orders' && item.href !== '/customers',
+  (item) =>
+    item.href !== '/' &&
+    item.href !== '/products' &&
+    item.href !== '/orders' &&
+    item.href !== '/customers' &&
+    item.href !== '/landing-pages',
 )
 
 function App() {
@@ -34,6 +45,12 @@ function App() {
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/unauthorized" element={<Unauthorized />} />
+
+      {/* Public, anon-accessible funnel routes — deliberately outside
+          ProtectedRoute/AppLayout. The public renderer is a separate
+          concern from the admin shell (no sidebar/topbar/auth). */}
+      <Route path="/l/:slug" element={<PublicLandingPage />} />
+      <Route path="/l/:slug/thank-you" element={<ThankYouPage />} />
 
       <Route element={<ProtectedRoute />}>
         <Route element={<AppLayout />}>
@@ -60,6 +77,13 @@ function App() {
             <Route index element={<CustomersPage />} />
             <Route path="new" element={<CreateCustomerPage />} />
             <Route path=":id" element={<CustomerDetailPage />} />
+          </Route>
+
+          <Route path="landing-pages">
+            <Route index element={<LandingPagesPage />} />
+            <Route path="new" element={<CreateLandingPagePage />} />
+            <Route path=":id/edit" element={<LandingPageEditorPage />} />
+            <Route path=":id/preview" element={<LandingPagePreviewPage />} />
           </Route>
 
           {placeholderNavItems.map((item) => (
