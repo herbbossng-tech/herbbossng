@@ -8,6 +8,7 @@ import {
   Settings as SettingsIcon,
   ShoppingCart,
   UserPlus,
+  Users,
 } from 'lucide-react'
 import * as React from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -25,6 +26,7 @@ import {
 import { useWorkspace } from '@/contexts/WorkspaceContext'
 import { allNavItems } from '@/data/navigation'
 import { mediaBuyers, topProducts } from '@/data/mockData'
+import { fetchCustomers } from '@/features/customers/api'
 import { fetchOrders } from '@/features/orders/api'
 
 interface CommandPaletteProps {
@@ -36,6 +38,7 @@ const quickActions = [
   { label: 'Create Product', href: '/products', icon: PlusCircle },
   { label: 'Create Landing Page', href: '/landing-pages', icon: FilePlus2 },
   { label: 'New Order', href: '/orders/new', icon: ShoppingCart },
+  { label: 'Add Customer', href: '/customers/new', icon: Users },
   { label: 'Open Analytics', href: '/analytics', icon: BarChart3 },
   { label: 'Open Reports', href: '/reports', icon: Rows3 },
   { label: 'Open Settings', href: '/settings', icon: SettingsIcon },
@@ -66,6 +69,12 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const { data: orderResults } = useQuery({
     queryKey: ['command-order-search', activeWorkspace.id, brandId, search],
     queryFn: () => fetchOrders(activeWorkspace.id, brandId, { search, pageSize: 6 }),
+    enabled: open && Boolean(brandId) && search.trim().length >= 2,
+  })
+
+  const { data: customerResults } = useQuery({
+    queryKey: ['command-customer-search', activeWorkspace.id, brandId, search],
+    queryFn: () => fetchCustomers(activeWorkspace.id, brandId, { search, pageSize: 6 }),
     enabled: open && Boolean(brandId) && search.trim().length >= 2,
   })
 
@@ -111,6 +120,27 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                 <ShoppingCart className="h-4 w-4 text-muted-foreground" />
                 <span className="font-mono text-xs text-muted-foreground">{order.order_number}</span>
                 {order.customer_name}
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        )}
+
+        {search.trim().length >= 2 && (
+          <CommandGroup heading="Customers">
+            {(customerResults?.rows.length ?? 0) === 0 && (
+              <CommandItem disabled value={`no-customers-${search}`}>
+                No matching customers
+              </CommandItem>
+            )}
+            {customerResults?.rows.map((customer) => (
+              <CommandItem
+                key={customer.id}
+                value={`${customer.full_name} ${customer.phone} ${customer.email ?? ''}`}
+                onSelect={() => go(`/customers/${customer.id}`)}
+              >
+                <Users className="h-4 w-4 text-muted-foreground" />
+                <span className="flex-1">{customer.full_name}</span>
+                <span className="text-xs text-muted-foreground">{customer.total_orders} order{customer.total_orders === 1 ? '' : 's'}</span>
               </CommandItem>
             ))}
           </CommandGroup>

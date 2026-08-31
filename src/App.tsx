@@ -4,6 +4,9 @@ import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { allNavItems } from '@/data/navigation'
 import { CategoriesPage } from '@/features/categories/pages/CategoriesPage'
+import { CreateCustomerPage } from '@/features/customers/pages/CreateCustomerPage'
+import { CustomerDetailPage } from '@/features/customers/pages/CustomerDetailPage'
+import { CustomersPage } from '@/features/customers/pages/CustomersPage'
 import { InventoryPage } from '@/features/inventory/pages/InventoryPage'
 import { CreateOrderPage } from '@/features/orders/pages/CreateOrderPage'
 import { OrderDetailPage } from '@/features/orders/pages/OrderDetailPage'
@@ -21,7 +24,7 @@ import { Dashboard } from '@/pages/Dashboard'
 import { PlaceholderPage } from '@/pages/PlaceholderPage'
 
 const placeholderNavItems = allNavItems.filter(
-  (item) => item.href !== '/' && item.href !== '/products' && item.href !== '/orders',
+  (item) => item.href !== '/' && item.href !== '/products' && item.href !== '/orders' && item.href !== '/customers',
 )
 
 function App() {
@@ -51,6 +54,12 @@ function App() {
             <Route index element={<OrdersPage />} />
             <Route path="new" element={<CreateOrderPage />} />
             <Route path=":id" element={<OrderDetailPage />} />
+          </Route>
+
+          <Route path="customers">
+            <Route index element={<CustomersPage />} />
+            <Route path="new" element={<CreateCustomerPage />} />
+            <Route path=":id" element={<CustomerDetailPage />} />
           </Route>
 
           {placeholderNavItems.map((item) => (

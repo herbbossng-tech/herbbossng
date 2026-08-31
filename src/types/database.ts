@@ -478,6 +478,76 @@ export interface OrderDailyStat {
   delivered_revenue: number
 }
 
+/** Distinct from OrderStatus — a customer relationship state, not an order lifecycle state. */
+export type CustomerStatus = 'active' | 'inactive' | 'blocked'
+
+export interface Customer {
+  id: string
+  workspace_id: string
+  brand_id: string
+
+  first_name: string | null
+  last_name: string | null
+  full_name: string
+  phone: string
+  /** Market-aware dedup key: dial-code digits + national number. See normalize_phone(). */
+  canonical_phone: string
+  alternate_phone: string | null
+  email: string | null
+
+  country_code: string | null
+  state: string | null
+  city: string | null
+  address: string | null
+  address_2: string | null
+  landmark: string | null
+  postal_code: string | null
+
+  status: CustomerStatus
+
+  /** Everything below is trigger-maintained from orders — never write these from the client. */
+  is_repeat_customer: boolean
+  total_orders: number
+  delivered_count: number
+  pending_count: number
+  returned_count: number
+  cancelled_count: number
+  total_order_value: number
+  delivered_value: number
+  pending_value: number
+  returned_value: number
+  first_order_at: string | null
+  last_order_at: string | null
+
+  /** Captured once from the first order and never overwritten by a later order's source. */
+  acquisition_source: string | null
+
+  created_at: string
+  updated_at: string
+  created_by: string | null
+  updated_by: string | null
+  deleted_at: string | null
+}
+
+export interface CustomerNote {
+  id: string
+  customer_id: string
+  workspace_id: string
+  brand_id: string
+  body: string
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface CustomerStats {
+  total_customers: number
+  new_customers: number
+  repeat_customers: number
+  active_customers: number
+  customers_with_pending_orders: number
+}
+
 /**
  * The Supabase client is intentionally NOT generically typed with a full
  * `Database` schema (see src/lib/supabase.ts). At this schema's size,
