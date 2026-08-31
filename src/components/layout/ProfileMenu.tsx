@@ -24,7 +24,8 @@ function initials(name: string) {
 
 export function ProfileMenu() {
   const { user, profile, signOut } = useAuth()
-  const { role } = usePermissions()
+  const { roles } = usePermissions()
+  const roleLabel = roles.length > 0 ? roles.map((r) => r.name).join(', ') : 'Member'
   const navigate = useNavigate()
 
   const displayName =
@@ -49,7 +50,7 @@ export function ProfileMenu() {
           <span className="truncate text-sm font-semibold text-foreground">{displayName}</span>
           <span className="truncate text-xs font-normal text-muted-foreground">{user?.email}</span>
           <span className="mt-1 w-fit rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-bold text-primary">
-            {role.name}
+            {roleLabel}
           </span>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />

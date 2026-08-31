@@ -11,7 +11,8 @@ import { EmptyState, LoadingState } from '@/components/ui/state'
 import { Progress } from '@/components/ui/progress'
 import { PermissionGate, usePermission } from '@/contexts/PermissionsContext'
 import { useWorkspace } from '@/contexts/WorkspaceContext'
-import { mediaBuyers, nonOrderKpis, notifications, topProducts } from '@/data/mockData'
+import { mediaBuyers, nonOrderKpis, topProducts } from '@/data/mockData'
+import { useRecentNotifications } from '@/features/notifications/hooks'
 import { useLandingPages } from '@/features/landingPages/hooks'
 import { OrderStatusBadge } from '@/features/orders/components/OrderStatusBadge'
 import { useOrderDailyStats, useOrders, useOrderStats } from '@/features/orders/hooks'
@@ -23,6 +24,7 @@ const WEEKDAY_FORMAT = new Intl.DateTimeFormat('en-US', { weekday: 'short' })
 export function Dashboard() {
   const { activeWorkspace } = useWorkspace()
   const canViewOrders = usePermission('orders.view')
+  const { data: recentNotifications } = useRecentNotifications()
 
   return (
     <div className="flex flex-col gap-6">
@@ -116,24 +118,26 @@ export function Dashboard() {
           <CardHeader className="flex-row items-center justify-between space-y-0">
             <div>
               <CardTitle className="text-base">Notifications</CardTitle>
-              <CardDescription className="mt-1">Latest operational alerts (sample data)</CardDescription>
+              <CardDescription className="mt-1">Latest operational alerts for this workspace</CardDescription>
             </div>
             <Phone className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
-            {notifications.map((note) => (
-              <div key={note.title} className="flex items-start gap-3 text-sm">
+            {(recentNotifications?.length ?? 0) === 0 && <p className="text-sm text-muted-foreground">You're all caught up.</p>}
+            {recentNotifications?.map((note) => (
+              <div key={note.id} className="flex items-start gap-3 text-sm">
                 <span
                   className={cn(
                     'mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full',
-                    note.tone === 'success' && 'bg-success',
-                    note.tone === 'warning' && 'bg-warning',
-                    note.tone === 'info' && 'bg-info',
+                    note.priority === 'urgent' && 'bg-destructive',
+                    note.priority === 'high' && 'bg-warning',
+                    note.priority === 'normal' && 'bg-info',
+                    note.priority === 'low' && 'bg-muted-foreground',
                   )}
                 />
                 <div className="min-w-0">
                   <p className="truncate">{note.title}</p>
-                  <p className="text-xs text-muted-foreground">{note.time}</p>
+                  <p className="text-xs text-muted-foreground">{new Date(note.created_at).toLocaleString()}</p>
                 </div>
               </div>
             ))}

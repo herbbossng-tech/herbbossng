@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import {
   BarChart3,
   FilePlus2,
+  Layout,
   Package,
   PlusCircle,
   Settings as SettingsIcon,
@@ -24,11 +25,14 @@ import {
   CommandSeparator,
   CommandShortcut,
 } from '@/components/ui/command'
+import { usePermissions } from '@/contexts/PermissionsContext'
 import { useWorkspace } from '@/contexts/WorkspaceContext'
 import { allNavItems } from '@/data/navigation'
-import { mediaBuyers, topProducts } from '@/data/mockData'
 import { fetchCustomers } from '@/features/customers/api'
+import { fetchLandingPages } from '@/features/landingPages/api'
 import { fetchOrders } from '@/features/orders/api'
+import { fetchProducts } from '@/features/products/api'
+import { fetchWorkspaceStaff } from '@/features/staff/api'
 
 interface CommandPaletteProps {
   open: boolean
@@ -50,8 +54,11 @@ const quickActions = [
 export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const navigate = useNavigate()
   const { activeWorkspace, activeBrand } = useWorkspace()
+  const { hasPermission } = usePermissions()
   const brandId = activeBrand?.id ?? ''
   const [search, setSearch] = React.useState('')
+  const term = search.trim()
+  const searching = open && Boolean(brandId) && term.length >= 2
 
   React.useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -68,17 +75,55 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     if (!open) setSearch('')
   }, [open])
 
+  // Every search below is explicitly gated on the relevant view
+  // permission — an unauthorized module is never queried at all, not
+  // just hidden after the fact. RLS would return nothing regardless,
+  // but the query itself staying scoped is the point (see Phase 5
+  // spec §24/§78: "do not query unauthorized data merely to hide it
+  // later in React").
+  const canSearchOrders = hasPermission('orders.view')
+  const canSearchCustomers = hasPermission('customers.view')
+  const canSearchProducts = hasPermission('products.view')
+  const canSearchLandingPages = hasPermission('landing_pages.view')
+  const canSearchStaff = hasPermission('staff.view')
+
   const { data: orderResults } = useQuery({
-    queryKey: ['command-order-search', activeWorkspace.id, brandId, search],
-    queryFn: () => fetchOrders(activeWorkspace.id, brandId, { search, pageSize: 6 }),
-    enabled: open && Boolean(brandId) && search.trim().length >= 2,
+    queryKey: ['command-order-search', activeWorkspace.id, brandId, term],
+    queryFn: () => fetchOrders(activeWorkspace.id, brandId, { search: term, pageSize: 6 }),
+    enabled: searching && canSearchOrders,
   })
 
   const { data: customerResults } = useQuery({
-    queryKey: ['command-customer-search', activeWorkspace.id, brandId, search],
-    queryFn: () => fetchCustomers(activeWorkspace.id, brandId, { search, pageSize: 6 }),
-    enabled: open && Boolean(brandId) && search.trim().length >= 2,
+    queryKey: ['command-customer-search', activeWorkspace.id, brandId, term],
+    queryFn: () => fetchCustomers(activeWorkspace.id, brandId, { search: term, pageSize: 6 }),
+    enabled: searching && canSearchCustomers,
   })
+
+  const { data: productResults } = useQuery({
+    queryKey: ['command-product-search', activeWorkspace.id, brandId, term],
+    queryFn: () => fetchProducts(activeWorkspace.id, brandId, { search: term }),
+    enabled: searching && canSearchProducts,
+  })
+
+  const { data: landingPageResults } = useQuery({
+    queryKey: ['command-landing-page-search', activeWorkspace.id, brandId, term],
+    queryFn: () => fetchLandingPages(activeWorkspace.id, brandId, { search: term, pageSize: 6 }),
+    enabled: searching && canSearchLandingPages,
+  })
+
+  const { data: staffResults } = useQuery({
+    queryKey: ['command-staff-search', activeWorkspace.id],
+    queryFn: () => fetchWorkspaceStaff(activeWorkspace.id),
+    enabled: searching && canSearchStaff,
+  })
+  const filteredStaff = (staffResults ?? [])
+    .filter((s) => {
+      const name = `${s.first_name ?? ''} ${s.last_name ?? ''}`.toLowerCase()
+      return name.includes(term.toLowerCase()) || s.email.toLowerCase().includes(term.toLowerCase())
+    })
+    .slice(0, 6)
+
+  const visibleNavItems = allNavItems.filter((item) => !item.permission || hasPermission(item.permission))
 
   const go = (href: string) => {
     onOpenChange(false)
@@ -88,7 +133,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange}>
       <CommandInput
-        placeholder="Search orders, customers, products, staff… or run a command"
+        placeholder="Search orders, customers, products, staff, landing pages… or run a command"
         value={search}
         onValueChange={setSearch}
       />
@@ -106,10 +151,10 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
 
         <CommandSeparator />
 
-        {search.trim().length >= 2 && (
+        {searching && canSearchOrders && (
           <CommandGroup heading="Orders">
             {(orderResults?.rows.length ?? 0) === 0 && (
-              <CommandItem disabled value={`no-orders-${search}`}>
+              <CommandItem disabled value={`no-orders-${term}`}>
                 No matching orders
               </CommandItem>
             )}
@@ -127,10 +172,10 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
           </CommandGroup>
         )}
 
-        {search.trim().length >= 2 && (
+        {searching && canSearchCustomers && (
           <CommandGroup heading="Customers">
             {(customerResults?.rows.length ?? 0) === 0 && (
-              <CommandItem disabled value={`no-customers-${search}`}>
+              <CommandItem disabled value={`no-customers-${term}`}>
                 No matching customers
               </CommandItem>
             )}
@@ -148,28 +193,58 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
           </CommandGroup>
         )}
 
-        <CommandGroup heading="Products">
-          {topProducts.map((product) => (
-            <CommandItem key={product.name} value={product.name} onSelect={() => go('/products')}>
-              <Package className="h-4 w-4 text-muted-foreground" />
-              {product.name}
-            </CommandItem>
-          ))}
-        </CommandGroup>
+        {searching && canSearchProducts && (
+          <CommandGroup heading="Products">
+            {(productResults?.length ?? 0) === 0 && (
+              <CommandItem disabled value={`no-products-${term}`}>
+                No matching products
+              </CommandItem>
+            )}
+            {productResults?.slice(0, 6).map((product) => (
+              <CommandItem key={product.id} value={`${product.name} ${product.sku ?? ''}`} onSelect={() => go(`/products/${product.id}/edit`)}>
+                <Package className="h-4 w-4 text-muted-foreground" />
+                {product.name}
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        )}
 
-        <CommandGroup heading="Affiliates">
-          {mediaBuyers.map((buyer) => (
-            <CommandItem key={buyer.name} value={buyer.name} onSelect={() => go('/affiliates')}>
-              <UserPlus className="h-4 w-4 text-muted-foreground" />
-              {buyer.name}
-            </CommandItem>
-          ))}
-        </CommandGroup>
+        {searching && canSearchLandingPages && (
+          <CommandGroup heading="Landing Pages">
+            {(landingPageResults?.rows.length ?? 0) === 0 && (
+              <CommandItem disabled value={`no-landing-pages-${term}`}>
+                No matching landing pages
+              </CommandItem>
+            )}
+            {landingPageResults?.rows.map((page) => (
+              <CommandItem key={page.id} value={`${page.name} ${page.slug}`} onSelect={() => go(`/landing-pages/${page.id}/edit`)}>
+                <Layout className="h-4 w-4 text-muted-foreground" />
+                {page.name}
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        )}
+
+        {searching && canSearchStaff && (
+          <CommandGroup heading="Staff">
+            {filteredStaff.length === 0 && (
+              <CommandItem disabled value={`no-staff-${term}`}>
+                No matching staff
+              </CommandItem>
+            )}
+            {filteredStaff.map((s) => (
+              <CommandItem key={s.user_id} value={`${s.first_name ?? ''} ${s.last_name ?? ''} ${s.email}`} onSelect={() => go(`/staff/${s.user_id}`)}>
+                <UserPlus className="h-4 w-4 text-muted-foreground" />
+                {[s.first_name, s.last_name].filter(Boolean).join(' ') || s.email}
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        )}
 
         <CommandSeparator />
 
         <CommandGroup heading="Navigate">
-          {allNavItems.map((item) => (
+          {visibleNavItems.map((item) => (
             <CommandItem key={item.href} value={item.label} onSelect={() => go(item.href)}>
               <item.icon className="h-4 w-4 text-muted-foreground" />
               {item.label}

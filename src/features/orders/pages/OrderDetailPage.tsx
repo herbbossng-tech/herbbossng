@@ -5,11 +5,13 @@ import { Link, useParams } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ErrorState, LoadingState } from '@/components/ui/state'
 import { Textarea } from '@/components/ui/textarea'
 import { useAuth } from '@/contexts/AuthContext'
 import { PermissionGate, usePermission } from '@/contexts/PermissionsContext'
 import { OrderStatusBadge } from '@/features/orders/components/OrderStatusBadge'
+import { useAssignableStaff } from '@/features/staff/hooks'
 import { OrderStatusDialog } from '@/features/orders/components/OrderStatusDialog'
 import {
   useAddOrderNote,
@@ -58,6 +60,7 @@ export function OrderDetailPage() {
 
   const canUpdate = usePermission('orders.update')
   const canAssign = usePermission('orders.assign')
+  const { data: assignableStaff } = useAssignableStaff()
 
   if (isLoading) return <LoadingState label="Loading order…" />
   if (isError || !order) {
@@ -286,29 +289,48 @@ export function OrderDetailPage() {
                 <p className="font-medium text-foreground">{order.assigned_to_email ?? 'Unassigned'}</p>
               </div>
               {canAssign && (
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    disabled={assignOrder.isPending || !user}
-                    onClick={() => user && assignOrder.mutate(user.id)}
+                <div className="flex flex-col gap-2">
+                  <Select
+                    value={order.assigned_to ?? 'unassigned'}
+                    onValueChange={(value) => assignOrder.mutate(value === 'unassigned' ? null : value)}
+                    disabled={assignOrder.isPending}
                   >
-                    <UserCheck className="h-3.5 w-3.5" />
-                    Assign to me
-                  </Button>
-                  {order.assigned_to && (
+                    <SelectTrigger className="w-full sm:w-64">
+                      <SelectValue placeholder="Assign staff…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="unassigned">Unassigned</SelectItem>
+                      {assignableStaff?.map((s) => (
+                        <SelectItem key={s.user_id} value={s.user_id}>
+                          {[s.first_name, s.last_name].filter(Boolean).join(' ') || s.email}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <div className="flex gap-2">
                     <Button
                       type="button"
                       size="sm"
                       variant="outline"
-                      disabled={assignOrder.isPending}
-                      onClick={() => assignOrder.mutate(null)}
+                      disabled={assignOrder.isPending || !user}
+                      onClick={() => user && assignOrder.mutate(user.id)}
                     >
-                      <UserX className="h-3.5 w-3.5" />
-                      Unassign
+                      <UserCheck className="h-3.5 w-3.5" />
+                      Assign to me
                     </Button>
-                  )}
+                    {order.assigned_to && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={assignOrder.isPending}
+                        onClick={() => assignOrder.mutate(null)}
+                      >
+                        <UserX className="h-3.5 w-3.5" />
+                        Unassign
+                      </Button>
+                    )}
+                  </div>
                 </div>
               )}
             </CardContent>

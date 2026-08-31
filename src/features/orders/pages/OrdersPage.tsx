@@ -18,6 +18,7 @@ import { useOrders } from '@/features/orders/hooks'
 import { orderSourceLabels, orderStatuses, orderStatusLabels } from '@/features/orders/statusMeta'
 import type { OrderFilters, OrderListItem } from '@/features/orders/types'
 import { useProducts } from '@/features/products/hooks'
+import { useAssignableStaff } from '@/features/staff/hooks'
 import { exportToCsv } from '@/lib/csv'
 
 const PAGE_SIZE = 25
@@ -60,10 +61,12 @@ export function OrdersPage() {
 
   const { data, isLoading, isError, refetch } = useOrders(appliedFilters)
   const { data: products } = useProducts({})
+  const { data: assignableStaff } = useAssignableStaff()
   const canCreate = usePermission('orders.create')
   const canExport = usePermission('orders.export')
   const canAssign = usePermission('orders.assign')
   const canUpdate = usePermission('orders.update')
+  const [bulkAssignee, setBulkAssignee] = React.useState<string>('')
 
   const columns = React.useMemo(() => buildOrderColumns(), [])
   const rows = data?.rows ?? []
@@ -117,6 +120,15 @@ export function OrdersPage() {
     if (!user) return
     await Promise.allSettled(selectedIds.map((id) => assignOrderApi(id, user.id, user.id)))
     setRowSelection({})
+    refetch()
+  }
+
+  async function applyBulkAssign() {
+    if (!bulkAssignee || !user) return
+    const target = bulkAssignee === 'unassigned' ? null : bulkAssignee
+    await Promise.allSettled(selectedIds.map((id) => assignOrderApi(id, target, user.id)))
+    setRowSelection({})
+    setBulkAssignee('')
     refetch()
   }
 
@@ -213,6 +225,13 @@ export function OrdersPage() {
               <SelectItem value="all">Anyone</SelectItem>
               {user && <SelectItem value={user.id}>Assigned to me</SelectItem>}
               <SelectItem value="unassigned">Unassigned</SelectItem>
+              {assignableStaff
+                ?.filter((s) => s.user_id !== user?.id)
+                .map((s) => (
+                  <SelectItem key={s.user_id} value={s.user_id}>
+                    {[s.first_name, s.last_name].filter(Boolean).join(' ') || s.email}
+                  </SelectItem>
+                ))}
             </SelectContent>
           </Select>
           <div className="flex items-center gap-1.5">
@@ -276,10 +295,28 @@ export function OrdersPage() {
             </>
           )}
           {canAssign && (
-            <Button variant="outline" size="sm" onClick={assignSelectedToMe}>
-              <UserCheck className="h-3.5 w-3.5" />
-              Assign to me
-            </Button>
+            <>
+              <Button variant="outline" size="sm" onClick={assignSelectedToMe}>
+                <UserCheck className="h-3.5 w-3.5" />
+                Assign to me
+              </Button>
+              <Select value={bulkAssignee} onValueChange={setBulkAssignee}>
+                <SelectTrigger className="h-8 w-44">
+                  <SelectValue placeholder="Assign to…" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unassigned">Unassign</SelectItem>
+                  {assignableStaff?.map((s) => (
+                    <SelectItem key={s.user_id} value={s.user_id}>
+                      {[s.first_name, s.last_name].filter(Boolean).join(' ') || s.email}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button variant="outline" size="sm" disabled={!bulkAssignee} onClick={applyBulkAssign}>
+                Apply
+              </Button>
+            </>
           )}
           {canExport && (
             <Button variant="outline" size="sm" onClick={() => handleExport(selectedRows)}>

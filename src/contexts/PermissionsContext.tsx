@@ -1,35 +1,119 @@
+import { useQuery } from '@tanstack/react-query'
 import * as React from 'react'
 
-import { mockPermissions, mockRole } from '@/data/mockWorkspaces'
+import { useWorkspace } from '@/contexts/WorkspaceContext'
+import { supabase } from '@/lib/supabase'
 import type { Role } from '@/types/database'
 
 interface PermissionsContextValue {
+  /** First role the user holds in the active workspace — kept for ProfileMenu's existing single-badge display. See `roles` for the full list. */
   role: Role
+  /** Every role the user holds in the active workspace (a user can hold more than one). */
+  roles: Role[]
   permissions: ReadonlySet<string>
   hasPermission: (slug: string) => boolean
   hasAnyPermission: (slugs: string[]) => boolean
+  isLoading: boolean
 }
 
 const PermissionsContext = React.createContext<PermissionsContextValue | null>(null)
 
+const FALLBACK_ROLE: Role = {
+  id: '',
+  workspace_id: null,
+  name: 'Member',
+  slug: 'member',
+  description: null,
+  is_system_role: false,
+  created_at: '',
+  updated_at: '',
+  created_by: null,
+  updated_by: null,
+  deleted_at: null,
+}
+
+interface EffectivePermissionRow {
+  role_id: string
+  role_name: string
+  role_slug: string
+  is_system_role: boolean
+  permission_slug: string | null
+}
+
+async function fetchEffectivePermissions(workspaceId: string): Promise<EffectivePermissionRow[]> {
+  const { data, error } = await supabase.rpc('get_effective_permissions', { p_workspace_id: workspaceId })
+  if (error) throw error
+  return (data ?? []) as EffectivePermissionRow[]
+}
+
 /**
- * Resolves the current user's permission set for the active workspace.
- * Runs on the mock Owner role/permission catalogue today (every button and
- * nav item is already gated through `hasPermission`, so wiring this up to
- * a real `user_roles` + `role_permissions` query later is a one-file change).
+ * Real, database-backed authorization: resolves the current user's
+ * actual roles/permissions in the active workspace via
+ * get_effective_permissions() (see migration 0023). This is the
+ * ONLY place that determines what the UI shows — the RPC itself is
+ * just a read reflecting user_roles/role_permissions, so there is no
+ * separate "mock Owner" path left anywhere in the frontend.
+ *
+ * These gates are UX only. The actual security boundary is Postgres
+ * RLS + the SECURITY DEFINER functions — every meaningful mutation
+ * re-checks permission server-side regardless of what this context
+ * reports (see the Phase 5 security test matrix).
  */
 export function PermissionsProvider({ children }: { children: React.ReactNode }) {
-  const permissions = React.useMemo(() => new Set(mockPermissions.map((p) => p.slug)), [])
+  const { activeWorkspace, hasWorkspaceAccess, isLoading: workspaceLoading } = useWorkspace()
+
+  const { data, isLoading: queryLoading } = useQuery({
+    queryKey: ['effective-permissions', activeWorkspace.id],
+    queryFn: () => fetchEffectivePermissions(activeWorkspace.id),
+    enabled: hasWorkspaceAccess && Boolean(activeWorkspace.id),
+    staleTime: 30_000,
+  })
+
+  const rows = data ?? []
+
+  const permissions = React.useMemo(() => {
+    const set = new Set<string>()
+    for (const row of rows) {
+      if (row.permission_slug) set.add(row.permission_slug)
+    }
+    return set
+  }, [rows])
+
+  const roles = React.useMemo(() => {
+    const seen = new Map<string, Role>()
+    for (const row of rows) {
+      if (!seen.has(row.role_id)) {
+        seen.set(row.role_id, {
+          id: row.role_id,
+          workspace_id: activeWorkspace.id,
+          name: row.role_name,
+          slug: row.role_slug,
+          description: null,
+          is_system_role: row.is_system_role,
+          created_at: '',
+          updated_at: '',
+          created_by: null,
+          updated_by: null,
+          deleted_at: null,
+        })
+      }
+    }
+    return Array.from(seen.values())
+  }, [rows, activeWorkspace.id])
 
   const hasPermission = React.useCallback((slug: string) => permissions.has(slug), [permissions])
-  const hasAnyPermission = React.useCallback(
-    (slugs: string[]) => slugs.some((slug) => permissions.has(slug)),
-    [permissions],
-  )
+  const hasAnyPermission = React.useCallback((slugs: string[]) => slugs.some((slug) => permissions.has(slug)), [permissions])
 
   const value = React.useMemo<PermissionsContextValue>(
-    () => ({ role: mockRole, permissions, hasPermission, hasAnyPermission }),
-    [permissions, hasPermission, hasAnyPermission],
+    () => ({
+      role: roles[0] ?? FALLBACK_ROLE,
+      roles,
+      permissions,
+      hasPermission,
+      hasAnyPermission,
+      isLoading: workspaceLoading || (hasWorkspaceAccess && queryLoading),
+    }),
+    [roles, permissions, hasPermission, hasAnyPermission, workspaceLoading, hasWorkspaceAccess, queryLoading],
   )
 
   return <PermissionsContext.Provider value={value}>{children}</PermissionsContext.Provider>

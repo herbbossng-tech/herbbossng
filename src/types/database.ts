@@ -83,6 +83,7 @@ export type PermissionModule =
   | 'marketing'
   | 'analytics'
   | 'reports'
+  | 'finance'
   | 'staff'
   | 'roles_permissions'
   | 'notifications'

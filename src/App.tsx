@@ -8,8 +8,12 @@ import { CreateCustomerPage } from '@/features/customers/pages/CreateCustomerPag
 import { CustomerDetailPage } from '@/features/customers/pages/CustomerDetailPage'
 import { CustomersPage } from '@/features/customers/pages/CustomersPage'
 import { AnalyticsPage } from '@/features/analytics/pages/AnalyticsPage'
+import { AuditLogsPage } from '@/features/auditLogs/pages/AuditLogsPage'
+import { BrandDetailPage } from '@/features/brands/pages/BrandDetailPage'
+import { BrandsPage } from '@/features/brands/pages/BrandsPage'
 import { FinancePage } from '@/features/finance/pages/FinancePage'
 import { InventoryPage } from '@/features/inventory/pages/InventoryPage'
+import { NotificationsPage } from '@/features/notifications/pages/NotificationsPage'
 import { CreateLandingPagePage } from '@/features/landingPages/pages/CreateLandingPagePage'
 import { LandingPageEditorPage } from '@/features/landingPages/pages/LandingPageEditorPage'
 import { LandingPagePreviewPage } from '@/features/landingPages/pages/LandingPagePreviewPage'
@@ -25,11 +29,17 @@ import { ProductsListPage } from '@/features/products/pages/ProductsListPage'
 import { ProductSettingsPage } from '@/features/products/pages/ProductSettingsPage'
 import { ProductsLayout } from '@/features/products/ProductsLayout'
 import { ReportsPage } from '@/features/reports/pages/ReportsPage'
+import { RoleDetailPage } from '@/features/roles/pages/RoleDetailPage'
+import { RolesPage } from '@/features/roles/pages/RolesPage'
+import { StaffDetailPage } from '@/features/staff/pages/StaffDetailPage'
+import { StaffPage } from '@/features/staff/pages/StaffPage'
+import { WorkspaceSettingsPage } from '@/features/workspace/pages/WorkspaceSettingsPage'
 import { ForgotPassword } from '@/pages/auth/ForgotPassword'
 import { Login } from '@/pages/auth/Login'
 import { ResetPassword } from '@/pages/auth/ResetPassword'
 import { Unauthorized } from '@/pages/auth/Unauthorized'
 import { Dashboard } from '@/pages/Dashboard'
+import { AcceptInvitationPage } from '@/pages/invitations/AcceptInvitationPage'
 import { PlaceholderPage } from '@/pages/PlaceholderPage'
 
 const placeholderNavItems = allNavItems.filter(
@@ -41,7 +51,13 @@ const placeholderNavItems = allNavItems.filter(
     item.href !== '/landing-pages' &&
     item.href !== '/finance' &&
     item.href !== '/analytics' &&
-    item.href !== '/reports',
+    item.href !== '/reports' &&
+    item.href !== '/staff' &&
+    item.href !== '/roles' &&
+    item.href !== '/workspace' &&
+    item.href !== '/brands' &&
+    item.href !== '/notifications' &&
+    item.href !== '/audit-logs',
 )
 
 function App() {
@@ -59,6 +75,12 @@ function App() {
       <Route path="/l/:slug/thank-you" element={<ThankYouPage />} />
 
       <Route element={<ProtectedRoute />}>
+        {/* Deliberately outside AppLayout: a user accepting their first
+            invitation to any workspace has zero workspace access yet, so
+            AppLayout's own gating would show "No workspace access" before
+            they ever get a chance to redeem the token. */}
+        <Route path="/invitations/accept" element={<AcceptInvitationPage />} />
+
         <Route element={<AppLayout />}>
           <Route index element={<Dashboard />} />
 
@@ -95,6 +117,25 @@ function App() {
           <Route path="finance" element={<FinancePage />} />
           <Route path="analytics" element={<AnalyticsPage />} />
           <Route path="reports" element={<ReportsPage />} />
+
+          <Route path="staff">
+            <Route index element={<StaffPage />} />
+            <Route path=":id" element={<StaffDetailPage />} />
+          </Route>
+
+          <Route path="roles">
+            <Route index element={<RolesPage />} />
+            <Route path=":id" element={<RoleDetailPage />} />
+          </Route>
+
+          <Route path="workspace" element={<WorkspaceSettingsPage />} />
+          <Route path="notifications" element={<NotificationsPage />} />
+          <Route path="audit-logs" element={<AuditLogsPage />} />
+
+          <Route path="brands">
+            <Route index element={<BrandsPage />} />
+            <Route path=":id" element={<BrandDetailPage />} />
+          </Route>
 
           {placeholderNavItems.map((item) => (
             <Route

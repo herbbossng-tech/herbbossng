@@ -33,7 +33,9 @@ export function Login() {
       setFormError(error)
       return
     }
-    const redirectTo = (location.state as { from?: Location })?.from?.pathname ?? '/'
+    const from = (location.state as { from?: Location })?.from
+    // Preserve the query string too (e.g. /invitations/accept?token=...) — not just the path.
+    const redirectTo = from ? `${from.pathname}${from.search ?? ''}` : '/'
     navigate(redirectTo, { replace: true })
   }
 
