@@ -4,11 +4,12 @@ import {
   FilePlus2,
   Package,
   PlusCircle,
-  Rows3,
   Settings as SettingsIcon,
   ShoppingCart,
+  Sparkles,
   UserPlus,
   Users,
+  Wallet,
 } from 'lucide-react'
 import * as React from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -39,8 +40,9 @@ const quickActions = [
   { label: 'Create Landing Page', href: '/landing-pages/new', icon: FilePlus2 },
   { label: 'New Order', href: '/orders/new', icon: ShoppingCart },
   { label: 'Add Customer', href: '/customers/new', icon: Users },
-  { label: 'Open Analytics', href: '/analytics', icon: BarChart3 },
-  { label: 'Open Reports', href: '/reports', icon: Rows3 },
+  { label: 'Open Finance', href: '/finance', icon: Wallet },
+  { label: 'Open Analytics', href: '/analytics', icon: Sparkles },
+  { label: 'Open Reports', href: '/reports', icon: BarChart3 },
   { label: 'Open Settings', href: '/settings', icon: SettingsIcon },
   { label: 'Invite Staff', href: '/staff', icon: UserPlus },
 ]

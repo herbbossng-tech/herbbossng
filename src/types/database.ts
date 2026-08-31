@@ -355,6 +355,9 @@ export interface Order {
   cash_collected_amount: number | null
   cash_collected_at: string | null
 
+  /** Real courier/logistics cost, distinct from shipping_fee (what the customer was charged). NULL until an operator records it — never fabricated. */
+  actual_delivery_cost: number | null
+
   landing_page_id: string | null
   source_detail: string | null
   referrer: string | null
@@ -396,6 +399,8 @@ export interface OrderItem {
   package_name: string | null
   quantity: number
   unit_price: number
+  /** Product cost_price at order time (NULL if unset then). Never recomputed from current cost, never backfilled for older rows. */
+  unit_cost: number | null
   compare_price: number | null
   discount_amount: number
   total_amount: number
@@ -683,6 +688,110 @@ export interface LandingPageEvent {
   session_id: string | null
   metadata: Json
   created_at: string
+}
+
+/**
+ * Finance + Analytics + Reports (Phase 4). These interfaces mirror the
+ * RPC row shapes defined in supabase/migrations/0022_finance_analytics_reports.sql
+ * exactly — see that migration's header comment for the authoritative
+ * definition of every field (date-scoping rules, what counts as
+ * "eligible", etc.). Never recompute these client-side.
+ */
+export interface FinanceSummary {
+  total_sales_value: number
+  total_orders: number
+  delivered_revenue: number
+  delivered_orders: number
+  pending_revenue: number
+  pending_orders: number
+  returned_value: number
+  returned_orders: number
+  cancelled_value: number
+  cancelled_orders: number
+  average_order_value: number
+  average_delivered_order_value: number
+  cogs_delivered: number
+  gross_profit: number
+  gross_margin_pct: number
+  delivery_success_rate: number
+  return_rate: number
+  cancellation_rate: number
+  /** Numerator/denominator backing delivery_success_rate/return_rate/cancellation_rate — always show these next to the percentage, never the percentage alone. */
+  rate_delivered_count: number
+  rate_returned_count: number
+  rate_cancelled_count: number
+  rate_eligible_count: number
+  /** Only computed over delivered orders that have actual_delivery_cost recorded — see contribution_profit_orders_count. */
+  contribution_profit: number
+  /** How many delivered orders actually contributed to contribution_profit. 0 means "not configured yet", not "zero profit". */
+  contribution_profit_orders_count: number
+}
+
+export interface OrderStatusValueRow {
+  status: OrderStatus
+  order_count: number
+  order_value: number
+}
+
+export type DeliveryFunnelStage = 'CREATED' | 'CONFIRMED' | 'DISPATCHED' | 'DELIVERED' | 'CASH_COLLECTED'
+
+export interface DeliveryFunnelStat {
+  stage: DeliveryFunnelStage
+  order_count: number
+  order_value: number
+}
+
+export interface RevenueTrendPoint {
+  bucket: string
+  sales_value: number
+  delivered_revenue: number
+  pending_revenue: number
+}
+
+export type TrendGranularity = 'day' | 'week' | 'month'
+
+export interface ProductPerformanceRow {
+  product_id: string
+  product_name: string
+  sku: string | null
+  orders_count: number
+  units_sold: number
+  sales_value: number
+  delivered_revenue: number
+  returned_orders: number
+  cancelled_orders: number
+  cancellation_rate: number
+  stock_quantity: number | null
+  reserved_quantity: number | null
+  available_quantity: number | null
+  cogs_delivered: number
+  gross_profit: number
+  gross_margin_pct: number
+  items_delivered: number
+  items_with_cost_data: number
+}
+
+export interface CustomerAnalyticsSummary {
+  total_customers: number
+  new_customers: number
+  repeat_customers: number
+  repeat_order_rate: number
+  avg_orders_per_customer: number
+  customer_revenue: number
+  delivered_customer_revenue: number
+}
+
+export interface LandingPageAnalyticsRow {
+  landing_page_id: string
+  landing_page_name: string
+  landing_page_slug: string
+  orders_count: number
+  sales_value: number
+  delivered_revenue: number
+  pending_revenue: number
+  returned_orders: number
+  cancelled_orders: number
+  average_order_value: number
 }
 
 /**

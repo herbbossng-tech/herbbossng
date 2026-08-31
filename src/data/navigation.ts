@@ -47,12 +47,18 @@ export const navSections: NavSection[] = [
     ],
   },
   {
+    label: 'Finance',
+    items: [
+      { label: 'Finance', href: '/finance', icon: Wallet, permission: 'finance.view' },
+      { label: 'Analytics', href: '/analytics', icon: Sparkles, permission: 'analytics.view' },
+      { label: 'Reports', href: '/reports', icon: BarChart3, permission: 'reports.view' },
+    ],
+  },
+  {
     label: 'Growth',
     items: [
       { label: 'Affiliates', href: '/affiliates', icon: UsersRound, permission: 'affiliates.view' },
       { label: 'Marketing', href: '/marketing', icon: Megaphone, permission: 'marketing.view' },
-      { label: 'Analytics', href: '/analytics', icon: Sparkles, permission: 'analytics.view' },
-      { label: 'Reports', href: '/reports', icon: BarChart3, permission: 'reports.view' },
     ],
   },
   {

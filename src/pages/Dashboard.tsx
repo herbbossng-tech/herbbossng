@@ -1,4 +1,4 @@
-import { AlertTriangle, ExternalLink, Lock, Phone, Plus, ShoppingCart, TrendingUp, UserPlus } from 'lucide-react'
+import { AlertTriangle, ExternalLink, Lock, Phone, Plus, ShoppingCart, TrendingUp, UserPlus, Wallet } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 import { OrdersByDayChart } from '@/components/dashboard/OrdersByDayChart'
@@ -45,6 +45,14 @@ export function Dashboard() {
             <ExternalLink className="h-4 w-4" />
             Preview Funnels
           </Button>
+          <PermissionGate permission="finance.view">
+            <Button variant="outline" size="sm" asChild>
+              <Link to="/finance">
+                <Wallet className="h-4 w-4" />
+                Finance
+              </Link>
+            </Button>
+          </PermissionGate>
           <PermissionGate permission="orders.create">
             <Button size="sm" asChild>
               <Link to="/orders/new">

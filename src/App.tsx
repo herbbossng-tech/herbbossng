@@ -7,6 +7,8 @@ import { CategoriesPage } from '@/features/categories/pages/CategoriesPage'
 import { CreateCustomerPage } from '@/features/customers/pages/CreateCustomerPage'
 import { CustomerDetailPage } from '@/features/customers/pages/CustomerDetailPage'
 import { CustomersPage } from '@/features/customers/pages/CustomersPage'
+import { AnalyticsPage } from '@/features/analytics/pages/AnalyticsPage'
+import { FinancePage } from '@/features/finance/pages/FinancePage'
 import { InventoryPage } from '@/features/inventory/pages/InventoryPage'
 import { CreateLandingPagePage } from '@/features/landingPages/pages/CreateLandingPagePage'
 import { LandingPageEditorPage } from '@/features/landingPages/pages/LandingPageEditorPage'
@@ -22,6 +24,7 @@ import { ProductEditPage } from '@/features/products/pages/ProductEditPage'
 import { ProductsListPage } from '@/features/products/pages/ProductsListPage'
 import { ProductSettingsPage } from '@/features/products/pages/ProductSettingsPage'
 import { ProductsLayout } from '@/features/products/ProductsLayout'
+import { ReportsPage } from '@/features/reports/pages/ReportsPage'
 import { ForgotPassword } from '@/pages/auth/ForgotPassword'
 import { Login } from '@/pages/auth/Login'
 import { ResetPassword } from '@/pages/auth/ResetPassword'
@@ -35,7 +38,10 @@ const placeholderNavItems = allNavItems.filter(
     item.href !== '/products' &&
     item.href !== '/orders' &&
     item.href !== '/customers' &&
-    item.href !== '/landing-pages',
+    item.href !== '/landing-pages' &&
+    item.href !== '/finance' &&
+    item.href !== '/analytics' &&
+    item.href !== '/reports',
 )
 
 function App() {
@@ -85,6 +91,10 @@ function App() {
             <Route path=":id/edit" element={<LandingPageEditorPage />} />
             <Route path=":id/preview" element={<LandingPagePreviewPage />} />
           </Route>
+
+          <Route path="finance" element={<FinancePage />} />
+          <Route path="analytics" element={<AnalyticsPage />} />
+          <Route path="reports" element={<ReportsPage />} />
 
           {placeholderNavItems.map((item) => (
             <Route

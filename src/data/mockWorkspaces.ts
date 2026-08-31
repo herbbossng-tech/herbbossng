@@ -180,6 +180,7 @@ export const mockPermissions: Permission[] = [
   'marketing.view', 'marketing.update', 'marketing.manage',
   'analytics.view', 'analytics.export',
   'reports.view', 'reports.export',
+  'finance.view', 'finance.export', 'finance.manage',
   'staff.view', 'staff.create', 'staff.update', 'staff.delete', 'staff.assign', 'staff.manage',
   'roles_permissions.view', 'roles_permissions.manage',
   'notifications.view', 'notifications.manage',
