@@ -9,6 +9,9 @@ import { EmptyState, LoadingState } from '@/components/ui/state'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { usePermission } from '@/contexts/PermissionsContext'
 import { useWorkspace } from '@/contexts/WorkspaceContext'
+import { useAffiliatePerformance } from '@/features/affiliates/hooks'
+import { useAdCostSummary } from '@/features/adCosts/hooks'
+import { useCampaignPerformance } from '@/features/campaigns/hooks'
 import { useCustomers } from '@/features/customers/hooks'
 import { DateRangeFilter, type DateRangePreset } from '@/features/finance/components/DateRangeFilter'
 import { resolveDateRange } from '@/features/finance/dateRanges'
@@ -70,6 +73,9 @@ function ReportsContent() {
           <TabsTrigger value="products">Product Performance</TabsTrigger>
           <TabsTrigger value="customers">Customer Report</TabsTrigger>
           <TabsTrigger value="summary">Financial Summary</TabsTrigger>
+          <TabsTrigger value="affiliates">Affiliate Performance</TabsTrigger>
+          <TabsTrigger value="campaigns">Campaign Performance</TabsTrigger>
+          <TabsTrigger value="ad-costs">Ad Costs</TabsTrigger>
         </TabsList>
 
         <TabsContent value="sales">
@@ -86,6 +92,15 @@ function ReportsContent() {
         </TabsContent>
         <TabsContent value="summary">
           <FinancialSummaryReportTab dateFrom={range.from} dateTo={range.to} canExport={canExport} currency={activeWorkspace.currency_code} />
+        </TabsContent>
+        <TabsContent value="affiliates">
+          <AffiliatePerformanceReportTab dateFrom={range.from} dateTo={range.to} canExport={canExport} currency={activeWorkspace.currency_code} />
+        </TabsContent>
+        <TabsContent value="campaigns">
+          <CampaignPerformanceReportTab canExport={canExport} currency={activeWorkspace.currency_code} />
+        </TabsContent>
+        <TabsContent value="ad-costs">
+          <AdCostReportTab canExport={canExport} currency={activeWorkspace.currency_code} />
         </TabsContent>
       </Tabs>
     </div>
@@ -539,5 +554,212 @@ function SummaryTile({ label, value }: { label: string; value: string }) {
       <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
       <p className="mt-1 text-base font-bold">{value}</p>
     </div>
+  )
+}
+
+// Affiliate Performance, Campaign Performance and Ad Costs consolidate
+// the spec's "Affiliate/Campaign/Commission/Wallet/Withdrawals/Ad Costs
+// reports" list into three tables rather than six near-duplicates:
+// get_affiliate_performance already carries commission + wallet
+// columns per affiliate, and get_campaign_performance already carries
+// commission + ad-cost columns per campaign — a Commission-only or
+// Wallet-only tab would just be a narrower slice of the same rows.
+// Withdrawals has its own dedicated screen (/affiliates/withdrawals)
+// with full status/audit detail a summary report would flatten away.
+function AffiliatePerformanceReportTab({ dateFrom, dateTo, canExport, currency }: { dateFrom: string | null; dateTo: string | null; canExport: boolean; currency: string }) {
+  const { data, isLoading } = useAffiliatePerformance(dateFrom, dateTo)
+
+  function handleExport() {
+    if (!data || data.length === 0) return
+    exportToCsv(
+      `affiliate-performance-${new Date().toISOString().slice(0, 10)}.csv`,
+      data.map((a) => ({
+        affiliate: a.affiliate_name,
+        referral_code: a.referral_code,
+        total_orders: a.total_orders,
+        delivered_orders: a.delivered_orders,
+        delivered_revenue: a.delivered_revenue,
+        commission_earned: a.total_commission_earned,
+        commission_reversed: a.total_commission_reversed,
+        net_commission: a.net_commission,
+        wallet_balance: a.wallet_balance,
+        wallet_reserved_balance: a.wallet_reserved_balance,
+      })),
+    )
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Affiliate Performance Report</CardTitle>
+        <CardDescription>Delivered revenue reuses the exact Finance definition (DELIVERED + cash collected). Net commission = earned minus reversed.</CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <ReportToolbar search="" onSearch={() => {}} onExport={handleExport} canExport={canExport} exportDisabled={!data || data.length === 0} />
+        {isLoading ? (
+          <LoadingState label="Loading affiliate performance…" />
+        ) : (data?.length ?? 0) === 0 ? (
+          <EmptyState icon={Lock} title="No affiliate activity yet" description="Affiliate performance will appear here once attributed orders come in." />
+        ) : (
+          <div className="overflow-x-auto rounded-lg border border-border">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-xs uppercase tracking-wide text-muted-foreground">
+                  <th className="px-4 py-2.5 font-semibold">Affiliate</th>
+                  <th className="px-4 py-2.5 text-right font-semibold">Orders</th>
+                  <th className="px-4 py-2.5 text-right font-semibold">Delivered</th>
+                  <th className="px-4 py-2.5 text-right font-semibold">Delivered Revenue</th>
+                  <th className="px-4 py-2.5 text-right font-semibold">Net Commission</th>
+                  <th className="px-4 py-2.5 text-right font-semibold">Wallet Balance</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data?.map((a) => (
+                  <tr key={a.affiliate_id} className="border-t border-border/60">
+                    <td className="px-4 py-2.5">
+                      {a.affiliate_name} <span className="font-mono text-xs text-muted-foreground">({a.referral_code})</span>
+                    </td>
+                    <td className="px-4 py-2.5 text-right">{a.total_orders}</td>
+                    <td className="px-4 py-2.5 text-right">{a.delivered_orders}</td>
+                    <td className="px-4 py-2.5 text-right font-semibold">{formatCurrency(a.delivered_revenue, currency)}</td>
+                    <td className="px-4 py-2.5 text-right">{formatCurrency(a.net_commission, currency)}</td>
+                    <td className="px-4 py-2.5 text-right">{formatCurrency(a.wallet_balance, currency)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+function CampaignPerformanceReportTab({ canExport, currency }: { canExport: boolean; currency: string }) {
+  const { data, isLoading } = useCampaignPerformance()
+
+  function handleExport() {
+    if (!data || data.length === 0) return
+    exportToCsv(
+      `campaign-performance-${new Date().toISOString().slice(0, 10)}.csv`,
+      data.map((c) => ({
+        campaign: c.campaign_name,
+        status: c.status,
+        total_orders: c.total_orders,
+        delivered_orders: c.delivered_orders,
+        delivered_revenue: c.delivered_revenue,
+        commission_paid: c.total_commission_paid,
+        approved_ad_cost: c.approved_ad_cost,
+      })),
+    )
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Campaign Performance Report</CardTitle>
+        <CardDescription>Approved ad cost only — pending/rejected entries are excluded.</CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <ReportToolbar search="" onSearch={() => {}} onExport={handleExport} canExport={canExport} exportDisabled={!data || data.length === 0} />
+        {isLoading ? (
+          <LoadingState label="Loading campaign performance…" />
+        ) : (data?.length ?? 0) === 0 ? (
+          <EmptyState icon={Lock} title="No campaigns yet" description="Campaign performance will appear here once a campaign is created for this brand." />
+        ) : (
+          <div className="overflow-x-auto rounded-lg border border-border">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-xs uppercase tracking-wide text-muted-foreground">
+                  <th className="px-4 py-2.5 font-semibold">Campaign</th>
+                  <th className="px-4 py-2.5 font-semibold">Status</th>
+                  <th className="px-4 py-2.5 text-right font-semibold">Delivered Orders</th>
+                  <th className="px-4 py-2.5 text-right font-semibold">Delivered Revenue</th>
+                  <th className="px-4 py-2.5 text-right font-semibold">Commission Paid</th>
+                  <th className="px-4 py-2.5 text-right font-semibold">Approved Ad Cost</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data?.map((c) => (
+                  <tr key={c.campaign_id} className="border-t border-border/60">
+                    <td className="px-4 py-2.5">{c.campaign_name}</td>
+                    <td className="px-4 py-2.5 text-xs text-muted-foreground">{c.status}</td>
+                    <td className="px-4 py-2.5 text-right">{c.delivered_orders}</td>
+                    <td className="px-4 py-2.5 text-right font-semibold">{formatCurrency(c.delivered_revenue, currency)}</td>
+                    <td className="px-4 py-2.5 text-right">{formatCurrency(c.total_commission_paid, currency)}</td>
+                    <td className="px-4 py-2.5 text-right">{formatCurrency(c.approved_ad_cost, currency)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+function AdCostReportTab({ canExport, currency }: { canExport: boolean; currency: string }) {
+  const { data, isLoading } = useAdCostSummary()
+
+  function handleExport() {
+    if (!data || data.length === 0) return
+    exportToCsv(
+      `ad-costs-${new Date().toISOString().slice(0, 10)}.csv`,
+      data.map((ac) => ({
+        campaign: ac.campaign_name ?? '',
+        period_start: ac.period_start,
+        period_end: ac.period_end,
+        cost: ac.initial_cost_amount,
+        initial_orders: ac.initial_orders_count,
+        delivered_orders: ac.delivered_orders_count ?? '',
+        initial_cost_per_order: ac.initial_cost_per_order ?? '',
+        delivered_cost_per_order: ac.delivered_cost_per_order ?? '',
+      })),
+    )
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Ad Costs Report</CardTitle>
+        <CardDescription>Only APPROVED entries are shown. "Initial Cost/Order" and "Delivered Cost/Order" — never "CPC", which implies per-click.</CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <ReportToolbar search="" onSearch={() => {}} onExport={handleExport} canExport={canExport} exportDisabled={!data || data.length === 0} />
+        {isLoading ? (
+          <LoadingState label="Loading ad costs…" />
+        ) : (data?.length ?? 0) === 0 ? (
+          <EmptyState icon={Lock} title="No approved ad cost entries yet" description="Approve at least one ad cost entry to see it here." />
+        ) : (
+          <div className="overflow-x-auto rounded-lg border border-border">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-xs uppercase tracking-wide text-muted-foreground">
+                  <th className="px-4 py-2.5 font-semibold">Campaign</th>
+                  <th className="px-4 py-2.5 font-semibold">Period</th>
+                  <th className="px-4 py-2.5 text-right font-semibold">Cost</th>
+                  <th className="px-4 py-2.5 text-right font-semibold">Initial Cost/Order</th>
+                  <th className="px-4 py-2.5 text-right font-semibold">Delivered Cost/Order</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data?.map((ac) => (
+                  <tr key={ac.id} className="border-t border-border/60">
+                    <td className="px-4 py-2.5">{ac.campaign_name ?? '—'}</td>
+                    <td className="px-4 py-2.5 text-xs text-muted-foreground">
+                      {new Date(ac.period_start).toLocaleDateString()} – {new Date(ac.period_end).toLocaleDateString()}
+                    </td>
+                    <td className="px-4 py-2.5 text-right font-semibold">{formatCurrency(ac.initial_cost_amount, currency)}</td>
+                    <td className="px-4 py-2.5 text-right">{ac.initial_cost_per_order !== null ? formatCurrency(ac.initial_cost_per_order, currency) : '—'}</td>
+                    <td className="px-4 py-2.5 text-right">{ac.delivered_cost_per_order !== null ? formatCurrency(ac.delivered_cost_per_order, currency) : '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   )
 }

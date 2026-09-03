@@ -35,6 +35,7 @@ const defaultFormValues: CreateOrderInput = {
   discountAmount: 0,
   priority: 'normal',
   internalNotes: '',
+  affiliateReferralCode: '',
 }
 
 export function CreateOrderPage() {
@@ -234,6 +235,18 @@ export function CreateOrderPage() {
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="sourceDetail">Source detail (optional)</Label>
                 <Input id="sourceDetail" placeholder="e.g. campaign name, landing page" {...register('sourceDetail')} />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="affiliateReferralCode">Affiliate referral code (optional)</Label>
+                <Input
+                  id="affiliateReferralCode"
+                  placeholder="e.g. AFF-4F2A9C"
+                  className="font-mono uppercase"
+                  {...register('affiliateReferralCode')}
+                />
+                <p className="text-xs text-muted-foreground">
+                  If this order came through an affiliate, enter their referral code to attribute it and calculate commission automatically.
+                </p>
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label>Priority</Label>

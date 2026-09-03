@@ -1,8 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
 import {
   BarChart3,
+  Banknote,
   FilePlus2,
   Layout,
+  Megaphone,
   Package,
   PlusCircle,
   Settings as SettingsIcon,
@@ -10,6 +12,7 @@ import {
   Sparkles,
   UserPlus,
   Users,
+  UsersRound,
   Wallet,
 } from 'lucide-react'
 import * as React from 'react'
@@ -28,6 +31,7 @@ import {
 import { usePermissions } from '@/contexts/PermissionsContext'
 import { useWorkspace } from '@/contexts/WorkspaceContext'
 import { allNavItems } from '@/data/navigation'
+import { fetchAffiliates } from '@/features/affiliates/api'
 import { fetchCustomers } from '@/features/customers/api'
 import { fetchLandingPages } from '@/features/landingPages/api'
 import { fetchOrders } from '@/features/orders/api'
@@ -49,6 +53,9 @@ const quickActions = [
   { label: 'Open Reports', href: '/reports', icon: BarChart3 },
   { label: 'Open Settings', href: '/settings', icon: SettingsIcon },
   { label: 'Invite Staff', href: '/staff', icon: UserPlus },
+  { label: 'New Affiliate', href: '/affiliates', icon: UsersRound },
+  { label: 'New Campaign', href: '/affiliates/campaigns/new', icon: Megaphone },
+  { label: 'Open Withdrawals', href: '/affiliates/withdrawals', icon: Banknote },
 ]
 
 export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
@@ -86,6 +93,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const canSearchProducts = hasPermission('products.view')
   const canSearchLandingPages = hasPermission('landing_pages.view')
   const canSearchStaff = hasPermission('staff.view')
+  const canSearchAffiliates = hasPermission('affiliates.view')
 
   const { data: orderResults } = useQuery({
     queryKey: ['command-order-search', activeWorkspace.id, brandId, term],
@@ -122,6 +130,12 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
       return name.includes(term.toLowerCase()) || s.email.toLowerCase().includes(term.toLowerCase())
     })
     .slice(0, 6)
+
+  const { data: affiliateResults } = useQuery({
+    queryKey: ['command-affiliate-search', activeWorkspace.id, term],
+    queryFn: () => fetchAffiliates(activeWorkspace.id, { search: term }),
+    enabled: searching && canSearchAffiliates,
+  })
 
   const visibleNavItems = allNavItems.filter((item) => !item.permission || hasPermission(item.permission))
 
@@ -236,6 +250,23 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
               <CommandItem key={s.user_id} value={`${s.first_name ?? ''} ${s.last_name ?? ''} ${s.email}`} onSelect={() => go(`/staff/${s.user_id}`)}>
                 <UserPlus className="h-4 w-4 text-muted-foreground" />
                 {[s.first_name, s.last_name].filter(Boolean).join(' ') || s.email}
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        )}
+
+        {searching && canSearchAffiliates && (
+          <CommandGroup heading="Affiliates">
+            {(affiliateResults?.length ?? 0) === 0 && (
+              <CommandItem disabled value={`no-affiliates-${term}`}>
+                No matching affiliates
+              </CommandItem>
+            )}
+            {affiliateResults?.slice(0, 6).map((affiliate) => (
+              <CommandItem key={affiliate.id} value={`${affiliate.full_name} ${affiliate.referral_code} ${affiliate.email ?? ''}`} onSelect={() => go(`/affiliates/${affiliate.id}`)}>
+                <UsersRound className="h-4 w-4 text-muted-foreground" />
+                <span className="flex-1">{affiliate.full_name}</span>
+                <span className="font-mono text-xs text-muted-foreground">{affiliate.referral_code}</span>
               </CommandItem>
             ))}
           </CommandGroup>

@@ -3,6 +3,15 @@ import { Route, Routes } from 'react-router-dom'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { allNavItems } from '@/data/navigation'
+import { AdCostsPage } from '@/features/adCosts/pages/AdCostsPage'
+import { AffiliateDetailPage } from '@/features/affiliates/pages/AffiliateDetailPage'
+import { AffiliatesPage } from '@/features/affiliates/pages/AffiliatesPage'
+import { AffiliatesLayout } from '@/features/affiliates/AffiliatesLayout'
+import { CampaignDetailPage } from '@/features/campaigns/pages/CampaignDetailPage'
+import { CampaignFormPage } from '@/features/campaigns/pages/CampaignFormPage'
+import { CampaignsPage } from '@/features/campaigns/pages/CampaignsPage'
+import { WalletsPage } from '@/features/wallets/pages/WalletsPage'
+import { WithdrawalsPage } from '@/features/withdrawals/pages/WithdrawalsPage'
 import { CategoriesPage } from '@/features/categories/pages/CategoriesPage'
 import { CreateCustomerPage } from '@/features/customers/pages/CreateCustomerPage'
 import { CustomerDetailPage } from '@/features/customers/pages/CustomerDetailPage'
@@ -57,7 +66,8 @@ const placeholderNavItems = allNavItems.filter(
     item.href !== '/workspace' &&
     item.href !== '/brands' &&
     item.href !== '/notifications' &&
-    item.href !== '/audit-logs',
+    item.href !== '/audit-logs' &&
+    item.href !== '/affiliates',
 )
 
 function App() {
@@ -135,6 +145,19 @@ function App() {
           <Route path="brands">
             <Route index element={<BrandsPage />} />
             <Route path=":id" element={<BrandDetailPage />} />
+          </Route>
+
+          <Route path="affiliates">
+            <Route path="campaigns/new" element={<CampaignFormPage />} />
+            <Route path="campaigns/:id" element={<CampaignDetailPage />} />
+            <Route element={<AffiliatesLayout />}>
+              <Route index element={<AffiliatesPage />} />
+              <Route path="campaigns" element={<CampaignsPage />} />
+              <Route path="credits" element={<WalletsPage />} />
+              <Route path="withdrawals" element={<WithdrawalsPage />} />
+              <Route path="ad-costs" element={<AdCostsPage />} />
+            </Route>
+            <Route path=":id" element={<AffiliateDetailPage />} />
           </Route>
 
           {placeholderNavItems.map((item) => (

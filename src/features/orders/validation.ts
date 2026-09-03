@@ -24,6 +24,7 @@ export const createOrderSchema = z.object({
   discountAmount: z.coerce.number().min(0),
   priority: z.enum(['normal', 'high', 'urgent']),
   internalNotes: z.string(),
+  affiliateReferralCode: z.string(),
 })
 
 export type CreateOrderInput = z.input<typeof createOrderSchema>

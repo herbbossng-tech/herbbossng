@@ -12,7 +12,9 @@ import { Progress } from '@/components/ui/progress'
 import { PermissionGate, usePermission } from '@/contexts/PermissionsContext'
 import { useWorkspace } from '@/contexts/WorkspaceContext'
 import { mediaBuyers, nonOrderKpis, topProducts } from '@/data/mockData'
+import { useAffiliates } from '@/features/affiliates/hooks'
 import { useRecentNotifications } from '@/features/notifications/hooks'
+import { useWithdrawals } from '@/features/withdrawals/hooks'
 import { useLandingPages } from '@/features/landingPages/hooks'
 import { OrderStatusBadge } from '@/features/orders/components/OrderStatusBadge'
 import { useOrderDailyStats, useOrders, useOrderStats } from '@/features/orders/hooks'
@@ -148,6 +150,32 @@ export function Dashboard() {
   )
 }
 
+// Deliberately small: two counts, not a second Finance dashboard.
+// Hidden entirely (not just zeroed) for anyone without affiliates.view.
+function GrowthKpiSection() {
+  const canView = usePermission('affiliates.view')
+  if (!canView) return null
+  return <GrowthKpiContent />
+}
+
+function GrowthKpiContent() {
+  const canViewWithdrawals = usePermission('withdrawals.view')
+  const { data: activeAffiliates } = useAffiliates({ approvalStatus: 'approved', status: 'active' })
+  const { data: pendingWithdrawals } = useWithdrawals({ status: 'PENDING' })
+
+  return (
+    <div>
+      <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-muted-foreground">Growth</h2>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <StatCard label="Active Affiliates" value={String((activeAffiliates ?? []).length)} icon="userCheck" compact />
+        {canViewWithdrawals && (
+          <StatCard label="Pending Withdrawals" value={String((pendingWithdrawals ?? []).length)} icon="wallet" compact />
+        )}
+      </div>
+    </div>
+  )
+}
+
 function OrdersPermissionNotice() {
   return (
     <Card className="p-8">
@@ -224,6 +252,8 @@ function OrderDrivenSections() {
           ))}
         </div>
       </div>
+
+      <GrowthKpiSection />
 
       {/* Charts row */}
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">

@@ -120,6 +120,11 @@ export function OrderDetailPage() {
                 <div className="flex items-center gap-1.5">
                   <p className="font-medium text-foreground">{order.customer_name}</p>
                   {order.is_repeat_customer && <Badge variant="info">Repeat customer</Badge>}
+                  {order.affiliate_id && (
+                    <Link to={`/affiliates/${order.affiliate_id}`}>
+                      <Badge variant="secondary">Affiliate: {order.affiliate_referral_code_used}</Badge>
+                    </Link>
+                  )}
                 </div>
               </div>
               <div>

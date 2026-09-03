@@ -80,6 +80,12 @@ export type PermissionModule =
   | 'customers'
   | 'inventory'
   | 'affiliates'
+  | 'campaigns'
+  | 'commissions'
+  | 'wallets'
+  | 'withdrawals'
+  | 'ad_costs'
+  | 'affiliate_reports'
   | 'marketing'
   | 'analytics'
   | 'reports'
@@ -380,6 +386,12 @@ export interface Order {
   idempotency_key: string | null
   /** Computed once, server-side, by create_order() from prior orders with a matching phone number. Never a status. */
   is_repeat_customer: boolean
+
+  /** The affiliate credited with this order, resolved server-side from a referral code — never client-supplied directly. */
+  affiliate_id: string | null
+  /** The ACTIVE campaign this order was attributed to at creation time. Null if a valid affiliate was resolved but no live campaign covered any ordered product. */
+  affiliate_campaign_id: string | null
+  affiliate_referral_code_used: string | null
 
   created_at: string
   updated_at: string
@@ -793,6 +805,259 @@ export interface LandingPageAnalyticsRow {
   returned_orders: number
   cancelled_orders: number
   average_order_value: number
+}
+
+// ---------------------------------------------------------------
+// Affiliates, Campaigns, Commissions, Wallets, Withdrawals & Ad
+// Costs (migration 0024). See that migration for the full field
+// semantics — approval_status/status on Affiliate can only change via
+// approve_affiliate()/reject_affiliate()/suspend_affiliate()/
+// reactivate_affiliate(); AffiliateCampaign's status can only change
+// via a direct update gated by RLS + the guard_campaign_status_
+// transition() trigger.
+// ---------------------------------------------------------------
+
+export interface Affiliate {
+  id: string
+  workspace_id: string
+  full_name: string
+  email: string | null
+  phone: string | null
+  business_name: string | null
+  referral_code: string
+  approval_status: 'pending' | 'approved' | 'rejected'
+  status: 'active' | 'suspended'
+  applied_at: string
+  approved_at: string | null
+  approved_by: string | null
+  rejected_at: string | null
+  rejected_by: string | null
+  rejection_reason: string | null
+  suspended_at: string | null
+  suspended_by: string | null
+  suspension_reason: string | null
+  payout_method: Json
+  notes: string | null
+  tags: string[]
+  created_at: string
+  updated_at: string
+  created_by: string | null
+  updated_by: string | null
+  deleted_at: string | null
+}
+
+export type CampaignStatus = 'DRAFT' | 'ACTIVE' | 'PAUSED' | 'ARCHIVED'
+export type CommissionType = 'FIXED_AMOUNT' | 'PERCENTAGE'
+export type QualifyingEvent = 'PER_ORDER_CREATED' | 'PER_DELIVERED_ORDER'
+export type AffiliateAccess = 'ALL_APPROVED_AFFILIATES' | 'SELECTED_AFFILIATES_ONLY'
+
+export interface AffiliateCampaign {
+  id: string
+  workspace_id: string
+  brand_id: string
+  name: string
+  slug: string
+  description: string | null
+  status: CampaignStatus
+  commission_type: CommissionType
+  commission_value: number
+  qualifying_event: QualifyingEvent
+  affiliate_access: AffiliateAccess
+  allowed_activities: string[]
+  start_at: string | null
+  end_at: string | null
+  created_at: string
+  updated_at: string
+  created_by: string | null
+  updated_by: string | null
+  deleted_at: string | null
+}
+
+export interface AffiliateCampaignProduct {
+  id: string
+  campaign_id: string
+  product_id: string
+  created_at: string
+  created_by: string | null
+}
+
+export interface AffiliateCampaignAffiliate {
+  id: string
+  campaign_id: string
+  affiliate_id: string
+  relationship: 'ACCESS' | 'COMMISSION_EXCEPTION'
+  created_at: string
+  created_by: string | null
+}
+
+export interface AffiliateCampaignAsset {
+  id: string
+  campaign_id: string
+  name: string
+  file_path: string
+  file_type: string | null
+  file_size: number | null
+  created_at: string
+  created_by: string | null
+}
+
+export interface AffiliateCommission {
+  id: string
+  workspace_id: string
+  campaign_id: string
+  affiliate_id: string
+  order_id: string
+  qualifying_event: QualifyingEvent
+  commission_base_amount: number
+  commission_type: CommissionType
+  commission_value: number
+  commission_amount: number
+  currency_code: string
+  status: 'ELIGIBLE' | 'EXEMPT' | 'REVERSED'
+  wallet_transaction_id: string | null
+  reversed_at: string | null
+  reversed_reason: string | null
+  reversal_wallet_transaction_id: string | null
+  created_at: string
+}
+
+export interface AffiliateWallet {
+  id: string
+  workspace_id: string
+  affiliate_id: string
+  balance: number
+  reserved_balance: number
+  currency_code: string
+  created_at: string
+  updated_at: string
+}
+
+export type WalletTransactionType =
+  | 'COMMISSION_EARNED'
+  | 'COMMISSION_REVERSED'
+  | 'MANUAL_CREDIT'
+  | 'MANUAL_DEBIT'
+  | 'WITHDRAWAL_RESERVED'
+  | 'WITHDRAWAL_RELEASED'
+  | 'WITHDRAWAL_PAID'
+
+export interface AffiliateWalletTransaction {
+  id: string
+  workspace_id: string
+  wallet_id: string
+  affiliate_id: string
+  transaction_type: WalletTransactionType
+  amount: number
+  reserved_delta: number
+  reference_type: string | null
+  reference_id: string | null
+  description: string | null
+  created_by: string | null
+  created_at: string
+}
+
+export interface AffiliateWithdrawal {
+  id: string
+  workspace_id: string
+  affiliate_id: string
+  amount: number
+  currency_code: string
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'PAID'
+  payout_method: Json
+  note: string | null
+  requested_at: string
+  requested_by: string | null
+  reviewed_at: string | null
+  reviewed_by: string | null
+  rejection_reason: string | null
+  paid_at: string | null
+  paid_by: string | null
+  payment_reference: string | null
+  reserve_transaction_id: string | null
+  release_transaction_id: string | null
+  paid_transaction_id: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface AdCost {
+  id: string
+  workspace_id: string
+  brand_id: string
+  campaign_id: string | null
+  affiliate_id: string | null
+  product_id: string | null
+  period_start: string
+  period_end: string
+  initial_cost_amount: number
+  initial_orders_count: number
+  delivered_orders_count: number | null
+  currency_code: string
+  status: 'PENDING' | 'APPROVED' | 'REJECTED'
+  notes: string | null
+  submitted_by: string | null
+  submitted_at: string
+  reviewed_by: string | null
+  reviewed_at: string | null
+  rejection_reason: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface AffiliatePerformanceRow {
+  affiliate_id: string
+  affiliate_name: string
+  referral_code: string
+  total_orders: number
+  delivered_orders: number
+  delivered_revenue: number
+  total_commission_earned: number
+  total_commission_reversed: number
+  net_commission: number
+  wallet_balance: number
+  wallet_reserved_balance: number
+}
+
+export interface CampaignPerformanceRow {
+  campaign_id: string
+  campaign_name: string
+  status: CampaignStatus
+  total_orders: number
+  delivered_orders: number
+  delivered_revenue: number
+  total_commission_paid: number
+  approved_ad_cost: number
+  initial_orders_for_ad_cost: number
+  delivered_orders_for_ad_cost: number
+}
+
+export interface ProductAffiliatePerformanceRow {
+  product_id: string
+  product_name: string
+  campaign_id: string
+  campaign_name: string
+  delivered_orders: number
+  delivered_revenue: number
+  total_commission_paid: number
+}
+
+export interface AdCostSummaryRow {
+  id: string
+  campaign_id: string | null
+  campaign_name: string | null
+  affiliate_id: string | null
+  affiliate_name: string | null
+  product_id: string | null
+  product_name: string | null
+  period_start: string
+  period_end: string
+  initial_cost_amount: number
+  initial_orders_count: number
+  delivered_orders_count: number | null
+  initial_cost_per_order: number | null
+  delivered_cost_per_order: number | null
+  currency_code: string
+  status: 'PENDING' | 'APPROVED' | 'REJECTED'
 }
 
 /**
