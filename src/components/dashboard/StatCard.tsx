@@ -1,4 +1,5 @@
 import {
+  ArrowRight,
   Boxes,
   CheckCircle2,
   Clock,
@@ -12,6 +13,7 @@ import {
   UserCheck,
   Wallet,
 } from 'lucide-react'
+import { Link } from 'react-router-dom'
 
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
@@ -49,6 +51,9 @@ export interface StatCardProps {
   highlight?: boolean
   tone?: keyof typeof toneClasses
   compact?: boolean
+  /** Optional "View records"-style link rendered as a footer row. */
+  href?: string
+  actionLabel?: string
 }
 
 export function StatCard({
@@ -64,6 +69,8 @@ export function StatCard({
   highlight,
   tone = 'default',
   compact,
+  href,
+  actionLabel = 'View records',
 }: StatCardProps) {
   const Icon = iconMap[icon] ?? ShoppingCart
   const TrendIcon = trend === 'up' ? TrendingUp : TrendingDown
@@ -108,6 +115,16 @@ export function StatCard({
           )}
           <span className="truncate text-muted-foreground">{sub ?? deltaLabel}</span>
         </div>
+      )}
+
+      {href && (
+        <Link
+          to={href}
+          className="mt-3 flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+        >
+          {actionLabel}
+          <ArrowRight className="h-3 w-3" />
+        </Link>
       )}
     </Card>
   )

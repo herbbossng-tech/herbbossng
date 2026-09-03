@@ -10,10 +10,13 @@ export type DateRangePreset =
   | 'today'
   | 'yesterday'
   | 'last7days'
+  | 'last14days'
   | 'last30days'
+  | 'thisWeek'
   | 'thisMonth'
   | 'lastMonth'
   | 'thisYear'
+  | 'allTime'
   | 'custom'
 
 export interface DateRangeValue {
@@ -26,10 +29,13 @@ export const dateRangePresetLabels: Record<DateRangePreset, string> = {
   today: 'Today',
   yesterday: 'Yesterday',
   last7days: 'Last 7 Days',
+  last14days: 'Last 14 Days',
   last30days: 'Last 30 Days',
+  thisWeek: 'This Week',
   thisMonth: 'This Month',
   lastMonth: 'Last Month',
   thisYear: 'This Year',
+  allTime: 'All Time',
   custom: 'Custom Range',
 }
 
@@ -69,8 +75,19 @@ export function resolveDateRange(preset: DateRangePreset, timezone: string, cust
     }
     case 'last7days':
       return { preset, from: zonedDayBoundary(addDays(todayStart, -6), timezone, false).toISOString(), to: todayEnd.toISOString() }
+    case 'last14days':
+      return { preset, from: zonedDayBoundary(addDays(todayStart, -13), timezone, false).toISOString(), to: todayEnd.toISOString() }
     case 'last30days':
       return { preset, from: zonedDayBoundary(addDays(todayStart, -29), timezone, false).toISOString(), to: todayEnd.toISOString() }
+    case 'thisWeek': {
+      // Monday-start week, in the workspace's own timezone.
+      const isoDow = new Intl.DateTimeFormat('en-US', { timeZone: timezone, weekday: 'short' }).format(now)
+      const dowIndex = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].indexOf(isoDow)
+      const weekStart = zonedDayBoundary(addDays(todayStart, dowIndex >= 0 ? -dowIndex : 0), timezone, false)
+      return { preset, from: weekStart.toISOString(), to: todayEnd.toISOString() }
+    }
+    case 'allTime':
+      return { preset, from: null, to: null }
     case 'thisMonth': {
       const parts = new Intl.DateTimeFormat('en-US', { timeZone: timezone, year: 'numeric', month: '2-digit' }).formatToParts(now)
       const y = parts.find((p) => p.type === 'year')?.value

@@ -3,7 +3,19 @@ import { Input } from '@/components/ui/input'
 
 import { dateRangePresetLabels, formatDateRangeLabel, type DateRangePreset, type DateRangeValue } from '../dateRanges'
 
-const PRESETS: DateRangePreset[] = ['today', 'yesterday', 'last7days', 'last30days', 'thisMonth', 'lastMonth', 'thisYear', 'custom']
+const PRESETS: DateRangePreset[] = [
+  'today',
+  'yesterday',
+  'last7days',
+  'last14days',
+  'last30days',
+  'thisWeek',
+  'thisMonth',
+  'lastMonth',
+  'thisYear',
+  'allTime',
+  'custom',
+]
 
 export function DateRangeFilter({
   value,
