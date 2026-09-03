@@ -86,6 +86,12 @@ export type PermissionModule =
   | 'withdrawals'
   | 'ad_costs'
   | 'affiliate_reports'
+  | 'operations'
+  | 'fulfillment'
+  | 'waybills'
+  | 'delivery_partners'
+  | 'tasks'
+  | 'settlement'
   | 'marketing'
   | 'analytics'
   | 'reports'
@@ -392,6 +398,14 @@ export interface Order {
   /** The ACTIVE campaign this order was attributed to at creation time. Null if a valid affiliate was resolved but no live campaign covered any ordered product. */
   affiliate_campaign_id: string | null
   affiliate_referral_code_used: string | null
+
+  packed_at: string | null
+  packed_by: string | null
+  /** Trigger-maintained from delivery_attempts — never written directly. */
+  delivery_attempts_count: number
+  failed_delivery_reason: string | null
+  settlement_status: 'PENDING' | 'PARTIALLY_SETTLED' | 'SETTLED' | 'DISPUTED'
+  settled_at: string | null
 
   created_at: string
   updated_at: string
@@ -1058,6 +1072,152 @@ export interface AdCostSummaryRow {
   delivered_cost_per_order: number | null
   currency_code: string
   status: 'PENDING' | 'APPROVED' | 'REJECTED'
+}
+
+// ---------------------------------------------------------------
+// COD Operations, Fulfillment & Delivery Control (migration 0025).
+// See that migration for full field semantics.
+// ---------------------------------------------------------------
+
+export type OrderTaskType = 'CONFIRM_ORDER' | 'CALL_BACK' | 'VERIFY_ADDRESS' | 'DELIVERY_FOLLOW_UP' | 'FAILED_DELIVERY' | 'CUSTOMER_REQUEST' | 'OTHER'
+export type OrderTaskStatus = 'OPEN' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
+export type TaskPriority = 'low' | 'normal' | 'high' | 'urgent'
+
+export interface OrderTask {
+  id: string
+  workspace_id: string
+  brand_id: string
+  order_id: string
+  customer_id: string | null
+  task_type: OrderTaskType
+  title: string
+  description: string | null
+  priority: TaskPriority
+  status: OrderTaskStatus
+  assigned_to: string | null
+  due_at: string | null
+  completed_at: string | null
+  created_at: string
+  updated_at: string
+  created_by: string | null
+  updated_by: string | null
+}
+
+export interface DeliveryPartner {
+  id: string
+  workspace_id: string
+  name: string
+  contact_name: string | null
+  contact_phone: string | null
+  contact_email: string | null
+  coverage_areas: string[]
+  status: 'active' | 'inactive'
+  notes: string | null
+  created_at: string
+  updated_at: string
+  created_by: string | null
+  updated_by: string | null
+  deleted_at: string | null
+}
+
+export type WaybillStatus = 'CREATED' | 'READY' | 'DISPATCHED' | 'IN_TRANSIT' | 'OUT_FOR_DELIVERY' | 'DELIVERED' | 'FAILED' | 'RETURNED' | 'CANCELLED'
+
+export interface Waybill {
+  id: string
+  workspace_id: string
+  brand_id: string
+  order_id: string
+  waybill_number: string
+  delivery_partner_id: string | null
+  destination_address: string | null
+  destination_state: string | null
+  cod_amount: number
+  status: WaybillStatus
+  dispatched_at: string | null
+  delivered_at: string | null
+  returned_at: string | null
+  notes: string | null
+  created_at: string
+  updated_at: string
+  created_by: string | null
+  updated_by: string | null
+}
+
+export type DeliveryAttemptResult = 'DELIVERED' | 'CUSTOMER_UNAVAILABLE' | 'CUSTOMER_REFUSED' | 'WRONG_ADDRESS' | 'RESCHEDULED' | 'OTHER'
+
+export interface DeliveryAttempt {
+  id: string
+  workspace_id: string
+  brand_id: string
+  order_id: string
+  waybill_id: string | null
+  delivery_partner_id: string | null
+  attempt_number: number
+  result: DeliveryAttemptResult
+  failure_reason: string | null
+  notes: string | null
+  attempted_at: string
+  created_by: string | null
+}
+
+export interface OrderSettlement {
+  id: string
+  workspace_id: string
+  brand_id: string
+  order_id: string
+  expected_amount: number
+  collected_amount: number
+  delivery_fee: number
+  remitted_amount: number
+  discrepancy: number
+  status: 'PENDING' | 'PARTIALLY_SETTLED' | 'SETTLED' | 'DISPUTED'
+  settled_at: string | null
+  settled_by: string | null
+  dispute_reason: string | null
+  notes: string | null
+  created_at: string
+  updated_at: string
+  created_by: string | null
+}
+
+export interface OperationsSummary {
+  awaiting_confirmation_count: number
+  scheduled_count: number
+  processing_count: number
+  dispatched_count: number
+  in_transit_count: number
+  partially_delivered_count: number
+  returned_count: number
+  failed_deliveries_count: number
+  pending_cash_collection_count: number
+  pending_cash_collection_amount: number
+  settlement_exceptions_count: number
+  settlement_outstanding_amount: number
+}
+
+export interface RescueBoardRow {
+  order_id: string
+  order_number: string
+  customer_name: string
+  customer_phone: string
+  total_amount: number
+  currency_code: string
+  status: OrderStatus
+  issue: string
+  priority: 'normal' | 'high' | 'urgent'
+  assigned_to: string | null
+  scheduled_at: string | null
+  delivery_attempts_count: number
+  open_task_count: number
+  last_event_at: string | null
+}
+
+export interface TaskStats {
+  open_count: number
+  in_progress_count: number
+  overdue_count: number
+  due_today_count: number
+  completed_today_count: number
 }
 
 /**

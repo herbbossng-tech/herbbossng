@@ -10,12 +10,16 @@ import {
   createOrder,
   fetchOrder,
   fetchOrderDailyStats,
+  fetchOrderDeliveryAttempts,
   fetchOrderItems,
   fetchOrderNotes,
   fetchOrders,
   fetchOrderStats,
   fetchOrderStatusTransitions,
   fetchOrderTimeline,
+  markOrderPacked,
+  recordCashCollection,
+  recordDeliveryAttempt,
   setOrderTags,
   transitionOrderStatus,
   updateOrder,
@@ -209,6 +213,44 @@ export function useAssignOrder(id: string) {
       if (!user) throw new Error('You must be signed in')
       return assignOrder(id, assignedTo, user.id)
     },
+    onSuccess: invalidate,
+  })
+}
+
+export function useOrderDeliveryAttempts(orderId: string | undefined) {
+  return useQuery({
+    queryKey: ['order-delivery-attempts', orderId ?? ''],
+    queryFn: () => fetchOrderDeliveryAttempts(orderId as string),
+    enabled: Boolean(orderId),
+  })
+}
+
+export function useRecordDeliveryAttempt(id: string) {
+  const invalidate = useOrderDetailInvalidate(id)
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (input: { result: string; waybillId?: string | null; deliveryPartnerId?: string | null; failureReason?: string | null; notes?: string | null }) =>
+      recordDeliveryAttempt(id, input.result, input.waybillId, input.deliveryPartnerId, input.failureReason, input.notes),
+    onSuccess: () => {
+      invalidate()
+      queryClient.invalidateQueries({ queryKey: ['order-delivery-attempts', id] })
+    },
+  })
+}
+
+export function useMarkOrderPacked(id: string) {
+  const invalidate = useOrderDetailInvalidate(id)
+  return useMutation({
+    mutationFn: () => markOrderPacked(id),
+    onSuccess: invalidate,
+  })
+}
+
+export function useRecordCashCollection(id: string) {
+  const invalidate = useOrderDetailInvalidate(id)
+  return useMutation({
+    mutationFn: (input: { amount: number; note?: string | null }) => recordCashCollection(id, input.amount, input.note),
     onSuccess: invalidate,
   })
 }

@@ -12,6 +12,13 @@ import { CampaignFormPage } from '@/features/campaigns/pages/CampaignFormPage'
 import { CampaignsPage } from '@/features/campaigns/pages/CampaignsPage'
 import { WalletsPage } from '@/features/wallets/pages/WalletsPage'
 import { WithdrawalsPage } from '@/features/withdrawals/pages/WithdrawalsPage'
+import { DeliveryPartnersPage } from '@/features/deliveryPartners/pages/DeliveryPartnersPage'
+import { OperationsLayout } from '@/features/operations/OperationsLayout'
+import { OperationsDashboardPage } from '@/features/operations/pages/OperationsDashboardPage'
+import { RescueBoardPage } from '@/features/operations/pages/RescueBoardPage'
+import { SettlementPage } from '@/features/settlement/pages/SettlementPage'
+import { TaskManagerPage } from '@/features/tasks/pages/TaskManagerPage'
+import { WaybillsPage } from '@/features/waybills/pages/WaybillsPage'
 import { CategoriesPage } from '@/features/categories/pages/CategoriesPage'
 import { CreateCustomerPage } from '@/features/customers/pages/CreateCustomerPage'
 import { CustomerDetailPage } from '@/features/customers/pages/CustomerDetailPage'
@@ -67,7 +74,8 @@ const placeholderNavItems = allNavItems.filter(
     item.href !== '/brands' &&
     item.href !== '/notifications' &&
     item.href !== '/audit-logs' &&
-    item.href !== '/affiliates',
+    item.href !== '/affiliates' &&
+    item.href !== '/operations',
 )
 
 function App() {
@@ -158,6 +166,17 @@ function App() {
               <Route path="ad-costs" element={<AdCostsPage />} />
             </Route>
             <Route path=":id" element={<AffiliateDetailPage />} />
+          </Route>
+
+          <Route path="operations">
+            <Route element={<OperationsLayout />}>
+              <Route index element={<OperationsDashboardPage />} />
+              <Route path="rescue-board" element={<RescueBoardPage />} />
+              <Route path="tasks" element={<TaskManagerPage />} />
+              <Route path="waybills" element={<WaybillsPage />} />
+              <Route path="delivery-partners" element={<DeliveryPartnersPage />} />
+              <Route path="settlement" element={<SettlementPage />} />
+            </Route>
           </Route>
 
           {placeholderNavItems.map((item) => (

@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   ShoppingCart,
   Sparkles,
+  Truck,
   UserSquare2,
   Users,
   UsersRound,
@@ -45,6 +46,10 @@ export const navSections: NavSection[] = [
       { label: 'Landing Pages', href: '/landing-pages', icon: Boxes, permission: 'landing_pages.view' },
       { label: 'Customers', href: '/customers', icon: UserSquare2, permission: 'customers.view' },
     ],
+  },
+  {
+    label: 'Operations',
+    items: [{ label: 'Operations', href: '/operations', icon: Truck, permission: 'operations.view' }],
   },
   {
     label: 'Finance',

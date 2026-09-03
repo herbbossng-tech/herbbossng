@@ -1,5 +1,7 @@
 import { supabase } from '@/lib/supabase'
 import type {
+  DeliveryAttempt,
+  DeliveryPartner,
   Order,
   OrderDailyStat,
   OrderEvent,
@@ -306,6 +308,56 @@ export async function assignOrder(id: string, assignedTo: string | null, userId:
     .update({ assigned_to: assignedTo, updated_by: userId })
     .eq('id', id)
     .select('*')
+    .single()
+  if (error) throw error
+  return data as Order
+}
+
+export interface DeliveryAttemptRow extends DeliveryAttempt {
+  delivery_partner: Pick<DeliveryPartner, 'id' | 'name'> | null
+}
+
+export async function fetchOrderDeliveryAttempts(orderId: string): Promise<DeliveryAttemptRow[]> {
+  const { data, error } = await supabase
+    .from('delivery_attempts')
+    .select('*, delivery_partner:delivery_partners(id, name)')
+    .eq('order_id', orderId)
+    .order('attempt_number', { ascending: false })
+  if (error) throw error
+  return (data ?? []) as unknown as DeliveryAttemptRow[]
+}
+
+export async function recordDeliveryAttempt(
+  orderId: string,
+  result: string,
+  waybillId?: string | null,
+  deliveryPartnerId?: string | null,
+  failureReason?: string | null,
+  notes?: string | null,
+): Promise<DeliveryAttempt> {
+  const { data, error } = await supabase
+    .rpc('record_delivery_attempt', {
+      p_order_id: orderId,
+      p_result: result,
+      p_waybill_id: waybillId ?? null,
+      p_delivery_partner_id: deliveryPartnerId ?? null,
+      p_failure_reason: failureReason ?? null,
+      p_notes: notes ?? null,
+    })
+    .single()
+  if (error) throw error
+  return data as DeliveryAttempt
+}
+
+export async function markOrderPacked(orderId: string): Promise<Order> {
+  const { data, error } = await supabase.rpc('mark_order_packed', { p_order_id: orderId }).single()
+  if (error) throw error
+  return data as Order
+}
+
+export async function recordCashCollection(orderId: string, amount: number, note?: string | null): Promise<Order> {
+  const { data, error } = await supabase
+    .rpc('record_cash_collection', { p_order_id: orderId, p_amount: amount, p_note: note ?? null })
     .single()
   if (error) throw error
   return data as Order
