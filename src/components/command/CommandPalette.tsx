@@ -2,13 +2,18 @@ import { useQuery } from '@tanstack/react-query'
 import {
   BarChart3,
   Banknote,
+  Building2,
   FilePlus2,
+  History,
   Layout,
   Megaphone,
   Package,
   PlusCircle,
   Settings as SettingsIcon,
+  ShieldAlert,
+  ShieldCheck,
   ShoppingCart,
+  Shuffle,
   Sparkles,
   UserPlus,
   Users,
@@ -32,10 +37,13 @@ import { usePermissions } from '@/contexts/PermissionsContext'
 import { useWorkspace } from '@/contexts/WorkspaceContext'
 import { allNavItems } from '@/data/navigation'
 import { fetchAffiliates } from '@/features/affiliates/api'
+import { fetchAuditLogs } from '@/features/auditLogs/api'
+import { fetchBrands } from '@/features/brands/api'
 import { fetchCustomers } from '@/features/customers/api'
 import { fetchLandingPages } from '@/features/landingPages/api'
 import { fetchOrders } from '@/features/orders/api'
 import { fetchProducts } from '@/features/products/api'
+import { fetchRoles } from '@/features/roles/api'
 import { fetchWorkspaceStaff } from '@/features/staff/api'
 
 interface CommandPaletteProps {
@@ -56,6 +64,9 @@ const quickActions = [
   { label: 'New Affiliate', href: '/affiliates', icon: UsersRound },
   { label: 'New Campaign', href: '/affiliates/campaigns/new', icon: Megaphone },
   { label: 'Open Withdrawals', href: '/affiliates/withdrawals', icon: Banknote },
+  { label: 'Create Role', href: '/roles', icon: ShieldCheck },
+  { label: 'Assignment Rules', href: '/settings/assignment-rules', icon: Shuffle },
+  { label: 'Approval Rules', href: '/settings/approval-rules', icon: ShieldAlert },
 ]
 
 export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
@@ -94,6 +105,9 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const canSearchLandingPages = hasPermission('landing_pages.view')
   const canSearchStaff = hasPermission('staff.view')
   const canSearchAffiliates = hasPermission('affiliates.view')
+  const canSearchRoles = hasPermission('roles_permissions.view')
+  const canSearchBrands = hasPermission('brands.view')
+  const canSearchAuditLogs = hasPermission('audit_logs.view')
 
   const { data: orderResults } = useQuery({
     queryKey: ['command-order-search', activeWorkspace.id, brandId, term],
@@ -135,6 +149,25 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     queryKey: ['command-affiliate-search', activeWorkspace.id, term],
     queryFn: () => fetchAffiliates(activeWorkspace.id, { search: term }),
     enabled: searching && canSearchAffiliates,
+  })
+
+  const { data: roleResults } = useQuery({
+    queryKey: ['command-role-search', activeWorkspace.id],
+    queryFn: () => fetchRoles(activeWorkspace.id),
+    enabled: searching && canSearchRoles,
+  })
+  const filteredRoles = (roleResults ?? []).filter((r) => r.name.toLowerCase().includes(term.toLowerCase())).slice(0, 6)
+
+  const { data: brandResults } = useQuery({
+    queryKey: ['command-brand-search', activeWorkspace.id, term],
+    queryFn: () => fetchBrands(activeWorkspace.id, { search: term }),
+    enabled: searching && canSearchBrands,
+  })
+
+  const { data: auditLogResults } = useQuery({
+    queryKey: ['command-audit-log-search', activeWorkspace.id, term],
+    queryFn: () => fetchAuditLogs(activeWorkspace.id, { search: term, pageSize: 6 }),
+    enabled: searching && canSearchAuditLogs,
   })
 
   const visibleNavItems = allNavItems.filter((item) => !item.permission || hasPermission(item.permission))
@@ -267,6 +300,58 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                 <UsersRound className="h-4 w-4 text-muted-foreground" />
                 <span className="flex-1">{affiliate.full_name}</span>
                 <span className="font-mono text-xs text-muted-foreground">{affiliate.referral_code}</span>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        )}
+
+        {searching && canSearchRoles && (
+          <CommandGroup heading="Roles">
+            {filteredRoles.length === 0 && (
+              <CommandItem disabled value={`no-roles-${term}`}>
+                No matching roles
+              </CommandItem>
+            )}
+            {filteredRoles.map((role) => (
+              <CommandItem key={role.id} value={role.name} onSelect={() => go(`/roles/${role.id}`)}>
+                <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+                <span className="flex-1">{role.name}</span>
+                {role.is_system_role && <span className="text-xs text-muted-foreground">System</span>}
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        )}
+
+        {searching && canSearchBrands && (
+          <CommandGroup heading="Brands">
+            {(brandResults?.length ?? 0) === 0 && (
+              <CommandItem disabled value={`no-brands-${term}`}>
+                No matching brands
+              </CommandItem>
+            )}
+            {brandResults?.slice(0, 6).map((brand) => (
+              <CommandItem key={brand.id} value={`${brand.name} ${brand.slug}`} onSelect={() => go(`/brands/${brand.id}`)}>
+                <Building2 className="h-4 w-4 text-muted-foreground" />
+                {brand.name}
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        )}
+
+        {searching && canSearchAuditLogs && (
+          <CommandGroup heading="Audit Logs">
+            {(auditLogResults?.rows.length ?? 0) === 0 && (
+              <CommandItem disabled value={`no-audit-logs-${term}`}>
+                No matching audit log entries
+              </CommandItem>
+            )}
+            {auditLogResults?.rows.map((log) => (
+              <CommandItem key={log.id} value={`${log.module} ${log.action} ${log.entity_type ?? ''}`} onSelect={() => go('/audit-logs')}>
+                <History className="h-4 w-4 text-muted-foreground" />
+                <span className="flex-1">
+                  {log.module} · {log.action}
+                </span>
+                <span className="text-xs text-muted-foreground">{new Date(log.created_at).toLocaleDateString()}</span>
               </CommandItem>
             ))}
           </CommandGroup>

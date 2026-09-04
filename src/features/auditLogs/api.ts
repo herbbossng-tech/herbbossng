@@ -9,6 +9,7 @@ export interface AuditLogFilters {
   module?: string | 'all'
   action?: string | 'all'
   entityType?: string
+  brandId?: string | 'all'
   page?: number
   pageSize?: number
 }
@@ -34,6 +35,7 @@ export async function fetchAuditLogs(workspaceId: string, filters: AuditLogFilte
   if (filters.module && filters.module !== 'all') query = query.eq('module', filters.module)
   if (filters.action && filters.action !== 'all') query = query.eq('action', filters.action)
   if (filters.entityType) query = query.eq('entity_type', filters.entityType)
+  if (filters.brandId && filters.brandId !== 'all') query = query.eq('brand_id', filters.brandId)
   if (filters.search) {
     const term = filters.search.trim()
     query = query.or(`module.ilike.%${term}%,action.ilike.%${term}%,entity_type.ilike.%${term}%`)

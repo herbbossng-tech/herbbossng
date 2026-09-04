@@ -4,6 +4,8 @@ import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { allNavItems } from '@/data/navigation'
 import { AdCostsPage } from '@/features/adCosts/pages/AdCostsPage'
+import { ApprovalRulesPage } from '@/features/approvalRules/pages/ApprovalRulesPage'
+import { AssignmentRulesPage } from '@/features/assignmentRules/pages/AssignmentRulesPage'
 import { AffiliateDetailPage } from '@/features/affiliates/pages/AffiliateDetailPage'
 import { AffiliatesPage } from '@/features/affiliates/pages/AffiliatesPage'
 import { AffiliatesLayout } from '@/features/affiliates/AffiliatesLayout'
@@ -47,6 +49,7 @@ import { ProductsLayout } from '@/features/products/ProductsLayout'
 import { ReportsPage } from '@/features/reports/pages/ReportsPage'
 import { RoleDetailPage } from '@/features/roles/pages/RoleDetailPage'
 import { RolesPage } from '@/features/roles/pages/RolesPage'
+import { SettingsPage } from '@/features/settings/pages/SettingsPage'
 import { StaffDetailPage } from '@/features/staff/pages/StaffDetailPage'
 import { StaffPage } from '@/features/staff/pages/StaffPage'
 import { WorkspaceSettingsPage } from '@/features/workspace/pages/WorkspaceSettingsPage'
@@ -75,7 +78,8 @@ const placeholderNavItems = allNavItems.filter(
     item.href !== '/notifications' &&
     item.href !== '/audit-logs' &&
     item.href !== '/affiliates' &&
-    item.href !== '/operations',
+    item.href !== '/operations' &&
+    item.href !== '/settings',
 )
 
 function App() {
@@ -149,6 +153,12 @@ function App() {
           <Route path="workspace" element={<WorkspaceSettingsPage />} />
           <Route path="notifications" element={<NotificationsPage />} />
           <Route path="audit-logs" element={<AuditLogsPage />} />
+
+          <Route path="settings">
+            <Route index element={<SettingsPage />} />
+            <Route path="assignment-rules" element={<AssignmentRulesPage />} />
+            <Route path="approval-rules" element={<ApprovalRulesPage />} />
+          </Route>
 
           <Route path="brands">
             <Route index element={<BrandsPage />} />

@@ -137,8 +137,10 @@ function StaffContent() {
                   <tr className="border-t border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
                     <th className="px-5 py-3 font-semibold">Name</th>
                     <th className="px-5 py-3 font-semibold">Email</th>
+                    <th className="px-5 py-3 font-semibold">Phone</th>
                     <th className="px-5 py-3 font-semibold">Role(s)</th>
                     <th className="px-5 py-3 font-semibold">Status</th>
+                    <th className="px-5 py-3 font-semibold">Last Active</th>
                     <th className="px-5 py-3 font-semibold">Joined</th>
                   </tr>
                 </thead>
@@ -151,6 +153,7 @@ function StaffContent() {
                         </Link>
                       </td>
                       <td className="px-5 py-3 text-muted-foreground">{s.email}</td>
+                      <td className="px-5 py-3 text-muted-foreground">{s.phone ?? '—'}</td>
                       <td className="px-5 py-3">
                         <div className="flex flex-wrap gap-1">
                           {s.role_names.map((name) => (
@@ -164,6 +167,9 @@ function StaffContent() {
                         <Badge variant={statusToneMap[s.status] ?? 'secondary'} className="capitalize">
                           {s.status}
                         </Badge>
+                      </td>
+                      <td className="px-5 py-3 text-xs text-muted-foreground">
+                        {s.last_login_at ? new Date(s.last_login_at).toLocaleDateString() : 'Never'}
                       </td>
                       <td className="px-5 py-3 text-xs text-muted-foreground">{new Date(s.created_at).toLocaleDateString()}</td>
                     </tr>

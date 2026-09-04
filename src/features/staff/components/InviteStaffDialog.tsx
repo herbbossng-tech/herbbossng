@@ -6,15 +6,18 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { useBrandsList } from '@/features/brands/hooks'
 import { useRoles } from '@/features/roles/hooks'
 import { useCreateInvitation } from '@/features/staff/hooks'
 
 export function InviteStaffDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const { data: roles } = useRoles()
+  const { data: brands } = useBrandsList()
   const createInvitation = useCreateInvitation()
 
   const [email, setEmail] = React.useState('')
   const [roleId, setRoleId] = React.useState('')
+  const [brandId, setBrandId] = React.useState('all')
   const [error, setError] = React.useState<string | null>(null)
   const [result, setResult] = React.useState<{ link: string; expiresAt: string } | null>(null)
   const [copied, setCopied] = React.useState(false)
@@ -23,6 +26,7 @@ export function InviteStaffDialog({ open, onOpenChange }: { open: boolean; onOpe
     if (!open) {
       setEmail('')
       setRoleId('')
+      setBrandId('all')
       setError(null)
       setResult(null)
       setCopied(false)
@@ -41,7 +45,7 @@ export function InviteStaffDialog({ open, onOpenChange }: { open: boolean; onOpe
       return
     }
     try {
-      const invite = await createInvitation.mutateAsync({ email, roleId })
+      const invite = await createInvitation.mutateAsync({ email, roleId, brandId: brandId === 'all' ? null : brandId })
       const link = `${window.location.origin}/invitations/accept?token=${invite.token}`
       setResult({ link, expiresAt: invite.expires_at })
     } catch (err) {
@@ -104,6 +108,22 @@ export function InviteStaffDialog({ open, onOpenChange }: { open: boolean; onOpe
                   {roles?.map((role) => (
                     <SelectItem key={role.id} value={role.id}>
                       {role.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label>Brand access</Label>
+              <Select value={brandId} onValueChange={setBrandId}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All brands in this workspace</SelectItem>
+                  {brands?.map((b) => (
+                    <SelectItem key={b.id} value={b.id}>
+                      {b.name} only
                     </SelectItem>
                   ))}
                 </SelectContent>

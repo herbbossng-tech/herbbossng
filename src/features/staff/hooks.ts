@@ -89,9 +89,11 @@ export function useRevokeInvitation() {
 }
 
 export function useUpdateStaffStatus() {
+  const { activeWorkspace } = useWorkspace()
   const invalidate = useInvalidateStaff()
   return useMutation({
-    mutationFn: ({ userId, status }: { userId: string; status: 'active' | 'inactive' }) => updateStaffStatus(userId, status),
+    mutationFn: ({ userId, status }: { userId: string; status: 'active' | 'inactive' | 'suspended' }) =>
+      updateStaffStatus(activeWorkspace.id, userId, status),
     onSuccess: invalidate,
   })
 }
@@ -111,9 +113,9 @@ export function useAssignRole() {
   const invalidate = useInvalidateStaff()
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ userId, roleId }: { userId: string; roleId: string }) => {
+    mutationFn: ({ userId, roleId, brandId }: { userId: string; roleId: string; brandId?: string | null }) => {
       if (!user) throw new Error('You must be signed in')
-      return assignRoleToStaff(activeWorkspace.id, userId, roleId, user.id)
+      return assignRoleToStaff(activeWorkspace.id, userId, roleId, user.id, brandId)
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: staffKeys.roles(activeWorkspace.id, variables.userId) })

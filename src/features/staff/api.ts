@@ -20,14 +20,14 @@ export async function fetchStaffMember(workspaceId: string, userId: string): Pro
   return all.find((s) => s.user_id === userId) ?? null
 }
 
-export async function fetchStaffRoles(workspaceId: string, userId: string): Promise<(UserRole & { role: Role })[]> {
+export async function fetchStaffRoles(workspaceId: string, userId: string): Promise<(UserRole & { role: Role; brand: { id: string; name: string } | null })[]> {
   const { data, error } = await supabase
     .from('user_roles')
-    .select('*, role:roles(*)')
+    .select('*, role:roles(*), brand:brands(id, name)')
     .eq('workspace_id', workspaceId)
     .eq('user_id', userId)
   if (error) throw error
-  return (data ?? []) as unknown as (UserRole & { role: Role })[]
+  return (data ?? []) as unknown as (UserRole & { role: Role; brand: { id: string; name: string } | null })[]
 }
 
 export async function assignRoleToStaff(workspaceId: string, userId: string, roleId: string, createdBy: string, brandId?: string | null): Promise<void> {
@@ -42,8 +42,8 @@ export async function removeRoleFromStaff(userRoleId: string): Promise<void> {
   if (error) throw error
 }
 
-export async function updateStaffStatus(userId: string, status: 'active' | 'inactive'): Promise<void> {
-  const { error } = await supabase.from('profiles').update({ status }).eq('id', userId)
+export async function updateStaffStatus(workspaceId: string, userId: string, status: 'active' | 'inactive' | 'suspended'): Promise<void> {
+  const { error } = await supabase.rpc('set_staff_status', { p_workspace_id: workspaceId, p_user_id: userId, p_status: status })
   if (error) throw error
 }
 

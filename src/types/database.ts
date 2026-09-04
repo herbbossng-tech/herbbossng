@@ -104,6 +104,8 @@ export type PermissionModule =
   | 'workspace'
   | 'settings'
   | 'support'
+  | 'assignment_rules'
+  | 'approval_rules'
 
 export type PermissionAction =
   | 'view'
@@ -1218,6 +1220,44 @@ export interface TaskStats {
   overdue_count: number
   due_today_count: number
   completed_today_count: number
+}
+
+export type AssignmentRuleModule = 'orders' | 'tasks'
+export type AssignmentStrategy = 'manual' | 'round_robin' | 'least_workload' | 'fixed'
+
+export interface AssignmentRule {
+  id: string
+  workspace_id: string
+  brand_id: string | null
+  module: AssignmentRuleModule
+  strategy: AssignmentStrategy
+  fixed_staff_ids: string[]
+  is_active: boolean
+  notes: string | null
+  created_at: string
+  updated_at: string
+  created_by: string | null
+  updated_by: string | null
+  deleted_at: string | null
+}
+
+export type ApprovalRuleModule = 'orders' | 'affiliates' | 'withdrawals' | 'ad_costs'
+
+export interface ApprovalRule {
+  id: string
+  workspace_id: string
+  brand_id: string | null
+  module: ApprovalRuleModule
+  action: string
+  threshold_amount: number | null
+  required_approver_role_id: string | null
+  is_active: boolean
+  notes: string | null
+  created_at: string
+  updated_at: string
+  created_by: string | null
+  updated_by: string | null
+  deleted_at: string | null
 }
 
 /**

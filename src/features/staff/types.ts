@@ -3,6 +3,7 @@ export interface StaffMember {
   email: string
   first_name: string | null
   last_name: string | null
+  phone: string | null
   avatar_url: string | null
   department: string | null
   status: 'active' | 'inactive' | 'suspended' | 'invited'

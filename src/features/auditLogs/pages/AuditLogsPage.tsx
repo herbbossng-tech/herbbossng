@@ -10,6 +10,7 @@ import { usePermission } from '@/contexts/PermissionsContext'
 import { AuditDetailDialog } from '@/features/auditLogs/components/AuditDetailDialog'
 import { useAuditLogs } from '@/features/auditLogs/hooks'
 import type { AuditLogRow } from '@/features/auditLogs/api'
+import { useBrandsList } from '@/features/brands/hooks'
 import { moduleLabels, moduleOrder } from '@/features/roles/moduleMeta'
 import { useStaff } from '@/features/staff/hooks'
 
@@ -47,10 +48,12 @@ function AuditLogsContent() {
   const [userId, setUserId] = React.useState('all')
   const [module, setModule] = React.useState('all')
   const [action, setAction] = React.useState('all')
+  const [brandId, setBrandId] = React.useState('all')
   const [page, setPage] = React.useState(1)
   const [selected, setSelected] = React.useState<AuditLogRow | null>(null)
 
   const { data: staff } = useStaff()
+  const { data: brands } = useBrandsList()
   const { data, isLoading, isError, refetch } = useAuditLogs({
     search,
     dateFrom: dateFrom || undefined,
@@ -58,6 +61,7 @@ function AuditLogsContent() {
     userId,
     module,
     action,
+    brandId,
     page,
     pageSize: PAGE_SIZE,
   })
@@ -137,6 +141,25 @@ function AuditLogsContent() {
             {staff?.map((s) => (
               <SelectItem key={s.user_id} value={s.user_id}>
                 {[s.first_name, s.last_name].filter(Boolean).join(' ') || s.email}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select
+          value={brandId}
+          onValueChange={(v) => {
+            setBrandId(v)
+            setPage(1)
+          }}
+        >
+          <SelectTrigger className="w-[150px]">
+            <SelectValue placeholder="Brand" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All brands</SelectItem>
+            {brands?.map((b) => (
+              <SelectItem key={b.id} value={b.id}>
+                {b.name}
               </SelectItem>
             ))}
           </SelectContent>
