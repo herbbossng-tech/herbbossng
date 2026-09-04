@@ -20,6 +20,7 @@ import {
   useRevenueTrend,
 } from '@/features/finance/hooks'
 import { orderStatusLabels } from '@/features/orders/statusMeta'
+import { useRescueFunnel, useSupportAnalytics } from '@/features/support/hooks'
 import { formatCurrency } from '@/lib/currency'
 import { formatRatio, safeRatePct } from '@/lib/financeMath'
 
@@ -58,6 +59,11 @@ function AnalyticsContent() {
   const { data: products, isLoading: productsLoading } = useProductPerformance(dateRange)
   const { data: customerStats, isLoading: customerLoading } = useCustomerAnalytics(dateRange)
   const { data: landingPages, isLoading: lpLoading } = useLandingPageAnalytics(dateRange)
+
+  const days = Math.max(1, Math.ceil((new Date(range.to).getTime() - new Date(range.from).getTime()) / 86400000))
+  const canViewSupport = usePermission('support.view')
+  const { data: supportAnalytics, isLoading: supportLoading } = useSupportAnalytics(days)
+  const { data: rescueFunnel, isLoading: rescueFunnelLoading } = useRescueFunnel(days)
 
   const money = (n: number | undefined) => (n === undefined ? '—' : formatCurrency(n, currency))
   const count = (n: number | undefined) => (n === undefined ? '—' : n.toLocaleString())
@@ -98,6 +104,7 @@ function AnalyticsContent() {
           <TabsTrigger value="products">Products</TabsTrigger>
           <TabsTrigger value="customers">Customers</TabsTrigger>
           <TabsTrigger value="funnels">Funnels</TabsTrigger>
+          {canViewSupport && <TabsTrigger value="support">Support &amp; Rescue</TabsTrigger>}
         </TabsList>
 
         {/* Sales Analytics */}
@@ -302,6 +309,91 @@ function AnalyticsContent() {
             </Card>
           )}
         </TabsContent>
+
+        {canViewSupport && (
+          <TabsContent value="support">
+            {supportLoading || rescueFunnelLoading || !supportAnalytics || !rescueFunnel ? (
+              <LoadingState label="Loading support & rescue analytics…" />
+            ) : (
+              <div className="flex flex-col gap-6">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  <RateCard
+                    label="Contact Rate"
+                    pct={safeRatePct(supportAnalytics.orders_contacted, supportAnalytics.orders_in_scope)}
+                    ratio={formatRatio(supportAnalytics.orders_contacted, supportAnalytics.orders_in_scope)}
+                  />
+                  <RateCard
+                    label="Confirmation Recovery"
+                    pct={safeRatePct(supportAnalytics.confirmation_calls_confirmed, supportAnalytics.confirmation_calls_total)}
+                    ratio={formatRatio(supportAnalytics.confirmation_calls_confirmed, supportAnalytics.confirmation_calls_total)}
+                  />
+                  <RateCard
+                    label="Rescue Rate"
+                    pct={safeRatePct(supportAnalytics.rescue_successful, supportAnalytics.rescue_opportunities_opened)}
+                    ratio={formatRatio(supportAnalytics.rescue_successful, supportAnalytics.rescue_opportunities_opened)}
+                    tone="success"
+                  />
+                  <RateCard
+                    label="Overdue Rate"
+                    pct={safeRatePct(supportAnalytics.overdue_tasks_current, supportAnalytics.open_tasks_current)}
+                    ratio={formatRatio(supportAnalytics.overdue_tasks_current, supportAnalytics.open_tasks_current)}
+                    tone="warning"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  <StatCard label="Support Volume" value={supportAnalytics.support_interactions_total.toLocaleString()} icon="phone" compact />
+                  <StatCard label="Rescue Opportunities" value={supportAnalytics.rescue_opportunities_opened.toLocaleString()} icon="userCheck" compact />
+                  <StatCard label="Successful Rescues" value={supportAnalytics.rescue_successful.toLocaleString()} icon="check" compact tone="success" />
+                  <StatCard
+                    label="Avg Resolution Time"
+                    value={supportAnalytics.rescue_avg_resolution_hours !== null ? `${supportAnalytics.rescue_avg_resolution_hours.toFixed(1)}h` : '—'}
+                    icon="clock"
+                    compact
+                  />
+                </div>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Rescue Funnel</CardTitle>
+                    <CardDescription>
+                      Opportunities → Contacted → Customer Reached → Rescheduled/Fixed → Returned to Delivery → Delivered / Lost. Each rescue case is
+                      counted once per stage it has ever reached — never double-counted.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-col gap-2">
+                      {[
+                        { label: 'Opportunities', value: rescueFunnel.opportunities },
+                        { label: 'Contacted', value: rescueFunnel.contacted },
+                        { label: 'Customer Reached', value: rescueFunnel.customer_reached },
+                        { label: 'Rescheduled / Fixed', value: rescueFunnel.rescheduled_or_fixed },
+                        { label: 'Returned to Delivery', value: rescueFunnel.returned_to_delivery },
+                        { label: 'Delivered', value: rescueFunnel.delivered },
+                      ].map((stage) => {
+                        const pct = rescueFunnel.opportunities ? Math.round((stage.value / rescueFunnel.opportunities) * 100) : 0
+                        return (
+                          <div key={stage.label} className="flex items-center gap-3">
+                            <span className="w-40 shrink-0 text-xs text-muted-foreground">{stage.label}</span>
+                            <div className="h-6 flex-1 overflow-hidden rounded bg-muted">
+                              <div className="h-full rounded bg-primary" style={{ width: `${pct}%` }} />
+                            </div>
+                            <span className="w-24 shrink-0 text-right text-xs font-medium text-foreground">
+                              {stage.value.toLocaleString()} ({pct}%)
+                            </span>
+                          </div>
+                        )
+                      })}
+                      {rescueFunnel.lost > 0 && (
+                        <p className="mt-1 text-xs text-destructive">{rescueFunnel.lost.toLocaleString()} rescue case(s) lost — not counted toward Delivered.</p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   )

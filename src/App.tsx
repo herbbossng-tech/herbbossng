@@ -24,6 +24,7 @@ import { OperationsLayout } from '@/features/operations/OperationsLayout'
 import { OperationsDashboardPage } from '@/features/operations/pages/OperationsDashboardPage'
 import { RescueBoardPage } from '@/features/operations/pages/RescueBoardPage'
 import { SettlementPage } from '@/features/settlement/pages/SettlementPage'
+import { SupportPage } from '@/features/support/pages/SupportPage'
 import { TaskManagerPage } from '@/features/tasks/pages/TaskManagerPage'
 import { WaybillsPage } from '@/features/waybills/pages/WaybillsPage'
 import { CategoriesPage } from '@/features/categories/pages/CategoriesPage'
@@ -85,6 +86,7 @@ const placeholderNavItems = allNavItems.filter(
     item.href !== '/affiliates' &&
     item.href !== '/operations' &&
     item.href !== '/automation' &&
+    item.href !== '/support' &&
     item.href !== '/settings',
 )
 
@@ -203,6 +205,8 @@ function App() {
               <Route path="failed" element={<FailedAutomationsPage />} />
             </Route>
           </Route>
+
+          <Route path="support" element={<SupportPage />} />
 
           {placeholderNavItems.map((item) => (
             <Route

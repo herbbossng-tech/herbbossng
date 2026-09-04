@@ -104,6 +104,7 @@ export type PermissionModule =
   | 'workspace'
   | 'settings'
   | 'support'
+  | 'rescue'
   | 'assignment_rules'
   | 'approval_rules'
   | 'automation'
@@ -1448,6 +1449,165 @@ export interface CommunicationLog {
   provider_message_id: string | null
   related_execution_action_id: string | null
   created_at: string
+}
+
+// ---------------------------------------------------------------------
+// Phase 10 — Customer Support & Rescue Intelligence (migration 0030).
+// support_interactions is the one authoritative typed contact-history
+// log (orders AND customers); rescue_cases/rescue_attempts is the
+// persisted rescue state machine layered on top of the existing
+// Rescue Board. Orders/Finance alone still determine actual order
+// state and revenue — nothing here is a second source of truth.
+// ---------------------------------------------------------------------
+export type SupportInteractionType =
+  | 'CALL'
+  | 'CONFIRMATION_CALL'
+  | 'FOLLOW_UP_CALL'
+  | 'DELIVERY_FOLLOW_UP'
+  | 'ADDRESS_VERIFICATION'
+  | 'PHONE_VERIFICATION'
+  | 'CUSTOMER_REQUEST'
+  | 'CANCELLATION_REQUEST'
+  | 'RESCUE_ATTEMPT'
+  | 'ESCALATION'
+  | 'INTERNAL_NOTE'
+  | 'OTHER'
+
+export type SupportInteractionOutcome =
+  | 'CUSTOMER_REACHED'
+  | 'NO_ANSWER'
+  | 'WRONG_NUMBER'
+  | 'CALLBACK_REQUESTED'
+  | 'CONFIRMED'
+  | 'RESCHEDULED'
+  | 'CANCELLED'
+  | 'ADDRESS_UPDATED'
+  | 'PHONE_UPDATED'
+  | 'ESCALATED'
+  | 'NOT_INTERESTED'
+  | 'UNABLE_TO_DELIVER'
+  | 'OTHER'
+
+export interface SupportInteraction {
+  id: string
+  workspace_id: string
+  brand_id: string
+  order_id: string | null
+  customer_id: string | null
+  interaction_type: SupportInteractionType
+  outcome: SupportInteractionOutcome | null
+  summary: string
+  related_task_id: string | null
+  related_rescue_case_id: string | null
+  created_at: string
+  created_by: string | null
+}
+
+export type RescueCaseStatus =
+  | 'OPEN'
+  | 'CONTACTING'
+  | 'CUSTOMER_REACHED'
+  | 'RESCHEDULED'
+  | 'ADDRESS_FIXED'
+  | 'PHONE_FIXED'
+  | 'HANDED_BACK_TO_DELIVERY'
+  | 'CONVERTED'
+  | 'LOST'
+  | 'CANCELLED'
+
+export const RESCUE_CASE_TERMINAL_STATUSES: RescueCaseStatus[] = ['CONVERTED', 'LOST', 'CANCELLED']
+
+export interface RescueCase {
+  id: string
+  workspace_id: string
+  brand_id: string
+  order_id: string
+  customer_id: string | null
+  status: RescueCaseStatus
+  reason: string
+  priority: TaskPriority
+  assigned_to: string | null
+  opened_at: string
+  closed_at: string | null
+  closed_reason: string | null
+  escalated: boolean
+  escalated_at: string | null
+  escalated_by: string | null
+  escalation_reason: string | null
+  created_at: string
+  updated_at: string
+  created_by: string | null
+  updated_by: string | null
+}
+
+export interface RescueAttempt {
+  id: string
+  rescue_case_id: string
+  workspace_id: string
+  brand_id: string
+  from_status: RescueCaseStatus | null
+  to_status: RescueCaseStatus
+  action_note: string | null
+  outcome: SupportInteractionOutcome | null
+  related_interaction_id: string | null
+  created_by: string | null
+  created_at: string
+}
+
+export interface SupportQueueRow {
+  order_id: string
+  order_number: string
+  customer_id: string | null
+  customer_name: string
+  customer_phone: string
+  order_status: OrderStatus
+  priority: 'normal' | 'high' | 'urgent'
+  priority_reasons: string[]
+  rescue_case_id: string | null
+  rescue_status: RescueCaseStatus | null
+  rescue_escalated: boolean
+  open_task_id: string | null
+  open_task_type: OrderTaskType | null
+  open_task_due_at: string | null
+  last_interaction_at: string | null
+  last_interaction_summary: string | null
+  assigned_to: string | null
+  next_action: string
+}
+
+export interface SupportSummary {
+  needs_attention_count: number
+  due_today_count: number
+  overdue_count: number
+  awaiting_customer_count: number
+  rescue_opportunities_count: number
+  escalated_count: number
+  completed_today_count: number
+}
+
+export interface RescueFunnel {
+  opportunities: number
+  contacted: number
+  customer_reached: number
+  rescheduled_or_fixed: number
+  returned_to_delivery: number
+  delivered: number
+  lost: number
+}
+
+export interface SupportAnalytics {
+  period_days: number
+  support_interactions_total: number
+  orders_in_scope: number
+  orders_contacted: number
+  confirmation_calls_total: number
+  confirmation_calls_confirmed: number
+  rescue_opportunities_opened: number
+  rescue_successful: number
+  rescue_lost: number
+  rescue_avg_resolution_hours: number | null
+  overdue_tasks_current: number
+  open_tasks_current: number
 }
 
 /**

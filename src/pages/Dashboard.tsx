@@ -27,6 +27,7 @@ import { useWithdrawals } from '@/features/withdrawals/hooks'
 import { OrderStatusBadge } from '@/features/orders/components/OrderStatusBadge'
 import { useOrders } from '@/features/orders/hooks'
 import { useProducts } from '@/features/products/hooks'
+import { useSupportSummary } from '@/features/support/hooks'
 import { formatCurrency } from '@/lib/currency'
 import { formatRatio, safeRatePct } from '@/lib/financeMath'
 import { cn } from '@/lib/utils'
@@ -107,12 +108,31 @@ export function Dashboard() {
 
       <MoneyOperationsSection range={range} />
 
+      <SupportAttentionRow />
+
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <TopProductsCard range={range} />
         <NeedsAttentionCard range={range} />
       </div>
 
       {canViewOrders ? <RecentOrdersSection /> : <OrdersPermissionNotice />}
+    </div>
+  )
+}
+
+// Deliberately restrained: at most two compact cards, both linking
+// into /support for the real detail. Detailed support/rescue
+// intelligence belongs on the Support workspace and Analytics tab,
+// never sprawled across the Dashboard.
+function SupportAttentionRow() {
+  const canView = usePermission('support.view')
+  const { data: summary } = useSupportSummary()
+  if (!canView) return null
+  const count = (n: number | undefined) => (n === undefined ? '—' : n.toLocaleString())
+  return (
+    <div className="grid grid-cols-2 gap-3 sm:w-1/2">
+      <StatCard label="Support Attention" value={count(summary?.needs_attention_count)} icon="phone" compact href="/support" />
+      <StatCard label="Rescue Opportunities" value={count(summary?.rescue_opportunities_count)} icon="userCheck" compact href="/support" />
     </div>
   )
 }

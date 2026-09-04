@@ -16,6 +16,9 @@ import { useAddCustomerNote, useCustomer, useCustomerNotes, useCustomerOrders, u
 import { customerClassificationLabel, customerStatusLabels, customerStatuses } from '@/features/customers/statusMeta'
 import { OrderStatusBadge } from '@/features/orders/components/OrderStatusBadge'
 import { orderSourceLabels } from '@/features/orders/statusMeta'
+import { LogInteractionDialog } from '@/features/support/components/LogInteractionDialog'
+import { useCustomerInteractions } from '@/features/support/hooks'
+import { interactionOutcomeLabels, interactionTypeLabels } from '@/features/support/statusMeta'
 import { formatCurrency } from '@/lib/currency'
 import type { CustomerStatus } from '@/types/database'
 
@@ -24,6 +27,7 @@ export function CustomerDetailPage() {
   const { activeWorkspace } = useWorkspace()
   const [editOpen, setEditOpen] = React.useState(false)
   const [noteBody, setNoteBody] = React.useState('')
+  const [logInteractionOpen, setLogInteractionOpen] = React.useState(false)
 
   const { data: customer, isLoading, isError, refetch } = useCustomer(id)
   const { data: orders } = useCustomerOrders(id)
@@ -36,6 +40,11 @@ export function CustomerDetailPage() {
   const canUpdate = usePermission('customers.update')
   const canDelete = usePermission('customers.delete')
   const canChangeStatus = canUpdate || canDelete
+  const canViewSupport = usePermission('support.view')
+  const hasSupportCreate = usePermission('support.create')
+  const hasSupportManage = usePermission('support.manage')
+  const canCreateInteraction = hasSupportCreate || hasSupportManage
+  const { data: interactions } = useCustomerInteractions(canViewSupport ? id : undefined)
 
   if (isLoading) return <LoadingState label="Loading customer…" />
   if (isError || !customer) {
@@ -213,6 +222,37 @@ export function CustomerDetailPage() {
             </CardContent>
           </Card>
 
+          {canViewSupport && (
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="text-base">Support</CardTitle>
+                {canCreateInteraction && (
+                  <Button size="sm" variant="outline" onClick={() => setLogInteractionOpen(true)}>
+                    Log Contact
+                  </Button>
+                )}
+              </CardHeader>
+              <CardContent>
+                {(interactions ?? []).length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No support interactions logged yet.</p>
+                ) : (
+                  <ol className="flex flex-col gap-2">
+                    {(interactions ?? []).map((i) => (
+                      <li key={i.id} className="rounded-lg border border-border p-3 text-sm">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-medium text-foreground">{interactionTypeLabels[i.interaction_type]}</span>
+                          {i.outcome && <Badge variant="secondary">{interactionOutcomeLabels[i.outcome]}</Badge>}
+                        </div>
+                        <p className="mt-1 text-muted-foreground">{i.summary}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">{new Date(i.created_at).toLocaleString()}</p>
+                      </li>
+                    ))}
+                  </ol>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Timeline</CardTitle>
@@ -286,6 +326,7 @@ export function CustomerDetailPage() {
       </div>
 
       <CustomerEditDialog customer={customer} open={editOpen} onOpenChange={setEditOpen} />
+      <LogInteractionDialog open={logInteractionOpen} onOpenChange={setLogInteractionOpen} customerId={customer.id} defaultType="CUSTOMER_REQUEST" title="Log Support Interaction" />
     </div>
   )
 }

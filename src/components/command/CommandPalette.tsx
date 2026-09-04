@@ -4,8 +4,10 @@ import {
   Banknote,
   Building2,
   FilePlus2,
+  Headset,
   History,
   Layout,
+  LifeBuoy,
   Megaphone,
   Package,
   PlusCircle,
@@ -47,6 +49,7 @@ import { fetchProducts } from '@/features/products/api'
 import { fetchAutomationRules } from '@/features/automation/api'
 import { fetchRoles } from '@/features/roles/api'
 import { fetchWorkspaceStaff } from '@/features/staff/api'
+import { fetchActiveRescueCases } from '@/features/support/api'
 
 interface CommandPaletteProps {
   open: boolean
@@ -72,6 +75,9 @@ const quickActions = [
   { label: 'Automation Rules', href: '/automation', icon: Workflow },
   { label: 'New Automation Rule', href: '/automation', icon: PlusCircle },
   { label: 'Failed Automations', href: '/automation/failed', icon: Workflow },
+  { label: 'Open Support Queue', href: '/support', icon: Headset },
+  { label: 'Open Rescue Board', href: '/operations/rescue-board', icon: LifeBuoy },
+  { label: 'Open Follow-up Tasks', href: '/operations/tasks', icon: FilePlus2 },
 ]
 
 export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
@@ -114,6 +120,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const canSearchAutomationRules = hasPermission('automation.view')
   const canSearchBrands = hasPermission('brands.view')
   const canSearchAuditLogs = hasPermission('audit_logs.view')
+  const canSearchRescueCases = hasPermission('rescue.view')
 
   const { data: orderResults } = useQuery({
     queryKey: ['command-order-search', activeWorkspace.id, brandId, term],
@@ -183,6 +190,13 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     enabled: searching && canSearchAuditLogs,
   })
 
+  const { data: rescueCaseResults } = useQuery({
+    queryKey: ['command-rescue-case-search', activeWorkspace.id, brandId],
+    queryFn: () => fetchActiveRescueCases(activeWorkspace.id, brandId),
+    enabled: searching && canSearchRescueCases,
+  })
+  const filteredRescueCases = (rescueCaseResults ?? []).filter((rc) => rc.reason.toLowerCase().includes(term.toLowerCase())).slice(0, 6)
+
   const visibleNavItems = allNavItems.filter((item) => !item.permission || hasPermission(item.permission))
 
   const go = (href: string) => {
@@ -227,6 +241,17 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                 <ShoppingCart className="h-4 w-4 text-muted-foreground" />
                 <span className="font-mono text-xs text-muted-foreground">{order.order_number}</span>
                 {order.customer_name}
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        )}
+
+        {searching && canSearchRescueCases && filteredRescueCases.length > 0 && (
+          <CommandGroup heading="Rescue Cases">
+            {filteredRescueCases.map((rc) => (
+              <CommandItem key={rc.id} value={`rescue ${rc.reason}`} onSelect={() => go(`/orders/${rc.order_id}`)}>
+                <LifeBuoy className="h-4 w-4 text-muted-foreground" />
+                {rc.reason}
               </CommandItem>
             ))}
           </CommandGroup>

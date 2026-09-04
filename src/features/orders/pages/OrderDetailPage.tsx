@@ -33,6 +33,11 @@ import {
 } from '@/features/orders/hooks'
 import { orderNextAction, orderSourceLabels, orderStatusLabels } from '@/features/orders/statusMeta'
 import { useCreateOrderSettlement, useOrderSettlements } from '@/features/settlement/hooks'
+import { LogInteractionDialog } from '@/features/support/components/LogInteractionDialog'
+import { RescueCasePanel } from '@/features/support/components/RescueCasePanel'
+import { StartRescueDialog } from '@/features/support/components/StartRescueDialog'
+import { useOrderInteractions, useOrderRescueCase } from '@/features/support/hooks'
+import { interactionOutcomeLabels, interactionTypeLabels } from '@/features/support/statusMeta'
 import { useCreateOrderTask, useOrderTasks, useUpdateOrderTaskStatus } from '@/features/tasks/hooks'
 import { useCreateWaybill, useOrderWaybills, useUpdateWaybillStatus } from '@/features/waybills/hooks'
 import { formatCurrency } from '@/lib/currency'
@@ -121,6 +126,18 @@ export function OrderDetailPage() {
   const canUpdateTask = hasTasksUpdate || hasTasksManage
   const { data: orderTasks } = useOrderTasks(canViewTasks ? id : undefined)
   const updateTaskStatus = useUpdateOrderTaskStatus()
+
+  const canViewSupport = usePermission('support.view')
+  const hasSupportCreate = usePermission('support.create')
+  const hasSupportManage = usePermission('support.manage')
+  const hasRescueCreate = usePermission('rescue.create')
+  const hasRescueManage = usePermission('rescue.manage')
+  const canCreateInteraction = hasSupportCreate || hasSupportManage
+  const canCreateRescue = hasRescueCreate || hasRescueManage
+  const { data: interactions } = useOrderInteractions(canViewSupport ? id : undefined)
+  const { data: activeRescueCase } = useOrderRescueCase(canViewSupport ? id : undefined)
+  const [logInteractionOpen, setLogInteractionOpen] = React.useState(false)
+  const [startRescueOpen, setStartRescueOpen] = React.useState(false)
 
   const canViewWaybills = usePermission('waybills.view')
   const hasWaybillsCreate = usePermission('waybills.create')
@@ -402,6 +419,45 @@ export function OrderDetailPage() {
                       </div>
                     </div>
                   ))
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {canViewSupport && (
+            <Card>
+              <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
+                <CardTitle>Support</CardTitle>
+                <div className="flex flex-wrap gap-2">
+                  {canCreateInteraction && (
+                    <Button size="sm" variant="outline" onClick={() => setLogInteractionOpen(true)}>
+                      Log Contact
+                    </Button>
+                  )}
+                  {!activeRescueCase && canCreateRescue && (
+                    <Button size="sm" onClick={() => setStartRescueOpen(true)}>
+                      Start Rescue
+                    </Button>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-3">
+                {activeRescueCase && <RescueCasePanel rescueCase={activeRescueCase} />}
+                {!interactions || interactions.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No support interactions logged yet.</p>
+                ) : (
+                  <ol className="flex flex-col gap-2">
+                    {interactions.map((i) => (
+                      <li key={i.id} className="rounded-lg border border-border p-3 text-sm">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-medium text-foreground">{interactionTypeLabels[i.interaction_type]}</span>
+                          {i.outcome && <Badge variant="secondary">{interactionOutcomeLabels[i.outcome]}</Badge>}
+                        </div>
+                        <p className="mt-1 text-muted-foreground">{i.summary}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">{new Date(i.created_at).toLocaleString()}</p>
+                      </li>
+                    ))}
+                  </ol>
                 )}
               </CardContent>
             </Card>
@@ -693,6 +749,8 @@ export function OrderDetailPage() {
 
       <CreateTaskDialog orderId={order.id} open={createTaskOpen} onOpenChange={setCreateTaskOpen} />
       <CreateWaybillDialog orderId={order.id} open={createWaybillOpen} onOpenChange={setCreateWaybillOpen} />
+      <LogInteractionDialog open={logInteractionOpen} onOpenChange={setLogInteractionOpen} orderId={order.id} customerId={order.customer_id} />
+      <StartRescueDialog open={startRescueOpen} onOpenChange={setStartRescueOpen} orderId={order.id} />
       <RecordAttemptDialog
         open={recordAttemptOpen}
         onOpenChange={setRecordAttemptOpen}
