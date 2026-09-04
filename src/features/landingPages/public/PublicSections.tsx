@@ -1,14 +1,18 @@
-import { Star } from 'lucide-react'
+import { Check, ShieldCheck, Star, X } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import type {
   BenefitsConfig,
+  ComparisonConfig,
   CtaBannerConfig,
   FaqConfig,
+  GuaranteeConfig,
   HeroConfig,
   HowItWorksConfig,
   ImageTextConfig,
+  IngredientsConfig,
+  ProblemAwarenessConfig,
   TestimonialsConfig,
   TextConfig,
   TrustStripConfig,
@@ -171,6 +175,81 @@ export function FaqSection({ config }: { config: FaqConfig }) {
             </details>
           ))}
         </div>
+      </div>
+    </section>
+  )
+}
+
+export function ProblemAwarenessSection({ config }: { config: ProblemAwarenessConfig }) {
+  if (!config.headline && !config.body) return null
+  return (
+    <section className={SECTION_PADDING}>
+      <div className="mx-auto max-w-2xl text-center">
+        {config.headline && <h2 className="mb-3 text-2xl font-bold text-foreground">{config.headline}</h2>}
+        {config.body && <p className="whitespace-pre-line text-muted-foreground">{config.body}</p>}
+      </div>
+    </section>
+  )
+}
+
+export function IngredientsSection({ config }: { config: IngredientsConfig }) {
+  if (!config.items?.length) return null
+  return (
+    <section className={SECTION_PADDING}>
+      <div className="mx-auto max-w-3xl">
+        {config.headline && <h2 className="mb-6 text-center text-2xl font-bold text-foreground">{config.headline}</h2>}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {config.items.map((item, i) => (
+            <Card key={i} className="p-4">
+              <p className="font-semibold text-foreground">{item.name}</p>
+              {item.description && <p className="mt-1 text-sm text-muted-foreground">{item.description}</p>}
+            </Card>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+export function ComparisonSection({ config }: { config: ComparisonConfig }) {
+  if (!config.rows?.length) return null
+  return (
+    <section className={SECTION_PADDING}>
+      <div className="mx-auto max-w-2xl">
+        {config.headline && <h2 className="mb-6 text-center text-2xl font-bold text-foreground">{config.headline}</h2>}
+        <div className="overflow-hidden rounded-xl border border-border">
+          <div className="grid grid-cols-3 bg-secondary/30 text-xs font-semibold text-muted-foreground">
+            <div className="p-3">&nbsp;</div>
+            <div className="p-3 text-center text-primary">Us</div>
+            <div className="p-3 text-center">Others</div>
+          </div>
+          {config.rows.map((row, i) => (
+            <div key={i} className="grid grid-cols-3 border-t border-border text-sm">
+              <div className="p-3 font-medium text-foreground">{row.label}</div>
+              <div className="flex items-center justify-center gap-1 p-3 text-center text-foreground">
+                <Check className="h-3.5 w-3.5 shrink-0 text-success" />
+                {row.us}
+              </div>
+              <div className="flex items-center justify-center gap-1 p-3 text-center text-muted-foreground">
+                <X className="h-3.5 w-3.5 shrink-0" />
+                {row.them}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+export function GuaranteeSection({ config }: { config: GuaranteeConfig }) {
+  if (!config.headline && !config.body) return null
+  return (
+    <section className={cn(SECTION_PADDING, 'bg-secondary/20 text-center')}>
+      <div className="mx-auto flex max-w-xl flex-col items-center gap-3">
+        <ShieldCheck className="h-8 w-8 text-primary" />
+        {config.headline && <h2 className="text-xl font-bold text-foreground">{config.headline}</h2>}
+        {config.body && <p className="text-sm text-muted-foreground">{config.body}</p>}
       </div>
     </section>
   )

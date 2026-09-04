@@ -6,6 +6,7 @@ import type { LandingPage, LandingPageSectionType } from '@/types/database'
 
 import {
   archiveLandingPage,
+  cloneLandingPageTemplate,
   createLandingPage,
   createPackage,
   createSection,
@@ -18,17 +19,21 @@ import {
   fetchLandingPagePackages,
   fetchLandingPages,
   fetchLandingPageSections,
+  fetchLandingPageTemplates,
+  fetchLandingPageTrackingStatus,
   publishLandingPage,
   reorderPackages,
   reorderSections,
+  setLandingPageTracking,
   togglePackageEnabled,
   unpublishLandingPage,
   updateLandingPage,
   updatePackage,
   updateSection,
+  type SetLandingPageTrackingInput,
   type UpdateLandingPageFields,
 } from './api'
-import type { LandingPageFilters } from './types'
+import type { LandingPageFilters, LandingPageTemplate } from './types'
 import type { LandingPageFormOutput, PackageFormOutput } from './validation'
 
 export const landingPageKeys = {
@@ -85,12 +90,50 @@ export function useCreateLandingPage() {
   const { user } = useAuth()
   const invalidate = useInvalidateLandingPages()
   return useMutation({
-    mutationFn: (input: LandingPageFormOutput) => {
+    mutationFn: ({ input, template }: { input: LandingPageFormOutput; template?: LandingPageTemplate }) => {
       if (!activeBrand) throw new Error('Select a brand before creating a landing page')
       if (!user) throw new Error('You must be signed in')
-      return createLandingPage(activeWorkspace.id, activeBrand.id, input, user.id)
+      return createLandingPage(activeWorkspace.id, activeBrand.id, input, user.id, template)
     },
     onSuccess: invalidate,
+  })
+}
+
+// --- Templates ---
+
+export function useLandingPageTemplates() {
+  const { activeWorkspace } = useWorkspace()
+  return useQuery({
+    queryKey: ['landing-page-templates', activeWorkspace.id],
+    queryFn: () => fetchLandingPageTemplates(activeWorkspace.id),
+    enabled: Boolean(activeWorkspace.id),
+  })
+}
+
+export function useCloneLandingPageTemplate() {
+  const { activeWorkspace } = useWorkspace()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ templateId, name }: { templateId: string; name: string }) => cloneLandingPageTemplate(templateId, activeWorkspace.id, name),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['landing-page-templates', activeWorkspace.id] }),
+  })
+}
+
+// --- Tracking ---
+
+export function useLandingPageTrackingStatus(landingPageId: string | undefined) {
+  return useQuery({
+    queryKey: ['landing-page-tracking-status', landingPageId ?? ''],
+    queryFn: () => fetchLandingPageTrackingStatus(landingPageId as string),
+    enabled: Boolean(landingPageId),
+  })
+}
+
+export function useSetLandingPageTracking(landingPageId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: SetLandingPageTrackingInput) => setLandingPageTracking(landingPageId, input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['landing-page-tracking-status', landingPageId] }),
   })
 }
 

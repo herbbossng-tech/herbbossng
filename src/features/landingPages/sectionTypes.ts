@@ -84,6 +84,35 @@ export interface OrderFormConfig {
   title?: string
 }
 
+export interface ProblemAwarenessConfig {
+  headline: string
+  body: string
+}
+
+export interface IngredientItem {
+  name: string
+  description?: string
+}
+export interface IngredientsConfig {
+  headline?: string
+  items: IngredientItem[]
+}
+
+export interface ComparisonRow {
+  label: string
+  us: string
+  them: string
+}
+export interface ComparisonConfig {
+  headline?: string
+  rows: ComparisonRow[]
+}
+
+export interface GuaranteeConfig {
+  headline: string
+  body: string
+}
+
 export const sectionTypeLabels: Record<LandingPageSectionType, string> = {
   HERO: 'Hero',
   TRUST_STRIP: 'Trust Strip',
@@ -96,6 +125,10 @@ export const sectionTypeLabels: Record<LandingPageSectionType, string> = {
   CTA_BANNER: 'CTA Banner',
   PACKAGE_SELECTOR: 'Package Selector',
   ORDER_FORM: 'COD Order Form',
+  PROBLEM_AWARENESS: 'Problem Awareness',
+  INGREDIENTS: 'Ingredients / Formula',
+  COMPARISON: 'Comparison Table',
+  GUARANTEE: 'Guarantee / Risk Reversal',
 }
 
 /** PACKAGE_SELECTOR and ORDER_FORM render live data — a page needs at most one of each. */
@@ -125,6 +158,14 @@ export function defaultConfigFor(type: LandingPageSectionType): Record<string, u
       return { title: 'Choose Your Package', subtitle: '' } satisfies PackageSelectorConfig
     case 'ORDER_FORM':
       return { title: 'Complete Your Order' } satisfies OrderFormConfig
+    case 'PROBLEM_AWARENESS':
+      return { headline: '', body: '' } satisfies ProblemAwarenessConfig
+    case 'INGREDIENTS':
+      return { headline: '', items: [] } satisfies IngredientsConfig
+    case 'COMPARISON':
+      return { headline: '', rows: [] } satisfies ComparisonConfig
+    case 'GUARANTEE':
+      return { headline: '', body: '' } satisfies GuaranteeConfig
     default:
       return {}
   }

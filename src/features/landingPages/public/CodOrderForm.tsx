@@ -13,6 +13,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { createPublicOrder, trackLandingPageEvent } from '@/features/landingPages/api'
 import type { OrderFormConfig } from '@/features/landingPages/sectionTypes'
 import { getSessionId } from '@/features/landingPages/public/scroll'
+import { firePixelFormStart } from '@/features/landingPages/public/tracking'
 import { getMarketConfig, validateMarketPhone } from '@/lib/validation/market'
 import { formatCurrency } from '@/lib/currency'
 import type { LandingPageFormConfig, LandingPagePackage, Order } from '@/types/database'
@@ -94,6 +95,7 @@ export function CodOrderForm({
     if (!startedTracked.current) {
       startedTracked.current = true
       trackLandingPageEvent(slug, 'form_started', getSessionId())
+      firePixelFormStart()
     }
   }
 
@@ -122,6 +124,9 @@ export function CodOrderForm({
         utmCampaign: searchParams.get('utm_campaign') ?? undefined,
         utmContent: searchParams.get('utm_content') ?? undefined,
         utmTerm: searchParams.get('utm_term') ?? undefined,
+        fbclid: searchParams.get('fbclid') ?? undefined,
+        ttclid: searchParams.get('ttclid') ?? undefined,
+        affiliateReferralCode: searchParams.get('ref') ?? undefined,
       })
       await trackLandingPageEvent(slug, 'order_created', getSessionId(), { order_id: order.id })
       onOrderCreated(order)

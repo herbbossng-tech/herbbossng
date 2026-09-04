@@ -3,7 +3,17 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/contexts/AuthContext'
 import { useWorkspace } from '@/contexts/WorkspaceContext'
 
-import { createBrand, fetchBrand, fetchBrands, setBrandStatus, updateBrand, type BrandFilters, type BrandFormFields } from './api'
+import {
+  createBrand,
+  fetchBrand,
+  fetchBrands,
+  setBrandMetaTracking,
+  setBrandStatus,
+  setBrandTiktokTracking,
+  updateBrand,
+  type BrandFilters,
+  type BrandFormFields,
+} from './api'
 
 export const brandKeys = {
   list: (workspaceId: string, filters: BrandFilters) => ['brands-admin', workspaceId, filters] as const,
@@ -74,5 +84,21 @@ export function useSetBrandStatus() {
       return setBrandStatus(id, status, user.id)
     },
     onSuccess: invalidate,
+  })
+}
+
+export function useSetBrandMetaTracking(brandId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (fields: Parameters<typeof setBrandMetaTracking>[1]) => setBrandMetaTracking(brandId, fields),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: brandKeys.detail(brandId) }),
+  })
+}
+
+export function useSetBrandTiktokTracking(brandId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (fields: Parameters<typeof setBrandTiktokTracking>[1]) => setBrandTiktokTracking(brandId, fields),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: brandKeys.detail(brandId) }),
   })
 }

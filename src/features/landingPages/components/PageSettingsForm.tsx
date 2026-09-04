@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { useUpdateLandingPage } from '@/features/landingPages/hooks'
+import { TrackingSettingsForm } from '@/features/landingPages/components/TrackingSettingsForm'
 import type { FloatingCtaConfig, LandingPage, LandingPageFormConfig, LandingPageSeoConfig, WhatsappCtaConfig } from '@/types/database'
 
 export function PageSettingsForm({ page }: { page: LandingPage }) {
@@ -50,6 +51,8 @@ export function PageSettingsForm({ page }: { page: LandingPage }) {
           </div>
         </CardContent>
       </Card>
+
+      <TrackingSettingsForm page={page} />
 
       <Card>
         <CardHeader>

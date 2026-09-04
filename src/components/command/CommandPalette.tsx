@@ -17,6 +17,7 @@ import {
   ShoppingCart,
   Shuffle,
   Sparkles,
+  SquareStack,
   UserPlus,
   Users,
   UsersRound,
@@ -59,6 +60,7 @@ interface CommandPaletteProps {
 const quickActions = [
   { label: 'Create Product', href: '/products', icon: PlusCircle },
   { label: 'Create Landing Page', href: '/landing-pages/new', icon: FilePlus2 },
+  { label: 'Open Template Gallery', href: '/landing-pages/templates', icon: SquareStack },
   { label: 'New Order', href: '/orders/new', icon: ShoppingCart },
   { label: 'Add Customer', href: '/customers/new', icon: Users },
   { label: 'Open Finance', href: '/finance', icon: Wallet },

@@ -59,14 +59,24 @@ export function LandingPagesPage() {
           <h1 className="text-2xl font-bold tracking-tight">Landing Pages</h1>
           <p className="mt-1 text-sm text-muted-foreground">Build and manage COD funnel pages for your products.</p>
         </div>
-        <PermissionGate permission="landing_pages.create">
-          <Button asChild>
-            <Link to="/landing-pages/new">
-              <Plus className="h-4 w-4" />
-              Create Landing Page
-            </Link>
-          </Button>
-        </PermissionGate>
+        <div className="flex items-center gap-2">
+          <PermissionGate permission="landing_pages.templates.view">
+            <Button variant="outline" asChild>
+              <Link to="/landing-pages/templates">
+                <SquareStack className="h-4 w-4" />
+                Templates
+              </Link>
+            </Button>
+          </PermissionGate>
+          <PermissionGate permission="landing_pages.create">
+            <Button asChild>
+              <Link to="/landing-pages/new">
+                <Plus className="h-4 w-4" />
+                Create Landing Page
+              </Link>
+            </Button>
+          </PermissionGate>
+        </div>
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">

@@ -8,6 +8,8 @@ export const landingPageFormSchema = z.object({
     .min(3, 'Slug must be at least 3 characters')
     .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Use lowercase letters, numbers and hyphens only'),
   pageType: z.enum(['product_sales', 'direct_response']),
+  templateId: z.string(),
+  marketCountryCode: z.string(),
 })
 
 export type LandingPageFormInput = z.input<typeof landingPageFormSchema>

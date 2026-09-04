@@ -27,6 +27,7 @@ export interface BrandFormFields {
   email_sender_name?: string | null
   email_sender_address?: string | null
   meta_pixel_id?: string | null
+  tiktok_pixel_id?: string | null
   google_analytics_id?: string | null
   google_tag_manager_id?: string | null
   microsoft_clarity_id?: string | null
@@ -65,6 +66,39 @@ export async function setBrandStatus(id: string, status: 'active' | 'inactive', 
   const { data, error } = await supabase.from('brands').update({ status, updated_by: userId }).eq('id', id).select('*').single()
   if (error) throw error
   return data as Brand
+}
+
+/**
+ * Brand-level default conversion tracking, the "workspace/brand default"
+ * tier of the page-override → brand-default inheritance (0031). Tokens
+ * are write-only: null = leave unchanged, '' = explicitly clear. They
+ * are never selectable from the client (brand_tracking_secrets has zero
+ * client RLS policies) — set_brand_meta_tracking()/set_brand_tiktok_tracking()
+ * are the only write path, and neither RPC returns the token back.
+ */
+export async function setBrandMetaTracking(
+  brandId: string,
+  fields: { pixelId?: string | null; capiAccessToken?: string | null; capiTestEventCode?: string | null },
+): Promise<void> {
+  const { error } = await supabase.rpc('set_brand_meta_tracking', {
+    p_brand_id: brandId,
+    p_pixel_id: fields.pixelId ?? null,
+    p_capi_access_token: fields.capiAccessToken ?? null,
+    p_capi_test_event_code: fields.capiTestEventCode ?? null,
+  })
+  if (error) throw error
+}
+
+export async function setBrandTiktokTracking(
+  brandId: string,
+  fields: { pixelId?: string | null; accessToken?: string | null },
+): Promise<void> {
+  const { error } = await supabase.rpc('set_brand_tiktok_tracking', {
+    p_brand_id: brandId,
+    p_pixel_id: fields.pixelId ?? null,
+    p_access_token: fields.accessToken ?? null,
+  })
+  if (error) throw error
 }
 
 const LOGO_BUCKET = 'brands'

@@ -8,25 +8,34 @@ import { FloatingOrderCta, WhatsappCta } from '@/features/landingPages/public/Fl
 import { PackageSelectorSection } from '@/features/landingPages/public/PackageSelectorSection'
 import {
   BenefitsSection,
+  ComparisonSection,
   CtaBannerSection,
   FaqSection,
+  GuaranteeSection,
   HeroSection,
   HowItWorksSection,
   ImageTextSection,
+  IngredientsSection,
+  ProblemAwarenessSection,
   TestimonialsSection,
   TextSection,
   TrustStripSection,
 } from '@/features/landingPages/public/PublicSections'
 import { getSessionId } from '@/features/landingPages/public/scroll'
+import { firePixelOrderCreated, firePixelPageView, firePixelSelectPackage, firePixelViewContent, initTrackingRuntime } from '@/features/landingPages/public/tracking'
 import type {
   BenefitsConfig,
+  ComparisonConfig,
   CtaBannerConfig,
   FaqConfig,
+  GuaranteeConfig,
   HeroConfig,
   HowItWorksConfig,
   ImageTextConfig,
+  IngredientsConfig,
   OrderFormConfig,
   PackageSelectorConfig,
+  ProblemAwarenessConfig,
   TestimonialsConfig,
   TextConfig,
   TrustStripConfig,
@@ -65,6 +74,7 @@ export function PublicLandingPage() {
     if (page) {
       document.title = page.seo_config?.metaTitle || page.title || page.name
       trackLandingPageEvent(page.slug, 'page_view', getSessionId())
+      initTrackingRuntime(page.slug).then(() => firePixelPageView())
     }
   }, [page])
 
@@ -72,16 +82,24 @@ export function PublicLandingPage() {
     if (packages && packages.length > 0 && !selectedPackageId) {
       const preferred = packages.find((p) => p.is_default) ?? packages[0]
       setSelectedPackageId(preferred.id)
+      firePixelViewContent({ productName: page?.name, currency: page?.market_currency_code, value: preferred.price })
     }
-  }, [packages, selectedPackageId])
+  }, [packages, selectedPackageId, page])
 
   function handleSelectPackage(packageId: string) {
     setSelectedPackageId(packageId)
-    if (page) trackLandingPageEvent(page.slug, 'package_selected', getSessionId(), { package_id: packageId })
+    if (page) {
+      trackLandingPageEvent(page.slug, 'package_selected', getSessionId(), { package_id: packageId })
+      const pkg = (packages ?? []).find((p) => p.id === packageId)
+      firePixelSelectPackage({ packageName: pkg?.name, currency: page.market_currency_code, value: pkg?.price })
+    }
   }
 
   function handleOrderCreated(order: Order) {
-    if (page) trackLandingPageEvent(page.slug, 'thank_you_view', getSessionId())
+    if (page) {
+      trackLandingPageEvent(page.slug, 'thank_you_view', getSessionId())
+      firePixelOrderCreated({ orderId: order.id, currency: order.currency_code, value: order.total_amount })
+    }
     navigate(`/l/${slug}/thank-you`, { state: { order, packageName: selectedPackage?.name } })
   }
 
@@ -186,6 +204,14 @@ function RenderSection({
       )
     case 'ORDER_FORM':
       return <>{renderOrderForm(config as unknown as OrderFormConfig)}</>
+    case 'PROBLEM_AWARENESS':
+      return <ProblemAwarenessSection config={config as unknown as ProblemAwarenessConfig} />
+    case 'INGREDIENTS':
+      return <IngredientsSection config={config as unknown as IngredientsConfig} />
+    case 'COMPARISON':
+      return <ComparisonSection config={config as unknown as ComparisonConfig} />
+    case 'GUARANTEE':
+      return <GuaranteeSection config={config as unknown as GuaranteeConfig} />
     default:
       return null
   }

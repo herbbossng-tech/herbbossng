@@ -42,6 +42,7 @@ import { CreateLandingPagePage } from '@/features/landingPages/pages/CreateLandi
 import { LandingPageEditorPage } from '@/features/landingPages/pages/LandingPageEditorPage'
 import { LandingPagePreviewPage } from '@/features/landingPages/pages/LandingPagePreviewPage'
 import { LandingPagesPage } from '@/features/landingPages/pages/LandingPagesPage'
+import { TemplateGalleryPage } from '@/features/landingPages/pages/TemplateGalleryPage'
 import { PublicLandingPage } from '@/features/landingPages/public/PublicLandingPage'
 import { ThankYouPage } from '@/features/landingPages/public/ThankYouPage'
 import { CreateOrderPage } from '@/features/orders/pages/CreateOrderPage'
@@ -139,6 +140,7 @@ function App() {
 
           <Route path="landing-pages">
             <Route index element={<LandingPagesPage />} />
+            <Route path="templates" element={<TemplateGalleryPage />} />
             <Route path="new" element={<CreateLandingPagePage />} />
             <Route path=":id/edit" element={<LandingPageEditorPage />} />
             <Route path=":id/preview" element={<LandingPagePreviewPage />} />

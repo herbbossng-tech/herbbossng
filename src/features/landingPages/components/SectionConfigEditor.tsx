@@ -10,13 +10,19 @@ import { LandingPageImageField } from '@/features/landingPages/components/Landin
 import type {
   BenefitItem,
   BenefitsConfig,
+  ComparisonConfig,
+  ComparisonRow,
   CtaBannerConfig,
   FaqConfig,
   FaqItem,
+  GuaranteeConfig,
   HeroConfig,
   HowItWorksConfig,
   HowItWorksStep,
   ImageTextConfig,
+  IngredientItem,
+  IngredientsConfig,
+  ProblemAwarenessConfig,
   TestimonialsConfig,
   TextConfig,
   Testimonial,
@@ -273,6 +279,79 @@ export function SectionConfigEditor({ landingPageId, type, config, onChange }: S
           <p className="text-xs text-muted-foreground">Which fields are collected is controlled on the Settings tab.</p>
         </div>
       )
+    case 'PROBLEM_AWARENESS': {
+      const c = config as unknown as ProblemAwarenessConfig
+      return (
+        <div className="flex flex-col gap-4">
+          <Field label="Headline">
+            <Input value={c.headline ?? ''} onChange={(e) => set({ headline: e.target.value })} />
+          </Field>
+          <Field label="Body">
+            <Textarea rows={4} value={c.body ?? ''} onChange={(e) => set({ body: e.target.value })} />
+          </Field>
+        </div>
+      )
+    }
+    case 'INGREDIENTS': {
+      const c = config as unknown as IngredientsConfig
+      return (
+        <div className="flex flex-col gap-4">
+          <Field label="Headline">
+            <Input value={c.headline ?? ''} onChange={(e) => set({ headline: e.target.value })} />
+          </Field>
+          <ListEditor<IngredientItem>
+            items={c.items ?? []}
+            onChange={(items) => set({ items })}
+            newItem={{ name: '' }}
+            addLabel="Add ingredient"
+            renderItem={(item, update) => (
+              <div className="flex flex-col gap-2">
+                <Input placeholder="Ingredient name" value={item.name} onChange={(e) => update({ name: e.target.value })} />
+                <Textarea rows={2} placeholder="Role / description (optional)" value={item.description ?? ''} onChange={(e) => update({ description: e.target.value })} />
+              </div>
+            )}
+          />
+        </div>
+      )
+    }
+    case 'COMPARISON': {
+      const c = config as unknown as ComparisonConfig
+      return (
+        <div className="flex flex-col gap-4">
+          <Field label="Headline">
+            <Input value={c.headline ?? ''} onChange={(e) => set({ headline: e.target.value })} />
+          </Field>
+          <ListEditor<ComparisonRow>
+            items={c.rows ?? []}
+            onChange={(rows) => set({ rows })}
+            newItem={{ label: '', us: '', them: '' }}
+            addLabel="Add comparison row"
+            renderItem={(item, update) => (
+              <div className="flex flex-col gap-2">
+                <Input placeholder="Row label (e.g. Ingredients)" value={item.label} onChange={(e) => update({ label: e.target.value })} />
+                <div className="flex gap-2">
+                  <Input placeholder="Us" value={item.us} onChange={(e) => update({ us: e.target.value })} />
+                  <Input placeholder="Others" value={item.them} onChange={(e) => update({ them: e.target.value })} />
+                </div>
+              </div>
+            )}
+          />
+        </div>
+      )
+    }
+    case 'GUARANTEE': {
+      const c = config as unknown as GuaranteeConfig
+      return (
+        <div className="flex flex-col gap-4">
+          <Field label="Headline">
+            <Input value={c.headline ?? ''} onChange={(e) => set({ headline: e.target.value })} />
+          </Field>
+          <Field label="Body">
+            <Textarea rows={3} value={c.body ?? ''} onChange={(e) => set({ body: e.target.value })} />
+          </Field>
+        </div>
+      )
+    }
     default:
       return null
   }

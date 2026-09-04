@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label'
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/state'
 import { usePermission } from '@/contexts/PermissionsContext'
 import { BrandLogoUploader } from '@/features/brands/components/BrandLogoUploader'
-import { useBrand, useSetBrandStatus, useUpdateBrand } from '@/features/brands/hooks'
+import { useBrand, useSetBrandMetaTracking, useSetBrandStatus, useSetBrandTiktokTracking, useUpdateBrand } from '@/features/brands/hooks'
 import type { BrandFormFields } from '@/features/brands/api'
 
 export function BrandDetailPage() {
@@ -30,14 +30,23 @@ function BrandDetailContent() {
   const { id } = useParams<{ id: string }>()
   const { data: brand, isLoading, isError, refetch } = useBrand(id)
   const canManage = usePermission('brands.manage')
+  const canManageTracking = usePermission('landing_pages.tracking.manage')
   const updateBrand = useUpdateBrand(id ?? '')
   const setStatus = useSetBrandStatus()
+  const setMetaTracking = useSetBrandMetaTracking(id ?? '')
+  const setTiktokTracking = useSetBrandTiktokTracking(id ?? '')
 
   const [fields, setFields] = React.useState<BrandFormFields>({ name: '' })
   const [dirty, setDirty] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
   const [saved, setSaved] = React.useState(false)
   const [confirmDeactivate, setConfirmDeactivate] = React.useState(false)
+
+  const [metaCapiToken, setMetaCapiToken] = React.useState('')
+  const [metaTestEventCode, setMetaTestEventCode] = React.useState('')
+  const [tiktokToken, setTiktokToken] = React.useState('')
+  const [trackingSaved, setTrackingSaved] = React.useState<'meta' | 'tiktok' | null>(null)
+  const [trackingError, setTrackingError] = React.useState<string | null>(null)
 
   React.useEffect(() => {
     if (brand && !dirty) {
@@ -47,6 +56,7 @@ function BrandDetailContent() {
         email_sender_name: brand.email_sender_name ?? '',
         email_sender_address: brand.email_sender_address ?? '',
         meta_pixel_id: brand.meta_pixel_id ?? '',
+        tiktok_pixel_id: brand.tiktok_pixel_id ?? '',
         google_analytics_id: brand.google_analytics_id ?? '',
         google_tag_manager_id: brand.google_tag_manager_id ?? '',
         microsoft_clarity_id: brand.microsoft_clarity_id ?? '',
@@ -145,13 +155,20 @@ function BrandDetailContent() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Analytics Identifiers</CardTitle>
-          <CardDescription>Stored for future use — GCOS does not yet send events to any of these platforms.</CardDescription>
+          <CardTitle className="text-base">Analytics & Pixel IDs</CardTitle>
+          <CardDescription>
+            Public pixel IDs, safe to load in the browser. Meta Pixel and TikTok Pixel are the brand-level default for every landing page that
+            doesn't set its own override in its Tracking settings.
+          </CardDescription>
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <div className="flex flex-col gap-1.5">
             <Label>Meta Pixel ID</Label>
             <Input value={fields.meta_pixel_id ?? ''} disabled={!canManage} onChange={(e) => set('meta_pixel_id', e.target.value)} />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label>TikTok Pixel ID</Label>
+            <Input value={fields.tiktok_pixel_id ?? ''} disabled={!canManage} onChange={(e) => set('tiktok_pixel_id', e.target.value)} />
           </div>
           <div className="flex flex-col gap-1.5">
             <Label>Google Analytics ID</Label>
@@ -167,6 +184,80 @@ function BrandDetailContent() {
           </div>
         </CardContent>
       </Card>
+
+      {canManageTracking && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Conversion API / Events API Tokens</CardTitle>
+            <CardDescription>
+              Server-side secrets — never sent to the browser and never displayed back here once saved. Leave a field blank to keep the
+              currently-saved value unchanged.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-5">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="flex flex-col gap-1.5">
+                <Label>Meta CAPI access token</Label>
+                <Input type="password" placeholder="Unchanged unless filled in" value={metaCapiToken} onChange={(e) => setMetaCapiToken(e.target.value)} />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label>Meta CAPI test event code (optional)</Label>
+                <Input placeholder="Unchanged unless filled in" value={metaTestEventCode} onChange={(e) => setMetaTestEventCode(e.target.value)} />
+              </div>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-fit"
+              disabled={setMetaTracking.isPending || (!metaCapiToken && !metaTestEventCode)}
+              onClick={async () => {
+                setTrackingError(null)
+                try {
+                  await setMetaTracking.mutateAsync({
+                    capiAccessToken: metaCapiToken || null,
+                    capiTestEventCode: metaTestEventCode || null,
+                  })
+                  setMetaCapiToken('')
+                  setMetaTestEventCode('')
+                  setTrackingSaved('meta')
+                  setTimeout(() => setTrackingSaved(null), 3000)
+                } catch (err) {
+                  setTrackingError(err instanceof Error ? err.message : 'Failed to save Meta CAPI token')
+                }
+              }}
+            >
+              {setMetaTracking.isPending ? 'Saving…' : 'Save Meta CAPI Token'}
+            </Button>
+            {trackingSaved === 'meta' && <p className="text-xs text-success">Meta CAPI token saved.</p>}
+
+            <div className="flex flex-col gap-1.5 sm:max-w-xs">
+              <Label>TikTok Events API access token</Label>
+              <Input type="password" placeholder="Unchanged unless filled in" value={tiktokToken} onChange={(e) => setTiktokToken(e.target.value)} />
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-fit"
+              disabled={setTiktokTracking.isPending || !tiktokToken}
+              onClick={async () => {
+                setTrackingError(null)
+                try {
+                  await setTiktokTracking.mutateAsync({ accessToken: tiktokToken || null })
+                  setTiktokToken('')
+                  setTrackingSaved('tiktok')
+                  setTimeout(() => setTrackingSaved(null), 3000)
+                } catch (err) {
+                  setTrackingError(err instanceof Error ? err.message : 'Failed to save TikTok Events API token')
+                }
+              }}
+            >
+              {setTiktokTracking.isPending ? 'Saving…' : 'Save TikTok Events API Token'}
+            </Button>
+            {trackingSaved === 'tiktok' && <p className="text-xs text-success">TikTok Events API token saved.</p>}
+            {trackingError && <p className="text-xs text-destructive">{trackingError}</p>}
+          </CardContent>
+        </Card>
+      )}
 
       {canManage && (
         <div className="flex items-center gap-3">

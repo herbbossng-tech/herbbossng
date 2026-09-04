@@ -35,9 +35,10 @@ export interface Brand extends Timestamped {
   logo_url: string | null
   domain: string | null
   theme: Json
+  /** Public pixel ID, safe for the browser. The CAPI access token/test event code are NOT on this table — see brand_tracking_secrets (0031), never selected by the client. */
   meta_pixel_id: string | null
-  meta_capi_access_token: string | null
-  meta_capi_test_event_code: string | null
+  /** Public pixel ID, same class as meta_pixel_id. The TikTok access token lives server-side only in brand_tracking_secrets. */
+  tiktok_pixel_id: string | null
   google_analytics_id: string | null
   google_tag_manager_id: string | null
   microsoft_clarity_id: string | null
@@ -403,6 +404,14 @@ export interface Order {
   affiliate_campaign_id: string | null
   affiliate_referral_code_used: string | null
 
+  utm_source: string | null
+  utm_medium: string | null
+  utm_campaign: string | null
+  utm_term: string | null
+  utm_content: string | null
+  fbclid: string | null
+  ttclid: string | null
+
   packed_at: string | null
   packed_by: string | null
   /** Trigger-maintained from delivery_attempts — never written directly. */
@@ -635,9 +644,12 @@ export interface LandingPage {
   floating_cta_config: FloatingCtaConfig
   order_summary_enabled: boolean
 
-  /** Copied once from the owning workspace at creation time — see migration 0021. */
+  /** Copied from the owning workspace at creation time, or set explicitly per-page — see set_landing_page_market() (0031). */
   market_country_code: string | null
   market_currency_code: string | null
+
+  /** The template this page was created from, if any. Null for pages predating the template engine (0031) or built section-by-section. */
+  template_id: string | null
 
   published_at: string | null
   created_at: string
@@ -659,6 +671,10 @@ export type LandingPageSectionType =
   | 'CTA_BANNER'
   | 'PACKAGE_SELECTOR'
   | 'ORDER_FORM'
+  | 'PROBLEM_AWARENESS'
+  | 'INGREDIENTS'
+  | 'COMPARISON'
+  | 'GUARANTEE'
 
 export interface LandingPageSection {
   id: string
