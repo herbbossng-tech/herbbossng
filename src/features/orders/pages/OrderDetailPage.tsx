@@ -507,11 +507,13 @@ export function OrderDetailPage() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Settlement</CardTitle>
-                {canManageSettlement && ['collected', 'partial'].includes(order.cash_collection_status) && (
-                  <Button size="sm" variant="outline" onClick={() => setCreateSettlementOpen(true)}>
-                    Record
-                  </Button>
-                )}
+                {canManageSettlement &&
+                  ['collected', 'partial'].includes(order.cash_collection_status) &&
+                  !orderSettlements?.some((s) => s.status === 'SETTLED') && (
+                    <Button size="sm" variant="outline" onClick={() => setCreateSettlementOpen(true)}>
+                      Record
+                    </Button>
+                  )}
               </CardHeader>
               <CardContent className="flex flex-col gap-2 text-sm">
                 {!orderSettlements || orderSettlements.length === 0 ? (
