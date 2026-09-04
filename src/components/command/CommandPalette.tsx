@@ -19,6 +19,7 @@ import {
   Users,
   UsersRound,
   Wallet,
+  Workflow,
 } from 'lucide-react'
 import * as React from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -43,6 +44,7 @@ import { fetchCustomers } from '@/features/customers/api'
 import { fetchLandingPages } from '@/features/landingPages/api'
 import { fetchOrders } from '@/features/orders/api'
 import { fetchProducts } from '@/features/products/api'
+import { fetchAutomationRules } from '@/features/automation/api'
 import { fetchRoles } from '@/features/roles/api'
 import { fetchWorkspaceStaff } from '@/features/staff/api'
 
@@ -67,6 +69,9 @@ const quickActions = [
   { label: 'Create Role', href: '/roles', icon: ShieldCheck },
   { label: 'Assignment Rules', href: '/settings/assignment-rules', icon: Shuffle },
   { label: 'Approval Rules', href: '/settings/approval-rules', icon: ShieldAlert },
+  { label: 'Automation Rules', href: '/automation', icon: Workflow },
+  { label: 'New Automation Rule', href: '/automation', icon: PlusCircle },
+  { label: 'Failed Automations', href: '/automation/failed', icon: Workflow },
 ]
 
 export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
@@ -106,6 +111,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const canSearchStaff = hasPermission('staff.view')
   const canSearchAffiliates = hasPermission('affiliates.view')
   const canSearchRoles = hasPermission('roles_permissions.view')
+  const canSearchAutomationRules = hasPermission('automation.view')
   const canSearchBrands = hasPermission('brands.view')
   const canSearchAuditLogs = hasPermission('audit_logs.view')
 
@@ -157,6 +163,13 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     enabled: searching && canSearchRoles,
   })
   const filteredRoles = (roleResults ?? []).filter((r) => r.name.toLowerCase().includes(term.toLowerCase())).slice(0, 6)
+
+  const { data: automationRuleResults } = useQuery({
+    queryKey: ['command-automation-rule-search', activeWorkspace.id],
+    queryFn: () => fetchAutomationRules(activeWorkspace.id),
+    enabled: searching && canSearchAutomationRules,
+  })
+  const filteredAutomationRules = (automationRuleResults ?? []).filter((r) => r.name.toLowerCase().includes(term.toLowerCase())).slice(0, 6)
 
   const { data: brandResults } = useQuery({
     queryKey: ['command-brand-search', activeWorkspace.id, term],
@@ -317,6 +330,23 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                 <ShieldCheck className="h-4 w-4 text-muted-foreground" />
                 <span className="flex-1">{role.name}</span>
                 {role.is_system_role && <span className="text-xs text-muted-foreground">System</span>}
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        )}
+
+        {searching && canSearchAutomationRules && (
+          <CommandGroup heading="Automation">
+            {filteredAutomationRules.length === 0 && (
+              <CommandItem disabled value={`no-automation-rules-${term}`}>
+                No matching automation rules
+              </CommandItem>
+            )}
+            {filteredAutomationRules.map((rule) => (
+              <CommandItem key={rule.id} value={rule.name} onSelect={() => go('/automation')}>
+                <Workflow className="h-4 w-4 text-muted-foreground" />
+                <span className="flex-1">{rule.name}</span>
+                <span className="text-xs text-muted-foreground">{rule.status}</span>
               </CommandItem>
             ))}
           </CommandGroup>

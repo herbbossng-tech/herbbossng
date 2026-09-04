@@ -106,6 +106,7 @@ export type PermissionModule =
   | 'support'
   | 'assignment_rules'
   | 'approval_rules'
+  | 'automation'
 
 export type PermissionAction =
   | 'view'
@@ -1258,6 +1259,195 @@ export interface ApprovalRule {
   created_by: string | null
   updated_by: string | null
   deleted_at: string | null
+}
+
+// ---------------------------------------------------------------------
+// Phase 8 — Automation / Event Engine (migration 0028). See that
+// migration for full field semantics: conditions/actions are always
+// structured jsonb (never arbitrary code), event_type/entity_type are
+// free text server-side (no enum) but the values below are the full
+// set the engine currently emits/consumes.
+// ---------------------------------------------------------------------
+export type AutomationEventType =
+  | 'orders.created'
+  | 'orders.status_changed'
+  | 'orders.delivered'
+  | 'orders.cancelled'
+  | 'orders.returned'
+  | 'orders.payment_collected'
+  | 'customers.created'
+  | 'customers.repeat_detected'
+  | 'inventory.out_of_stock'
+  | 'inventory.low_stock'
+  | 'tasks.created'
+  | 'tasks.completed'
+  | 'waybills.created'
+  | 'waybills.dispatched'
+  | 'waybills.delivery_attempted'
+  | 'settlements.created'
+  | 'settlements.completed'
+  | 'affiliate.commission_earned'
+  | 'affiliate.withdrawal_requested'
+  | 'affiliate.withdrawal_approved'
+  | 'ad_cost.created'
+  | 'ad_cost.approved'
+  | 'staff.invited'
+  | 'staff.suspended'
+
+export type AutomationEventSource = 'system' | 'user_action' | 'webhook' | 'integration'
+export type AutomationEventProcessingStatus = 'pending' | 'processed' | 'failed'
+
+export interface AutomationEvent {
+  id: string
+  workspace_id: string
+  brand_id: string | null
+  event_type: AutomationEventType | string
+  entity_type: string
+  entity_id: string | null
+  payload: Json
+  source: AutomationEventSource
+  correlation_id: string
+  idempotency_key: string
+  occurred_at: string
+  created_at: string
+  processed_at: string | null
+  processing_status: AutomationEventProcessingStatus
+  processing_error: string | null
+}
+
+export type AutomationConditionOperator =
+  | 'equals'
+  | 'not_equals'
+  | 'greater_than'
+  | 'less_than'
+  | 'greater_or_equal'
+  | 'less_or_equal'
+  | 'contains'
+  | 'not_contains'
+  | 'in'
+  | 'not_in'
+  | 'is_empty'
+  | 'is_not_empty'
+
+export interface AutomationCondition {
+  field: string
+  operator: AutomationConditionOperator
+  value: Json
+}
+
+export type AutomationConditionsLogic = 'AND' | 'OR'
+
+export type AutomationActionType =
+  | 'CREATE_TASK'
+  | 'ASSIGN_TASK'
+  | 'ASSIGN_ORDER'
+  | 'CREATE_NOTIFICATION'
+  | 'TRIGGER_APPROVAL'
+  | 'UPDATE_SUPPORTED_RECORD'
+  | 'SEND_SMS'
+  | 'SEND_WHATSAPP'
+  | 'SEND_EMAIL'
+  | 'LOG_EVENT'
+
+export interface AutomationAction {
+  type: AutomationActionType
+  config: Json
+}
+
+export type AutomationRuleStatus = 'draft' | 'active' | 'paused' | 'archived'
+
+export interface AutomationRule {
+  id: string
+  workspace_id: string
+  brand_id: string | null
+  name: string
+  description: string | null
+  event_type: AutomationEventType | string
+  status: AutomationRuleStatus
+  priority: number
+  conditions: AutomationCondition[]
+  conditions_logic: AutomationConditionsLogic
+  actions: AutomationAction[]
+  created_at: string
+  updated_at: string
+  created_by: string | null
+  updated_by: string | null
+  deleted_at: string | null
+}
+
+export type AutomationExecutionStatus = 'pending' | 'running' | 'succeeded' | 'failed' | 'retrying' | 'skipped'
+
+export interface AutomationExecution {
+  id: string
+  event_id: string
+  rule_id: string
+  workspace_id: string
+  brand_id: string | null
+  status: AutomationExecutionStatus
+  attempts: number
+  max_attempts: number
+  started_at: string | null
+  completed_at: string | null
+  next_retry_at: string | null
+  error_message: string | null
+  result: Json
+  correlation_id: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type AutomationExecutionActionStatus = 'pending' | 'succeeded' | 'failed' | 'skipped'
+
+export interface AutomationExecutionAction {
+  id: string
+  execution_id: string
+  action_seq: number
+  action_type: AutomationActionType | string
+  action_config: Json
+  status: AutomationExecutionActionStatus
+  result: Json
+  error_message: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type ApprovalRequestStatus = 'PENDING' | 'APPROVED' | 'REJECTED'
+
+export interface ApprovalRequest {
+  id: string
+  workspace_id: string
+  brand_id: string | null
+  approval_rule_id: string | null
+  module: string
+  entity_type: string
+  entity_id: string
+  amount: number | null
+  status: ApprovalRequestStatus
+  requested_by: string | null
+  requested_at: string
+  decided_by: string | null
+  decided_at: string | null
+  decision_note: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type CommunicationChannel = 'sms' | 'whatsapp' | 'email' | 'push'
+export type CommunicationStatus = 'not_configured' | 'unsupported' | 'sent' | 'failed'
+
+export interface CommunicationLog {
+  id: string
+  workspace_id: string
+  brand_id: string | null
+  channel: CommunicationChannel
+  recipient: string | null
+  subject: string | null
+  body: string | null
+  status: CommunicationStatus
+  provider: string | null
+  provider_message_id: string | null
+  related_execution_action_id: string | null
+  created_at: string
 }
 
 /**

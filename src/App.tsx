@@ -14,6 +14,11 @@ import { CampaignFormPage } from '@/features/campaigns/pages/CampaignFormPage'
 import { CampaignsPage } from '@/features/campaigns/pages/CampaignsPage'
 import { WalletsPage } from '@/features/wallets/pages/WalletsPage'
 import { WithdrawalsPage } from '@/features/withdrawals/pages/WithdrawalsPage'
+import { AutomationLayout } from '@/features/automation/AutomationLayout'
+import { AutomationEventsPage } from '@/features/automation/pages/AutomationEventsPage'
+import { AutomationExecutionsPage } from '@/features/automation/pages/AutomationExecutionsPage'
+import { AutomationRulesPage } from '@/features/automation/pages/AutomationRulesPage'
+import { FailedAutomationsPage } from '@/features/automation/pages/FailedAutomationsPage'
 import { DeliveryPartnersPage } from '@/features/deliveryPartners/pages/DeliveryPartnersPage'
 import { OperationsLayout } from '@/features/operations/OperationsLayout'
 import { OperationsDashboardPage } from '@/features/operations/pages/OperationsDashboardPage'
@@ -79,6 +84,7 @@ const placeholderNavItems = allNavItems.filter(
     item.href !== '/audit-logs' &&
     item.href !== '/affiliates' &&
     item.href !== '/operations' &&
+    item.href !== '/automation' &&
     item.href !== '/settings',
 )
 
@@ -186,6 +192,15 @@ function App() {
               <Route path="waybills" element={<WaybillsPage />} />
               <Route path="delivery-partners" element={<DeliveryPartnersPage />} />
               <Route path="settlement" element={<SettlementPage />} />
+            </Route>
+          </Route>
+
+          <Route path="automation">
+            <Route element={<AutomationLayout />}>
+              <Route index element={<AutomationRulesPage />} />
+              <Route path="events" element={<AutomationEventsPage />} />
+              <Route path="executions" element={<AutomationExecutionsPage />} />
+              <Route path="failed" element={<FailedAutomationsPage />} />
             </Route>
           </Route>
 

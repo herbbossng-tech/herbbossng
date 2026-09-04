@@ -18,6 +18,7 @@ import {
   Users,
   UsersRound,
   Wallet,
+  Workflow,
 } from 'lucide-react'
 
 export interface NavItem {
@@ -64,6 +65,7 @@ export const navSections: NavSection[] = [
     items: [
       { label: 'Affiliates', href: '/affiliates', icon: UsersRound, permission: 'affiliates.view' },
       { label: 'Marketing', href: '/marketing', icon: Megaphone, permission: 'marketing.view' },
+      { label: 'Automation', href: '/automation', icon: Workflow, permission: 'automation.view' },
     ],
   },
   {
