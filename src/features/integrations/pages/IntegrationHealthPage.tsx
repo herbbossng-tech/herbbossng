@@ -8,8 +8,14 @@ import { EmptyState, ErrorState, LoadingState } from '@/components/ui/state'
 import { usePermission } from '@/contexts/PermissionsContext'
 import { useWorkspace } from '@/contexts/WorkspaceContext'
 import { fetchFailedAutomationExecutions } from '@/features/automation/api'
-import { summarizeByStatus } from '@/features/integrations/api'
-import { useCommunicationLog, useRetryCommunicationLogEntry, useRetryTrackingDispatchEvent, useTrackingDispatchEvents } from '@/features/integrations/hooks'
+import { summarizeByStatus, type QueueHealthRow } from '@/features/integrations/api'
+import {
+  useCommunicationLog,
+  useQueueHealth,
+  useRetryCommunicationLogEntry,
+  useRetryTrackingDispatchEvent,
+  useTrackingDispatchEvents,
+} from '@/features/integrations/hooks'
 import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate'
 import type { CommunicationLog, TrackingDispatchLog } from '@/types/database'
 import { useQuery } from '@tanstack/react-query'
@@ -76,6 +82,64 @@ function ProviderCard({
             ))}
           </div>
         )}
+      </CardContent>
+    </Card>
+  )
+}
+
+const queueHealthLabel: Record<QueueHealthRow['queue'], string> = {
+  tracking: 'Tracking Dispatch',
+  communication: 'Communications',
+  automation: 'Automation',
+}
+
+const healthBadgeVariant: Record<QueueHealthRow['health'], 'success' | 'warning' | 'destructive' | 'secondary'> = {
+  healthy: 'success',
+  degraded: 'warning',
+  failing: 'destructive',
+  not_configured: 'secondary',
+  no_data: 'secondary',
+}
+
+const healthLabel: Record<QueueHealthRow['health'], string> = {
+  healthy: 'Healthy',
+  degraded: 'Degraded',
+  failing: 'Failing',
+  not_configured: 'Not configured',
+  no_data: 'No data yet',
+}
+
+function relativeTime(iso: string | null): string {
+  if (!iso) return 'never'
+  const diffMs = Date.now() - new Date(iso).getTime()
+  const mins = Math.round(diffMs / 60_000)
+  if (mins < 1) return 'just now'
+  if (mins < 60) return `${mins}m ago`
+  const hours = Math.round(mins / 60)
+  if (hours < 24) return `${hours}h ago`
+  return `${Math.round(hours / 24)}d ago`
+}
+
+function QueueHealthCard({ row }: { row: QueueHealthRow }) {
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-base">{queueHealthLabel[row.queue]}</CardTitle>
+          <Badge variant={healthBadgeVariant[row.health]}>{healthLabel[row.health]}</Badge>
+        </div>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3">
+        <div className="grid grid-cols-3 gap-2">
+          <StatTile label="Pending" value={row.pending} />
+          <StatTile label="Retrying" value={row.retrying} tone={row.retrying > 0 ? 'warning' : undefined} />
+          <StatTile label="Failed (24h)" value={row.failed_recent} tone={row.failed_recent > 0 ? 'destructive' : undefined} />
+        </div>
+        <div className="flex flex-col gap-1 text-xs text-muted-foreground">
+          <span>Oldest pending: {relativeTime(row.oldest_pending_at)}</span>
+          <span>Last success: {relativeTime(row.last_success_at)}</span>
+          <span>Last failure: {relativeTime(row.last_failure_at)}</span>
+        </div>
       </CardContent>
     </Card>
   )
@@ -152,6 +216,7 @@ function IntegrationHealthContent() {
   const canManage = usePermission('integrations.manage')
   const { data: trackingEvents, isLoading: trackingLoading, isError: trackingError, refetch: refetchTracking } = useTrackingDispatchEvents()
   const { data: commLog, isLoading: commLoading, isError: commError, refetch: refetchComm } = useCommunicationLog()
+  const { data: queueHealth } = useQueueHealth()
   const retryTracking = useRetryTrackingDispatchEvent()
   const retryComm = useRetryCommunicationLogEntry()
 
@@ -162,9 +227,10 @@ function IntegrationHealthContent() {
     refetchInterval: 30_000,
   })
 
-  useRealtimeInvalidate('tracking_dispatch_log', activeWorkspace.id, [['tracking-dispatch-events']])
-  useRealtimeInvalidate('communication_log', activeWorkspace.id, [['communication-log']])
-  useRealtimeInvalidate('automation_executions', activeWorkspace.id, [['integration-health-automation', activeWorkspace.id]])
+  const queueHealthKey = ['queue-health', activeWorkspace.id]
+  useRealtimeInvalidate('tracking_dispatch_log', activeWorkspace.id, [['tracking-dispatch-events'], queueHealthKey])
+  useRealtimeInvalidate('communication_log', activeWorkspace.id, [['communication-log'], queueHealthKey])
+  useRealtimeInvalidate('automation_executions', activeWorkspace.id, [['integration-health-automation', activeWorkspace.id], queueHealthKey])
 
   if (trackingLoading || commLoading) return <LoadingState label="Loading integration health…" />
   if (trackingError || commError) return <ErrorState message="Couldn't load integration health." onRetry={() => { refetchTracking(); refetchComm() }} />
@@ -188,6 +254,14 @@ function IntegrationHealthContent() {
           queue state, never a fabricated green check.
         </p>
       </div>
+
+      {queueHealth && queueHealth.length > 0 && (
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          {queueHealth.map((row) => (
+            <QueueHealthCard key={row.queue} row={row} />
+          ))}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <ProviderCard

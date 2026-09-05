@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/state'
 import { usePermission } from '@/contexts/PermissionsContext'
+import { useOperationsRealtime } from '@/features/operations/hooks'
 import { useUpdateWaybillStatus, useWaybills } from '@/features/waybills/hooks'
 import { formatCurrency } from '@/lib/currency'
 
@@ -45,6 +46,7 @@ export function WaybillsPage() {
 }
 
 function WaybillsContent() {
+  useOperationsRealtime()
   const [search, setSearch] = React.useState('')
   const [status, setStatus] = React.useState('all')
   const { data: waybills, isLoading, isError, refetch } = useWaybills({ search, status })

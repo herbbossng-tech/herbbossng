@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/card'
 import { EmptyState, LoadingState } from '@/components/ui/state'
 import { usePermission } from '@/contexts/PermissionsContext'
 import { useWorkspace } from '@/contexts/WorkspaceContext'
-import { useOperationsSummary } from '@/features/operations/hooks'
+import { useOperationsRealtime, useOperationsSummary } from '@/features/operations/hooks'
 import { formatCurrency } from '@/lib/currency'
 
 export function OperationsDashboardPage() {
@@ -22,6 +22,7 @@ export function OperationsDashboardPage() {
 }
 
 function OperationsDashboardContent() {
+  useOperationsRealtime()
   const { activeWorkspace } = useWorkspace()
   const { data: summary, isLoading } = useOperationsSummary()
 

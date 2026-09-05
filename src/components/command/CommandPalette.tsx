@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import {
   BarChart3,
   Banknote,
+  Bell,
   Building2,
   FilePlus2,
   Headset,
@@ -13,6 +14,7 @@ import {
   Package,
   PlusCircle,
   Puzzle,
+  Send,
   Settings as SettingsIcon,
   ShieldAlert,
   ShieldCheck,
@@ -20,6 +22,7 @@ import {
   Shuffle,
   Sparkles,
   SquareStack,
+  Truck,
   UserPlus,
   Users,
   UsersRound,
@@ -49,11 +52,14 @@ import { fetchCustomers } from '@/features/customers/api'
 import { fetchLandingPages } from '@/features/landingPages/api'
 import { fetchOrders } from '@/features/orders/api'
 import { fetchProducts } from '@/features/products/api'
-import { fetchAutomationRules } from '@/features/automation/api'
+import { fetchAutomationRules, fetchFailedAutomationExecutions } from '@/features/automation/api'
+import { fetchCommunicationLog, fetchTrackingDispatchEvents } from '@/features/integrations/api'
 import { fetchMarketingCampaignList } from '@/features/marketing/api'
+import { fetchRecentNotifications } from '@/features/notifications/api'
 import { fetchRoles } from '@/features/roles/api'
 import { fetchWorkspaceStaff } from '@/features/staff/api'
 import { fetchActiveRescueCases } from '@/features/support/api'
+import { useAuth } from '@/contexts/AuthContext'
 
 interface CommandPaletteProps {
   open: boolean
@@ -93,6 +99,7 @@ const quickActions = [
 export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const navigate = useNavigate()
   const { activeWorkspace, activeBrand } = useWorkspace()
+  const { user } = useAuth()
   const { hasPermission } = usePermissions()
   const brandId = activeBrand?.id ?? ''
   const [search, setSearch] = React.useState('')
@@ -132,6 +139,10 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const canSearchAuditLogs = hasPermission('audit_logs.view')
   const canSearchRescueCases = hasPermission('rescue.view')
   const canSearchMarketing = hasPermission('marketing.view')
+  const canSearchNotifications = hasPermission('notifications.view')
+  const canSearchFailedAutomations = hasPermission('automation.view')
+  const canSearchCommunicationLog = hasPermission('communications.view') || hasPermission('integrations.view')
+  const canSearchTrackingDispatch = hasPermission('landing_pages.tracking.view') || hasPermission('integrations.view')
 
   const { data: orderResults } = useQuery({
     queryKey: ['command-order-search', activeWorkspace.id, brandId, term],
@@ -214,6 +225,39 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     enabled: searching && canSearchMarketing && Boolean(brandId),
   })
   const filteredMarketingCampaigns = (marketingCampaignResults ?? []).filter((c) => c.name.toLowerCase().includes(term.toLowerCase())).slice(0, 6)
+
+  const { data: notificationResults } = useQuery({
+    queryKey: ['command-notification-search', activeWorkspace.id, user?.id],
+    queryFn: () => fetchRecentNotifications(activeWorkspace.id, user?.id ?? '', 20),
+    enabled: searching && canSearchNotifications && Boolean(user?.id),
+  })
+  const filteredNotifications = (notificationResults ?? [])
+    .filter((n) => `${n.title} ${n.message ?? ''}`.toLowerCase().includes(term.toLowerCase()))
+    .slice(0, 6)
+
+  const { data: failedAutomationResults } = useQuery({
+    queryKey: ['command-failed-automation-search', activeWorkspace.id, term],
+    queryFn: () => fetchFailedAutomationExecutions(activeWorkspace.id, { search: term, pageSize: 6 }),
+    enabled: searching && canSearchFailedAutomations,
+  })
+
+  const { data: communicationLogResults } = useQuery({
+    queryKey: ['command-communication-log-search', activeWorkspace.id],
+    queryFn: () => fetchCommunicationLog(activeWorkspace.id, null, 30),
+    enabled: searching && canSearchCommunicationLog,
+  })
+  const filteredCommunicationLog = (communicationLogResults ?? [])
+    .filter((c) => `${c.recipient ?? ''} ${c.channel} ${c.failure_category ?? ''}`.toLowerCase().includes(term.toLowerCase()))
+    .slice(0, 6)
+
+  const { data: trackingDispatchResults } = useQuery({
+    queryKey: ['command-tracking-dispatch-search', activeWorkspace.id],
+    queryFn: () => fetchTrackingDispatchEvents(activeWorkspace.id, null, 30),
+    enabled: searching && canSearchTrackingDispatch,
+  })
+  const filteredTrackingDispatch = (trackingDispatchResults ?? [])
+    .filter((t) => `${t.event_type} ${t.provider} ${t.error_message ?? ''}`.toLowerCase().includes(term.toLowerCase()))
+    .slice(0, 6)
 
   const visibleNavItems = allNavItems.filter((item) => !item.permission || hasPermission(item.permission))
 
@@ -442,6 +486,60 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                   {log.module} · {log.action}
                 </span>
                 <span className="text-xs text-muted-foreground">{new Date(log.created_at).toLocaleDateString()}</span>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        )}
+
+        {searching && canSearchNotifications && filteredNotifications.length > 0 && (
+          <CommandGroup heading="Notifications">
+            {filteredNotifications.map((n) => (
+              <CommandItem key={n.id} value={`notification ${n.title} ${n.message}`} onSelect={() => go(n.link ?? '/notifications')}>
+                <Bell className="h-4 w-4 text-muted-foreground" />
+                <span className="flex-1">{n.title}</span>
+                <span className="text-xs text-muted-foreground">{n.priority}</span>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        )}
+
+        {searching && canSearchFailedAutomations && (failedAutomationResults?.rows.length ?? 0) > 0 && (
+          <CommandGroup heading="Failed Automations">
+            {failedAutomationResults?.rows.map((execution) => (
+              <CommandItem
+                key={execution.id}
+                value={`failed automation ${execution.rule?.name ?? ''} ${execution.event?.event_type ?? ''}`}
+                onSelect={() => go('/automation/failed')}
+              >
+                <Workflow className="h-4 w-4 text-muted-foreground" />
+                <span className="flex-1">{execution.rule?.name ?? 'Deleted rule'}</span>
+                <span className="text-xs text-muted-foreground">{execution.status}</span>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        )}
+
+        {searching && canSearchCommunicationLog && filteredCommunicationLog.length > 0 && (
+          <CommandGroup heading="Communication Records">
+            {filteredCommunicationLog.map((c) => (
+              <CommandItem key={c.id} value={`communication ${c.recipient ?? ''} ${c.channel}`} onSelect={() => go('/settings/integrations')}>
+                <Send className="h-4 w-4 text-muted-foreground" />
+                <span className="flex-1">{c.recipient ?? '(no recipient)'}</span>
+                <span className="text-xs text-muted-foreground">{c.status}</span>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        )}
+
+        {searching && canSearchTrackingDispatch && filteredTrackingDispatch.length > 0 && (
+          <CommandGroup heading="Tracking Dispatch Records">
+            {filteredTrackingDispatch.map((t) => (
+              <CommandItem key={t.id} value={`tracking ${t.event_type} ${t.provider}`} onSelect={() => go('/settings/integrations')}>
+                <Truck className="h-4 w-4 text-muted-foreground" />
+                <span className="flex-1">
+                  {t.provider} · {t.event_type}
+                </span>
+                <span className="text-xs text-muted-foreground">{t.status}</span>
               </CommandItem>
             ))}
           </CommandGroup>

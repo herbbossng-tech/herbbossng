@@ -11,7 +11,7 @@ import { usePermission } from '@/contexts/PermissionsContext'
 import { automationEventTypeLabels } from '@/features/automation/automationFields'
 import type { AutomationExecutionRow } from '@/features/automation/api'
 import { ExecutionDetailDialog } from '@/features/automation/components/ExecutionDetailDialog'
-import { useAutomationExecutions, useAutomationRules } from '@/features/automation/hooks'
+import { useAutomationExecutions, useAutomationRealtime, useAutomationRules } from '@/features/automation/hooks'
 import type { AutomationExecutionStatus } from '@/types/database'
 
 const PAGE_SIZE = 30
@@ -38,6 +38,7 @@ export function AutomationExecutionsPage() {
 }
 
 function AutomationExecutionsContent() {
+  useAutomationRealtime()
   const [search, setSearch] = React.useState('')
   const [status, setStatus] = React.useState('all')
   const [ruleId, setRuleId] = React.useState('all')

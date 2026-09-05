@@ -1682,6 +1682,7 @@ export interface CommunicationLog {
   is_transactional: boolean
   triggered_by: CommunicationTriggeredBy
   created_by: string | null
+  updated_at: string
 }
 
 export interface EmailTemplate {

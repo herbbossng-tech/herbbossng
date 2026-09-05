@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/state'
 import { Textarea } from '@/components/ui/textarea'
 import { usePermission } from '@/contexts/PermissionsContext'
+import { useOperationsRealtime } from '@/features/operations/hooks'
 import { useMarkSettlementDisputed, useSettlements } from '@/features/settlement/hooks'
 import { formatCurrency } from '@/lib/currency'
 
@@ -35,6 +36,7 @@ export function SettlementPage() {
 }
 
 function SettlementContent() {
+  useOperationsRealtime()
   const [search, setSearch] = React.useState('')
   const [status, setStatus] = React.useState('all')
   const { data: settlements, isLoading, isError, refetch } = useSettlements({ search, status })

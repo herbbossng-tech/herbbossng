@@ -16,7 +16,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { usePermission } from '@/contexts/PermissionsContext'
 import { useWorkspace } from '@/contexts/WorkspaceContext'
 import { assignOrder } from '@/features/orders/api'
-import { useRescueBoard } from '@/features/operations/hooks'
+import { useOperationsRealtime, useRescueBoard } from '@/features/operations/hooks'
 import { RescueCasePanel } from '@/features/support/components/RescueCasePanel'
 import { StartRescueDialog } from '@/features/support/components/StartRescueDialog'
 import { useActiveRescueCases } from '@/features/support/hooks'
@@ -43,6 +43,7 @@ export function RescueBoardPage() {
 }
 
 function RescueBoardContent() {
+  useOperationsRealtime()
   const { data: rows, isLoading, isError, refetch } = useRescueBoard()
   const { data: activeRescueCases } = useActiveRescueCases()
   const { user } = useAuth()

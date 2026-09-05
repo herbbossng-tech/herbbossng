@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { useAuth } from '@/contexts/AuthContext'
 import { useWorkspace } from '@/contexts/WorkspaceContext'
+import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate'
 import type { AutomationRuleStatus } from '@/types/database'
 
 import {
@@ -143,6 +144,25 @@ export function useAutomationEvent(eventId: string | null) {
     queryFn: () => fetchAutomationEvent(eventId as string),
     enabled: Boolean(eventId),
   })
+}
+
+/**
+ * Wires the Automation Executions / Failed Automations views to
+ * Realtime so a rule finishing, retrying, or getting reclaimed from a
+ * stuck run shows up without a manual refresh. Wraps the existing
+ * generic useRealtimeInvalidate() against automation_executions (already
+ * in the supabase_realtime publication since migration 0032) rather than
+ * a second subscription mechanism. Call once near the top of a page
+ * that lists executions or failed automations.
+ */
+export function useAutomationRealtime() {
+  const { activeWorkspace } = useWorkspace()
+  const workspaceId = activeWorkspace.id
+  useRealtimeInvalidate('automation_executions', workspaceId, [
+    ['automation-executions', workspaceId],
+    ['automation-failed-executions', workspaceId],
+    ['automation-execution-actions'],
+  ])
 }
 
 export function useRetryAutomationExecution() {

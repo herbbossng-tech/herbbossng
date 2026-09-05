@@ -5,12 +5,33 @@ import { useWorkspace } from '@/contexts/WorkspaceContext'
 import {
   fetchCommunicationConfigStatus,
   fetchCommunicationLog,
+  fetchCommunicationLogByActionIds,
+  fetchQueueHealth,
   fetchTrackingDispatchEvents,
   retryCommunicationLogEntry,
   retryTrackingDispatchEvent,
   setBrandCommunicationConfig,
   type SetBrandCommunicationConfigInput,
 } from './api'
+
+/** See fetchCommunicationLogByActionIds — only render this for a caller who holds communications.view or integrations.view, otherwise RLS returns an empty (not honest-looking) list. */
+export function useCommunicationLogForActions(actionIds: string[]) {
+  const key = actionIds.slice().sort().join(',')
+  return useQuery({
+    queryKey: ['communication-log-for-actions', key],
+    queryFn: () => fetchCommunicationLogByActionIds(actionIds),
+    enabled: actionIds.length > 0,
+  })
+}
+
+export function useQueueHealth() {
+  const { activeWorkspace } = useWorkspace()
+  return useQuery({
+    queryKey: ['queue-health', activeWorkspace.id],
+    queryFn: () => fetchQueueHealth(activeWorkspace.id),
+    enabled: Boolean(activeWorkspace.id),
+  })
+}
 
 export function useTrackingDispatchEvents(status?: string | null) {
   const { activeWorkspace } = useWorkspace()

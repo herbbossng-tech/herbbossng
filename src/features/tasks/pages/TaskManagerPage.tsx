@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/state'
 import { useAuth } from '@/contexts/AuthContext'
 import { usePermission } from '@/contexts/PermissionsContext'
+import { useOperationsRealtime } from '@/features/operations/hooks'
 import { useAssignOrderTask, useTaskStats, useTasks, useUpdateOrderTaskStatus } from '@/features/tasks/hooks'
 import { cn } from '@/lib/utils'
 
@@ -43,6 +44,7 @@ export function TaskManagerPage() {
 
 function TaskManagerContent() {
   const { user } = useAuth()
+  useOperationsRealtime()
   const [quick, setQuick] = React.useState<QuickFilter>('all')
   const [search, setSearch] = React.useState('')
   const [priority, setPriority] = React.useState('all')

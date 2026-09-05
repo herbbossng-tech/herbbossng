@@ -6,7 +6,8 @@ import { usePermission } from '@/contexts/PermissionsContext'
 import { automationEventTypeLabels } from '@/features/automation/automationFields'
 import type { AutomationExecutionRow } from '@/features/automation/api'
 import { useAutomationEvent, useAutomationExecutionActions, useRetryAutomationExecution } from '@/features/automation/hooks'
-import type { AutomationExecutionActionStatus, AutomationExecutionStatus } from '@/types/database'
+import { useCommunicationLogForActions } from '@/features/integrations/hooks'
+import type { AutomationExecutionActionStatus, AutomationExecutionStatus, CommunicationStatus } from '@/types/database'
 
 const executionStatusVariant: Record<AutomationExecutionStatus, 'secondary' | 'success' | 'warning' | 'destructive' | 'default'> = {
   pending: 'secondary',
@@ -24,6 +25,32 @@ const actionStatusVariant: Record<AutomationExecutionActionStatus, 'secondary' |
   skipped: 'warning',
 }
 
+const communicationStatusVariant: Record<CommunicationStatus, 'secondary' | 'success' | 'warning' | 'destructive'> = {
+  queued: 'secondary',
+  processing: 'secondary',
+  sent: 'success',
+  delivered: 'success',
+  retryable: 'warning',
+  failed: 'destructive',
+  permanently_failed: 'destructive',
+  not_configured: 'secondary',
+  unsupported: 'secondary',
+  skipped_preference: 'secondary',
+}
+
+const communicationStatusLabel: Record<CommunicationStatus, string> = {
+  queued: 'Queued',
+  processing: 'Sending…',
+  sent: 'Sent',
+  delivered: 'Delivered',
+  retryable: 'Retrying',
+  failed: 'Failed',
+  permanently_failed: 'Failed',
+  not_configured: 'Not configured',
+  unsupported: 'Unsupported channel',
+  skipped_preference: 'Skipped (preference)',
+}
+
 function Field({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
     <div>
@@ -37,7 +64,16 @@ export function ExecutionDetailDialog({ execution, onOpenChange }: { execution: 
   const { data: actions, isLoading } = useAutomationExecutionActions(execution?.id ?? null)
   const { data: event } = useAutomationEvent(execution?.event_id ?? null)
   const canManage = usePermission('automation.manage')
+  const canViewCommunicationsChannel = usePermission('communications.view')
+  const canViewIntegrations = usePermission('integrations.view')
+  const canViewCommunications = canViewCommunicationsChannel || canViewIntegrations
   const retry = useRetryAutomationExecution()
+
+  const sendActionIds = (actions ?? [])
+    .filter((a) => a.action_type === 'SEND_EMAIL' || a.action_type === 'SEND_SMS' || a.action_type === 'SEND_WHATSAPP')
+    .map((a) => a.id)
+  const { data: communicationResults } = useCommunicationLogForActions(canViewCommunications ? sendActionIds : [])
+  const communicationByActionId = new Map((communicationResults ?? []).map((c) => [c.related_execution_action_id as string, c]))
 
   const canRetry = execution && canManage && (execution.status === 'failed' || execution.status === 'retrying')
 
@@ -99,16 +135,27 @@ export function ExecutionDetailDialog({ execution, onOpenChange }: { execution: 
                       </tr>
                     </thead>
                     <tbody>
-                      {actions?.map((a) => (
-                        <tr key={a.id} className="border-t border-border/60">
-                          <td className="px-3 py-2 text-xs text-muted-foreground">{a.action_seq}</td>
-                          <td className="px-3 py-2 font-mono text-xs">{a.action_type}</td>
-                          <td className="px-3 py-2">
-                            <Badge variant={actionStatusVariant[a.status]}>{a.status}</Badge>
-                          </td>
-                          <td className="max-w-[220px] break-words px-3 py-2 text-xs text-muted-foreground">{a.error_message ?? '—'}</td>
-                        </tr>
-                      ))}
+                      {actions?.map((a) => {
+                        const communication = communicationByActionId.get(a.id)
+                        return (
+                          <tr key={a.id} className="border-t border-border/60">
+                            <td className="px-3 py-2 text-xs text-muted-foreground">{a.action_seq}</td>
+                            <td className="px-3 py-2 font-mono text-xs">{a.action_type}</td>
+                            <td className="px-3 py-2">
+                              <Badge variant={actionStatusVariant[a.status]}>{a.status}</Badge>
+                            </td>
+                            <td className="max-w-[260px] break-words px-3 py-2 text-xs text-muted-foreground">
+                              {a.error_message ?? '—'}
+                              {communication && (
+                                <div className="mt-1 flex items-center gap-1.5">
+                                  <Badge variant={communicationStatusVariant[communication.status]}>{communicationStatusLabel[communication.status]}</Badge>
+                                  {communication.provider && <span className="text-[10px] text-muted-foreground">via {communication.provider}</span>}
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        )
+                      })}
                     </tbody>
                   </table>
                 </div>

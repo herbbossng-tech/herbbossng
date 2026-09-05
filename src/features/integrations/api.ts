@@ -40,6 +40,23 @@ export async function retryCommunicationLogEntry(id: string): Promise<Communicat
   return data as CommunicationLog
 }
 
+/**
+ * Looks up the communication_log outcome(s) an automation SEND_EMAIL /
+ * SEND_SMS / SEND_WHATSAPP action produced, via the existing
+ * related_execution_action_id column (0028/0032/0034) — no new RPC or
+ * link table needed. Subject to communication_log's own RLS
+ * (communications.view OR integrations.view): a caller without either
+ * permission gets back zero rows, never an error, which is why the
+ * caller should only render this section for users who hold one of
+ * those permissions.
+ */
+export async function fetchCommunicationLogByActionIds(actionIds: string[]): Promise<CommunicationLog[]> {
+  if (actionIds.length === 0) return []
+  const { data, error } = await supabase.from('communication_log').select('*').in('related_execution_action_id', actionIds)
+  if (error) throw error
+  return (data ?? []) as CommunicationLog[]
+}
+
 export interface CommunicationConfigStatus {
   email_configured: boolean
   email_provider: string | null
@@ -85,4 +102,24 @@ export function summarizeByStatus<T extends { status: string }>(rows: T[]): Reco
     acc[row.status] = (acc[row.status] ?? 0) + 1
     return acc
   }, {})
+}
+
+export interface QueueHealthRow {
+  queue: 'tracking' | 'communication' | 'automation'
+  pending: number
+  processing: number
+  retrying: number
+  failed_recent: number
+  succeeded_recent: number
+  oldest_pending_at: string | null
+  last_success_at: string | null
+  last_failure_at: string | null
+  health: 'healthy' | 'degraded' | 'failing' | 'not_configured' | 'no_data'
+}
+
+/** get_queue_health() (0035) — one efficient server-side rollup over the full tables (not just the loaded page), replacing client-side counting derived from a partial page of rows. Health is honestly derived from actual queue state; see the function's own comment for the exact thresholds. */
+export async function fetchQueueHealth(workspaceId: string): Promise<QueueHealthRow[]> {
+  const { data, error } = await supabase.rpc('get_queue_health', { p_workspace_id: workspaceId })
+  if (error) throw error
+  return (data ?? []) as QueueHealthRow[]
 }

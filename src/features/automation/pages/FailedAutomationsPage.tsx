@@ -11,7 +11,7 @@ import { usePermission } from '@/contexts/PermissionsContext'
 import { automationEventTypeLabels } from '@/features/automation/automationFields'
 import type { AutomationExecutionRow } from '@/features/automation/api'
 import { ExecutionDetailDialog } from '@/features/automation/components/ExecutionDetailDialog'
-import { useAutomationRules, useFailedAutomationExecutions, useRetryAutomationExecution, useSetAutomationRuleStatus } from '@/features/automation/hooks'
+import { useAutomationRealtime, useAutomationRules, useFailedAutomationExecutions, useRetryAutomationExecution, useSetAutomationRuleStatus } from '@/features/automation/hooks'
 import type { AutomationExecutionStatus } from '@/types/database'
 
 const PAGE_SIZE = 30
@@ -38,6 +38,7 @@ export function FailedAutomationsPage() {
 }
 
 function FailedAutomationsContent() {
+  useAutomationRealtime()
   const [ruleId, setRuleId] = React.useState('all')
   const [page, setPage] = React.useState(1)
   const [selected, setSelected] = React.useState<AutomationExecutionRow | null>(null)
