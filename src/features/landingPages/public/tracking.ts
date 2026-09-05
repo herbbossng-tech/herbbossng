@@ -154,7 +154,11 @@ export function firePixelFormStart(): void {
  * sides even though this browser event has no CAPI counterpart today.
  */
 export function firePixelOrderCreated(data: { orderId: string; currency?: string | null; value?: number }): void {
-  const eventId = `${data.orderId}:ORDER_CREATED`
-  fireMeta('SubmitApplication', { currency: data.currency ?? undefined, value: data.value, eventID: eventId }, true)
-  fireTiktok('SubmitForm', { currency: data.currency ?? undefined, value: data.value, event_id: eventId })
+  // event_id MUST byte-for-byte match what enqueue_tracking_event() (0031)
+  // builds server-side — event_type:provider:order_id — or Meta/TikTok
+  // cannot deduplicate this browser copy against the server-side CAPI/
+  // Events API copy the dispatch-tracking-event Edge Function (Phase 11)
+  // sends later using that exact same tracking_dispatch_log.event_id.
+  fireMeta('SubmitApplication', { currency: data.currency ?? undefined, value: data.value, eventID: `ORDER_CREATED:meta:${data.orderId}` }, true)
+  fireTiktok('SubmitForm', { currency: data.currency ?? undefined, value: data.value, event_id: `ORDER_CREATED:tiktok:${data.orderId}` })
 }
