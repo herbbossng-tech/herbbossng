@@ -569,6 +569,11 @@ export interface Customer {
   /** Captured once from the first order and never overwritten by a later order's source. */
   acquisition_source: string | null
 
+  /** Gates MARKETING communication only — transactional (order/delivery/payment) messages are never blocked by these. See customers.email_opt_in's column comment (migration 0034). */
+  email_opt_in: boolean
+  sms_opt_in: boolean
+  whatsapp_opt_in: boolean
+
   created_at: string
   updated_at: string
   created_by: string | null
@@ -1630,8 +1635,20 @@ export interface ApprovalRequest {
 }
 
 export type CommunicationChannel = 'sms' | 'whatsapp' | 'email' | 'push'
+export type CommunicationTemplateChannel = 'email' | 'sms'
+export type CommunicationTriggeredBy = 'automation' | 'manual' | 'system'
 /** not_configured/unsupported are terminal (no provider, or a channel with no adapter). queued/retryable are eligible for the dispatch-communication Edge Function's claim. sent/delivered/permanently_failed reflect a real provider outcome — see migration 0032. */
-export type CommunicationStatus = 'not_configured' | 'unsupported' | 'queued' | 'processing' | 'sent' | 'delivered' | 'failed' | 'retryable' | 'permanently_failed'
+export type CommunicationStatus =
+  | 'not_configured'
+  | 'unsupported'
+  | 'queued'
+  | 'processing'
+  | 'sent'
+  | 'delivered'
+  | 'failed'
+  | 'retryable'
+  | 'permanently_failed'
+  | 'skipped_preference'
 export type FailureCategory = 'timeout' | 'client_error' | 'server_error' | 'not_configured' | 'unknown'
 
 export interface CommunicationLog {
@@ -1655,6 +1672,39 @@ export interface CommunicationLog {
   dispatched_at: string | null
   failure_category: FailureCategory | null
   created_at: string
+
+  // Phase 13 additions — see communication_log's table comment (0034).
+  entity_type: string | null
+  entity_id: string | null
+  customer_id: string | null
+  communication_type: string | null
+  template_key: string | null
+  is_transactional: boolean
+  triggered_by: CommunicationTriggeredBy
+  created_by: string | null
+}
+
+export interface EmailTemplate {
+  id: string
+  workspace_id: string | null
+  brand_id: string | null
+  key: string
+  name: string
+  channel: CommunicationTemplateChannel
+  subject: string | null
+  html_body: string
+  is_active: boolean
+  variables: string[]
+  created_at: string
+  updated_at: string
+  created_by: string | null
+  updated_by: string | null
+}
+
+export interface RenderedCommunicationTemplate {
+  subject: string | null
+  body: string | null
+  template_found: boolean
 }
 
 export type TrackingDispatchProvider = 'meta' | 'tiktok'

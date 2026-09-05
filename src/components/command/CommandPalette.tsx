@@ -8,9 +8,11 @@ import {
   History,
   Layout,
   LifeBuoy,
+  FileText,
   Megaphone,
   Package,
   PlusCircle,
+  Puzzle,
   Settings as SettingsIcon,
   ShieldAlert,
   ShieldCheck,
@@ -84,6 +86,8 @@ const quickActions = [
   { label: 'View Marketing', href: '/marketing', icon: Megaphone },
   { label: 'Create Marketing Campaign', href: '/marketing/campaigns', icon: PlusCircle },
   { label: 'Record Ad Spend', href: '/affiliates/ad-costs', icon: Banknote },
+  { label: 'Open Communication Templates', href: '/settings/communications/templates', icon: FileText },
+  { label: 'Open Integration Health', href: '/settings/integrations', icon: Puzzle },
 ]
 
 export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {

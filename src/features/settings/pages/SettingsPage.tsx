@@ -1,6 +1,7 @@
 import {
   Bell,
   Building2,
+  FileText,
   History,
   Package,
   Puzzle,
@@ -64,6 +65,13 @@ const sections: SettingsSection[] = [
       { label: 'Notifications', description: 'Your notification feed and read/archive state.', href: '/notifications', icon: Bell, permission: 'notifications.view' },
     ],
   },
+  {
+    label: 'Communications',
+    links: [
+      { label: 'Communication Templates', description: 'Email/SMS message bodies used by automation rules and manual customer contact.', href: '/settings/communications/templates', icon: FileText, permission: 'communications.templates.view' },
+      { label: 'Integration Health', description: 'Real-time delivery status for outbound SMS/WhatsApp/email and tracking dispatch queues.', href: '/settings/integrations', icon: Puzzle, permission: 'integrations.view' },
+    ],
+  },
 ]
 
 export function SettingsPage() {
@@ -86,8 +94,9 @@ export function SettingsPage() {
             Integrations
           </CardTitle>
           <CardDescription>
-            Meta Pixel, Meta CAPI, Google Analytics/Tag Manager and Microsoft Clarity identifiers are configured per brand — open a brand's
-            detail page under Brands. There is no separate global integrations screen because these values are always brand-scoped.
+            Meta Pixel, Meta CAPI, Google Analytics/Tag Manager, Microsoft Clarity, and email/SMS/WhatsApp provider credentials are all configured
+            per brand — open a brand's detail page under Brands. There is no separate global integrations screen because these values are always
+            brand-scoped; only message templates and delivery health are workspace-wide, which is why they have their own Settings entries above.
           </CardDescription>
         </CardHeader>
       </Card>

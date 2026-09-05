@@ -1,4 +1,4 @@
-import { ChevronLeft, Loader2, Send, Truck, UserCheck, UserX, Wallet } from 'lucide-react'
+import { ChevronLeft, Loader2, MessageSquare, Send, Truck, UserCheck, UserX, Wallet } from 'lucide-react'
 import * as React from 'react'
 import { Link, useParams } from 'react-router-dom'
 
@@ -13,6 +13,7 @@ import { ErrorState, LoadingState } from '@/components/ui/state'
 import { Textarea } from '@/components/ui/textarea'
 import { useAuth } from '@/contexts/AuthContext'
 import { PermissionGate, usePermission } from '@/contexts/PermissionsContext'
+import { ContactCustomerDialog } from '@/features/communications/components/ContactCustomerDialog'
 import { useDeliveryPartners } from '@/features/deliveryPartners/hooks'
 import { OrderStatusBadge } from '@/features/orders/components/OrderStatusBadge'
 import { useAssignableStaff } from '@/features/staff/hooks'
@@ -138,6 +139,7 @@ export function OrderDetailPage() {
   const { data: activeRescueCase } = useOrderRescueCase(canViewSupport ? id : undefined)
   const [logInteractionOpen, setLogInteractionOpen] = React.useState(false)
   const [startRescueOpen, setStartRescueOpen] = React.useState(false)
+  const [contactCustomerOpen, setContactCustomerOpen] = React.useState(false)
 
   const canViewWaybills = usePermission('waybills.view')
   const hasWaybillsCreate = usePermission('waybills.create')
@@ -210,8 +212,14 @@ export function OrderDetailPage() {
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
         <div className="flex flex-col gap-5 lg:col-span-2">
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0">
               <CardTitle>Customer</CardTitle>
+              <PermissionGate permission="communications.send">
+                <Button size="sm" variant="outline" onClick={() => setContactCustomerOpen(true)}>
+                  <MessageSquare className="h-3.5 w-3.5" />
+                  Contact Customer
+                </Button>
+              </PermissionGate>
             </CardHeader>
             <CardContent className="grid grid-cols-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
               <div>
@@ -751,6 +759,14 @@ export function OrderDetailPage() {
       <CreateWaybillDialog orderId={order.id} open={createWaybillOpen} onOpenChange={setCreateWaybillOpen} />
       <LogInteractionDialog open={logInteractionOpen} onOpenChange={setLogInteractionOpen} orderId={order.id} customerId={order.customer_id} />
       <StartRescueDialog open={startRescueOpen} onOpenChange={setStartRescueOpen} orderId={order.id} />
+      <ContactCustomerDialog
+        open={contactCustomerOpen}
+        onOpenChange={setContactCustomerOpen}
+        orderId={order.id}
+        customerName={order.customer_name}
+        customerEmail={order.customer_email}
+        customerPhone={order.customer_phone}
+      />
       <RecordAttemptDialog
         open={recordAttemptOpen}
         onOpenChange={setRecordAttemptOpen}

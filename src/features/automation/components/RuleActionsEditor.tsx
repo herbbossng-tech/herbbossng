@@ -1,8 +1,10 @@
-import { AlertTriangle } from 'lucide-react'
+import { AlertTriangle, Info } from 'lucide-react'
 
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import {
   automationActionTypeLabels,
@@ -10,6 +12,7 @@ import {
   automationPriorityOptions,
   automationTaskTypeOptions,
 } from '@/features/automation/automationFields'
+import { useCommunicationTemplates } from '@/features/communications/hooks'
 import { useStaff } from '@/features/staff/hooks'
 import type { AutomationAction, AutomationActionType, Json } from '@/types/database'
 
@@ -28,7 +31,78 @@ function NotConfiguredNotice() {
   return (
     <div className="flex items-start gap-2 rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning">
       <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-      <span>No SMS/WhatsApp/email provider is connected yet. This action will be recorded as not_configured — never fabricated as sent.</span>
+      <span>If no provider is connected for this brand/channel, this action is recorded as not_configured — never fabricated as sent. Configure providers on the brand's detail page.</span>
+    </div>
+  )
+}
+
+function SendActionConfigForm({
+  action,
+  config,
+  setConfig,
+  templateChannel,
+  recipientToken,
+  templateKey,
+}: {
+  action: AutomationAction
+  config: Record<string, Json>
+  setConfig: (patch: Record<string, Json>) => void
+  templateChannel: 'email' | 'sms'
+  recipientToken: string
+  templateKey: string
+}) {
+  const { data: templates } = useCommunicationTemplates()
+  const matchingTemplates = (templates ?? []).filter((t) => t.channel === templateChannel && t.is_active)
+  const isTransactional = config.is_transactional !== false
+
+  return (
+    <div className="flex flex-col gap-2">
+      <NotConfiguredNotice />
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <Field label="Recipient">
+          <div className="flex gap-1.5">
+            <Input value={(config.recipient as string) ?? ''} onChange={(e) => setConfig({ recipient: e.target.value })} placeholder="Phone number or email" />
+            <Button type="button" size="sm" variant="outline" className="shrink-0" onClick={() => setConfig({ recipient: recipientToken })}>
+              Use order's customer
+            </Button>
+          </div>
+        </Field>
+        <Field label="Template (optional — overrides subject/body below if set)">
+          <Select value={templateKey} onValueChange={(v) => setConfig({ template_key: v === 'none' ? null : v })}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">No template — use subject/body below</SelectItem>
+              {matchingTemplates.map((t) => (
+                <SelectItem key={t.id} value={t.key}>
+                  {t.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </Field>
+        {action.type === 'SEND_EMAIL' && (
+          <Field label="Subject">
+            <Input value={(config.subject as string) ?? ''} onChange={(e) => setConfig({ subject: e.target.value })} />
+          </Field>
+        )}
+        <div className="sm:col-span-2">
+          <Field label="Body">
+            <Textarea rows={2} value={(config.body as string) ?? ''} onChange={(e) => setConfig({ body: e.target.value })} />
+          </Field>
+        </div>
+      </div>
+      <div className="flex items-center gap-2 pt-1">
+        <Switch checked={!isTransactional} onCheckedChange={(checked) => setConfig({ is_transactional: !checked })} />
+        <Label className="text-xs font-normal text-muted-foreground">
+          This is a marketing message (respects the customer's opt-out preference — transactional messages never do)
+        </Label>
+      </div>
+      <div className="flex items-start gap-1.5 text-xs text-muted-foreground">
+        <Info className="mt-0.5 h-3 w-3 shrink-0" />
+        <span>"Use order's customer" resolves the recipient from the order that triggered this rule, so one rule correctly messages every order's own customer.</span>
+      </div>
     </div>
   )
 }
@@ -158,27 +232,21 @@ function ActionConfigForm({ action, update }: { action: AutomationAction; update
 
     case 'SEND_SMS':
     case 'SEND_WHATSAPP':
-    case 'SEND_EMAIL':
+    case 'SEND_EMAIL': {
+      const templateChannel = action.type === 'SEND_EMAIL' ? 'email' : 'sms'
+      const recipientToken = action.type === 'SEND_EMAIL' ? '{{customer_email}}' : '{{customer_phone}}'
+      const templateKey = (config.template_key as string) ?? 'none'
       return (
-        <div className="flex flex-col gap-2">
-          <NotConfiguredNotice />
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <Field label="Recipient">
-              <Input value={(config.recipient as string) ?? ''} onChange={(e) => setConfig({ recipient: e.target.value })} placeholder="Phone number or email" />
-            </Field>
-            {action.type === 'SEND_EMAIL' && (
-              <Field label="Subject">
-                <Input value={(config.subject as string) ?? ''} onChange={(e) => setConfig({ subject: e.target.value })} />
-              </Field>
-            )}
-            <div className="sm:col-span-2">
-              <Field label="Body">
-                <Textarea rows={2} value={(config.body as string) ?? ''} onChange={(e) => setConfig({ body: e.target.value })} />
-              </Field>
-            </div>
-          </div>
-        </div>
+        <SendActionConfigForm
+          action={action}
+          config={config}
+          setConfig={setConfig}
+          templateChannel={templateChannel}
+          recipientToken={recipientToken}
+          templateKey={templateKey}
+        />
       )
+    }
 
     case 'LOG_EVENT':
       return (

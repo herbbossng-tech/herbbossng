@@ -25,6 +25,7 @@ import { MarketingLandingPagesPage } from '@/features/marketing/pages/MarketingL
 import { MarketingProductsPage } from '@/features/marketing/pages/MarketingProductsPage'
 import { MarketingMediaBuyersPage } from '@/features/marketing/pages/MarketingMediaBuyersPage'
 import { MarketingBudgetPage } from '@/features/marketing/pages/MarketingBudgetPage'
+import { CommunicationTemplatesPage } from '@/features/communications/pages/CommunicationTemplatesPage'
 import { AutomationEventsPage } from '@/features/automation/pages/AutomationEventsPage'
 import { AutomationExecutionsPage } from '@/features/automation/pages/AutomationExecutionsPage'
 import { AutomationRulesPage } from '@/features/automation/pages/AutomationRulesPage'
@@ -180,6 +181,7 @@ function App() {
             <Route path="assignment-rules" element={<AssignmentRulesPage />} />
             <Route path="approval-rules" element={<ApprovalRulesPage />} />
             <Route path="integrations" element={<IntegrationHealthPage />} />
+            <Route path="communications/templates" element={<CommunicationTemplatesPage />} />
           </Route>
 
           <Route path="brands">

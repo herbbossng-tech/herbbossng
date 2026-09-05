@@ -6,25 +6,30 @@
 // record_communication_dispatch_result() (0032), the only functions
 // this code calls with elevated privilege.
 //
-// Only 'email' (via Resend, the provider named in migration 0006's
-// email_templates comment and .env.example) has a real adapter. No
-// SMS or WhatsApp provider has been chosen anywhere in this codebase
-// — those channels are never queued as 'queued' by
-// execute_automation_action() while brand_communication_secrets has no
-// provider set for them (see resolve_brand_communication_config_internal(),
+// 'email' dispatches via Resend (the provider named in migration
+// 0006's email_templates comment and .env.example). Phase 13 adds
+// reference adapters for 'sms' (Twilio, twilio.ts) and 'whatsapp'
+// (Meta WhatsApp Business Cloud API, whatsapp.ts) — each channel's
+// provider name is DATA on brand_communication_secrets, never a
+// hardcoded assumption; a workspace that has not configured a
+// provider for a channel never has a row queued as 'queued' for it in
+// the first place (see resolve_brand_communication_config_internal(),
 // 0032), so claim_communication_log_batch() will not normally return
-// them; the defensive branch below exists only so a future
-// misconfiguration fails honestly (permanently_failed, not_configured)
-// rather than crashing the batch.
+// one. The `else` branch below exists only so a genuinely unknown
+// provider name (a future typo, or a provider not yet given an
+// adapter here) fails honestly — permanently_failed, not_configured —
+// rather than crashing the batch or fabricating a send.
 //
 // Trigger + secrets: identical pattern to dispatch-tracking-event
 // (shared CRON_CALLER_SECRET header, SUPABASE_URL/SERVICE_ROLE_KEY
-// auto-provided). Not deployed or live-tested in this sandbox — see
-// the Phase 11 report.
+// auto-provided). Not deployed or live-tested against a real Twilio/
+// Meta/Resend account in this sandbox — see the Phase 13 report.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4'
 import { classifyHttpResult } from '../_shared/http-classify.ts'
 import { buildResendPayload } from './resend.ts'
+import { dispatchTwilioSms } from './twilio.ts'
+import { dispatchWhatsApp } from './whatsapp.ts'
 
 const BATCH_SIZE = 25
 const WORKER_ID = `dispatch-communication:${crypto.randomUUID().slice(0, 8)}`
@@ -89,23 +94,38 @@ Deno.serve(async (req) => {
   let permanentlyFailed = 0
 
   for (const row of rows) {
-    let result: { status: number | null; body: unknown; errorMessage: string | null }
     let providerMessageId: string | null = null
+    let hasAdapter = true
+    let status: number | null = null
+    let errorMessage: string | null = null
 
     if (row.channel === 'email' && row.provider === 'resend') {
-      result = await dispatchResend(row)
+      const result = await dispatchResend(row)
+      status = result.status
+      errorMessage = result.errorMessage
       if (result.status && result.status >= 200 && result.status < 300 && result.body && typeof result.body === 'object') {
         providerMessageId = (result.body as { id?: string }).id ?? null
       }
+    } else if (row.channel === 'sms' && row.provider === 'twilio') {
+      const result = await dispatchTwilioSms(row)
+      status = result.status
+      errorMessage = result.errorMessage
+      providerMessageId = result.providerMessageId
+    } else if (row.channel === 'whatsapp' && row.provider === 'whatsapp_cloud_api') {
+      const result = await dispatchWhatsApp(row)
+      status = result.status
+      errorMessage = result.errorMessage
+      providerMessageId = result.providerMessageId
     } else {
       // No adapter exists for this channel/provider combination —
       // honest permanent failure, never a fabricated send.
-      result = { status: null, body: null, errorMessage: `no adapter for channel=${row.channel} provider=${row.provider ?? '(none)'}` }
+      hasAdapter = false
+      errorMessage = `no adapter for channel=${row.channel} provider=${row.provider ?? '(none)'}`
     }
 
-    const outcome = row.channel === 'email' && row.provider === 'resend'
-      ? classifyHttpResult(result.status, result.errorMessage)
-      : { success: false, retryable: false, failureCategory: 'not_configured' as const, errorMessage: result.errorMessage }
+    const outcome = hasAdapter
+      ? classifyHttpResult(status, errorMessage)
+      : { success: false, retryable: false, failureCategory: 'not_configured' as const, errorMessage }
 
     const { error: recordError } = await supabase.rpc('record_communication_dispatch_result', {
       p_id: row.id,
