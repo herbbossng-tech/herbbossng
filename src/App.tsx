@@ -5,6 +5,7 @@ import { AppLayout } from '@/components/layout/AppLayout'
 import { allNavItems } from '@/data/navigation'
 import { AdCostsPage } from '@/features/adCosts/pages/AdCostsPage'
 import { ApprovalRulesPage } from '@/features/approvalRules/pages/ApprovalRulesPage'
+import { IntegrationHealthPage } from '@/features/integrations/pages/IntegrationHealthPage'
 import { AssignmentRulesPage } from '@/features/assignmentRules/pages/AssignmentRulesPage'
 import { AffiliateDetailPage } from '@/features/affiliates/pages/AffiliateDetailPage'
 import { AffiliatesPage } from '@/features/affiliates/pages/AffiliatesPage'
@@ -168,6 +169,7 @@ function App() {
             <Route index element={<SettingsPage />} />
             <Route path="assignment-rules" element={<AssignmentRulesPage />} />
             <Route path="approval-rules" element={<ApprovalRulesPage />} />
+            <Route path="integrations" element={<IntegrationHealthPage />} />
           </Route>
 
           <Route path="brands">

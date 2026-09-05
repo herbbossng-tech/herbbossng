@@ -37,6 +37,8 @@ export const moduleOrder: PermissionModule[] = [
   'assignment_rules',
   'approval_rules',
   'automation',
+  'integrations',
+  'communications',
 ]
 
 export const moduleLabels: Record<PermissionModule, string> = {
@@ -76,6 +78,8 @@ export const moduleLabels: Record<PermissionModule, string> = {
   assignment_rules: 'Assignment Rules',
   approval_rules: 'Approval Rules',
   automation: 'Automation',
+  integrations: 'Integrations',
+  communications: 'Communications',
 }
 
 export const actionOrder: PermissionAction[] = ['view', 'create', 'update', 'delete', 'assign', 'approve', 'export', 'import', 'manage']

@@ -109,6 +109,8 @@ export type PermissionModule =
   | 'assignment_rules'
   | 'approval_rules'
   | 'automation'
+  | 'integrations'
+  | 'communications'
 
 export type PermissionAction =
   | 'view'
@@ -1450,7 +1452,9 @@ export interface ApprovalRequest {
 }
 
 export type CommunicationChannel = 'sms' | 'whatsapp' | 'email' | 'push'
-export type CommunicationStatus = 'not_configured' | 'unsupported' | 'sent' | 'failed'
+/** not_configured/unsupported are terminal (no provider, or a channel with no adapter). queued/retryable are eligible for the dispatch-communication Edge Function's claim. sent/delivered/permanently_failed reflect a real provider outcome — see migration 0032. */
+export type CommunicationStatus = 'not_configured' | 'unsupported' | 'queued' | 'processing' | 'sent' | 'delivered' | 'failed' | 'retryable' | 'permanently_failed'
+export type FailureCategory = 'timeout' | 'client_error' | 'server_error' | 'not_configured' | 'unknown'
 
 export interface CommunicationLog {
   id: string
@@ -1464,7 +1468,52 @@ export interface CommunicationLog {
   provider: string | null
   provider_message_id: string | null
   related_execution_action_id: string | null
+  idempotency_key: string | null
+  attempts: number
+  max_attempts: number
+  next_retry_at: string | null
+  claimed_at: string | null
+  claimed_by: string | null
+  dispatched_at: string | null
+  failure_category: FailureCategory | null
   created_at: string
+}
+
+export type TrackingDispatchProvider = 'meta' | 'tiktok'
+export type TrackingDispatchEventType =
+  | 'PAGE_VIEW'
+  | 'VIEW_CONTENT'
+  | 'SELECT_PACKAGE'
+  | 'INITIATE_CHECKOUT'
+  | 'FORM_START'
+  | 'ORDER_CREATED'
+  | 'ORDER_CONFIRMED'
+  | 'PURCHASE'
+  | 'ORDER_CANCELLED'
+/** not_configured is terminal (no token existed when enqueued). pending/retryable are eligible for the dispatch-tracking-event Edge Function's claim. sent/permanently_failed reflect a real Meta/TikTok API outcome — see migration 0032. */
+export type TrackingDispatchStatus = 'not_configured' | 'pending' | 'processing' | 'sent' | 'failed' | 'retryable' | 'permanently_failed'
+
+export interface TrackingDispatchLog {
+  id: string
+  workspace_id: string
+  brand_id: string
+  landing_page_id: string | null
+  order_id: string | null
+  provider: TrackingDispatchProvider
+  event_type: TrackingDispatchEventType
+  event_id: string
+  status: TrackingDispatchStatus
+  provider_response: Json | null
+  error_message: string | null
+  attempts: number
+  max_attempts: number
+  next_retry_at: string | null
+  claimed_at: string | null
+  claimed_by: string | null
+  dispatched_at: string | null
+  failure_category: FailureCategory | null
+  created_at: string
+  updated_at: string
 }
 
 // ---------------------------------------------------------------------

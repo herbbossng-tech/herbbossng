@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { useAuth } from '@/contexts/AuthContext'
 import { useWorkspace } from '@/contexts/WorkspaceContext'
+import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate'
 import type { Order } from '@/types/database'
 
 import {
@@ -43,6 +44,8 @@ export const orderKeys = {
 export function useOrders(filters: OrderFilters = {}) {
   const { activeWorkspace, activeBrand } = useWorkspace()
   const brandId = activeBrand?.id ?? ''
+
+  useRealtimeInvalidate('orders', activeWorkspace.id, [orderKeys.all(activeWorkspace.id, brandId)])
 
   return useQuery({
     queryKey: orderKeys.list(activeWorkspace.id, brandId, filters),

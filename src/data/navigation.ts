@@ -1,4 +1,5 @@
 import {
+  Activity,
   BarChart3,
   Bell,
   Boxes,
@@ -82,6 +83,7 @@ export const navSections: NavSection[] = [
   {
     items: [
       { label: 'Settings', href: '/settings', icon: SettingsIcon, permission: 'settings.view' },
+      { label: 'Integration Health', href: '/settings/integrations', icon: Activity, permission: 'integrations.view' },
       { label: 'Support', href: '/support', icon: LifeBuoy, permission: 'support.view' },
     ],
   },

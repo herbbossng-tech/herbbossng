@@ -13,6 +13,7 @@ import { usePermission } from '@/contexts/PermissionsContext'
 import { BrandLogoUploader } from '@/features/brands/components/BrandLogoUploader'
 import { useBrand, useSetBrandMetaTracking, useSetBrandStatus, useSetBrandTiktokTracking, useUpdateBrand } from '@/features/brands/hooks'
 import type { BrandFormFields } from '@/features/brands/api'
+import { CommunicationConfigCard } from '@/features/integrations/components/CommunicationConfigCard'
 
 export function BrandDetailPage() {
   const canView = usePermission('brands.view')
@@ -258,6 +259,8 @@ function BrandDetailContent() {
           </CardContent>
         </Card>
       )}
+
+      <CommunicationConfigCard brandId={brand.id} />
 
       {canManage && (
         <div className="flex items-center gap-3">
