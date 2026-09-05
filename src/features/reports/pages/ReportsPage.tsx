@@ -17,6 +17,7 @@ import { DateRangeFilter, type DateRangePreset } from '@/features/finance/compon
 import { resolveDateRange } from '@/features/finance/dateRanges'
 import { useFinanceSummary, useOrderStatusValueBreakdown, useProductPerformance } from '@/features/finance/hooks'
 import { useDeliveryReportRows, useSalesReportRows } from '@/features/reports/hooks'
+import { useMarketingCampaignList } from '@/features/marketing/hooks'
 import { orderStatuses, orderStatusLabels } from '@/features/orders/statusMeta'
 import { formatCurrency } from '@/lib/currency'
 import { exportToCsv } from '@/lib/csv'
@@ -76,6 +77,7 @@ function ReportsContent() {
           <TabsTrigger value="affiliates">Affiliate Performance</TabsTrigger>
           <TabsTrigger value="campaigns">Campaign Performance</TabsTrigger>
           <TabsTrigger value="ad-costs">Ad Costs</TabsTrigger>
+          <TabsTrigger value="marketing">Marketing Campaigns</TabsTrigger>
         </TabsList>
 
         <TabsContent value="sales">
@@ -101,6 +103,9 @@ function ReportsContent() {
         </TabsContent>
         <TabsContent value="ad-costs">
           <AdCostReportTab canExport={canExport} currency={activeWorkspace.currency_code} />
+        </TabsContent>
+        <TabsContent value="marketing">
+          <MarketingCampaignReportTab dateFrom={range.from} dateTo={range.to} canExport={canExport} currency={activeWorkspace.currency_code} />
         </TabsContent>
       </Tabs>
     </div>
@@ -753,6 +758,93 @@ function AdCostReportTab({ canExport, currency }: { canExport: boolean; currency
                     <td className="px-4 py-2.5 text-right font-semibold">{formatCurrency(ac.initial_cost_amount, currency)}</td>
                     <td className="px-4 py-2.5 text-right">{ac.initial_cost_per_order !== null ? formatCurrency(ac.initial_cost_per_order, currency) : '—'}</td>
                     <td className="px-4 py-2.5 text-right">{ac.delivered_cost_per_order !== null ? formatCurrency(ac.delivered_cost_per_order, currency) : '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+function MarketingCampaignReportTab({
+  dateFrom,
+  dateTo,
+  canExport,
+  currency,
+}: {
+  dateFrom: string | null
+  dateTo: string | null
+  canExport: boolean
+  currency: string
+}) {
+  const { data, isLoading } = useMarketingCampaignList({ dateFrom, dateTo })
+
+  function handleExport() {
+    if (!data || data.length === 0) return
+    // Financial columns are already null server-side for a caller without
+    // marketing finance visibility (get_marketing_campaign_list embeds
+    // that check) — exporting the same rows the table already shows means
+    // a user without financial permission never receives them via CSV either.
+    exportToCsv(
+      `marketing-campaigns-${new Date().toISOString().slice(0, 10)}.csv`,
+      data.map((c) => ({
+        campaign: c.name,
+        channel: c.channel,
+        market: c.market_country_code ?? '',
+        spend: c.spend ?? '',
+        orders_created: c.orders_created,
+        confirmed: c.confirmed_orders,
+        dispatched: c.dispatched_orders,
+        delivered: c.delivered_orders,
+        delivery_rate_pct: c.delivery_rate_pct ?? '',
+        delivered_revenue: c.delivered_revenue ?? '',
+        delivered_cpa: c.delivered_cpa ?? '',
+        roas: c.roas ?? '',
+        cogs_delivered: c.cogs_delivered ?? '',
+        delivery_cost_delivered: c.delivery_cost_delivered ?? '',
+        profit: c.profit_data_available ? c.contribution_profit : '',
+        status: c.status,
+      })),
+    )
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Marketing Campaign Report</CardTitle>
+        <CardDescription>Delivered revenue, delivered CPA and ROAS — never orders-created value treated as revenue.</CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <ReportToolbar search="" onSearch={() => {}} onExport={handleExport} canExport={canExport} exportDisabled={!data || data.length === 0} />
+        {isLoading ? (
+          <LoadingState label="Loading marketing campaigns…" />
+        ) : (data?.length ?? 0) === 0 ? (
+          <EmptyState icon={Lock} title="No campaigns yet" description="Marketing campaign performance will appear here once a campaign is created." />
+        ) : (
+          <div className="overflow-x-auto rounded-lg border border-border">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-xs uppercase tracking-wide text-muted-foreground">
+                  <th className="px-4 py-2.5 font-semibold">Campaign</th>
+                  <th className="px-4 py-2.5 font-semibold">Channel</th>
+                  <th className="px-4 py-2.5 text-right font-semibold">Delivered Orders</th>
+                  <th className="px-4 py-2.5 text-right font-semibold">Delivered Revenue</th>
+                  <th className="px-4 py-2.5 text-right font-semibold">Delivered CPA</th>
+                  <th className="px-4 py-2.5 text-right font-semibold">ROAS</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data?.map((c) => (
+                  <tr key={c.campaign_id} className="border-t border-border/60">
+                    <td className="px-4 py-2.5">{c.name}</td>
+                    <td className="px-4 py-2.5 text-xs text-muted-foreground">{c.channel}</td>
+                    <td className="px-4 py-2.5 text-right">{c.delivered_orders}</td>
+                    <td className="px-4 py-2.5 text-right font-semibold">{c.delivered_revenue !== null ? formatCurrency(c.delivered_revenue, currency) : '—'}</td>
+                    <td className="px-4 py-2.5 text-right">{c.delivered_cpa !== null ? formatCurrency(c.delivered_cpa, currency) : '—'}</td>
+                    <td className="px-4 py-2.5 text-right">{c.roas !== null ? `${c.roas}x` : '—'}</td>
                   </tr>
                 ))}
               </tbody>

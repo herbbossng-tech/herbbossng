@@ -1023,6 +1023,11 @@ export interface AdCost {
   campaign_id: string | null
   affiliate_id: string | null
   product_id: string | null
+  marketing_campaign_id: string | null
+  channel: MarketingChannel | null
+  source: string | null
+  description: string | null
+  external_reference: string | null
   period_start: string
   period_end: string
   initial_cost_amount: number
@@ -1038,6 +1043,179 @@ export interface AdCost {
   rejection_reason: string | null
   created_at: string
   updated_at: string
+}
+
+export type MarketingChannel = 'meta' | 'tiktok' | 'google' | 'affiliate' | 'organic' | 'direct' | 'whatsapp' | 'other'
+export type MarketingCampaignStatus = 'draft' | 'active' | 'paused' | 'completed' | 'archived'
+
+export interface MarketingCampaign {
+  id: string
+  workspace_id: string
+  brand_id: string
+  name: string
+  description: string | null
+  status: MarketingCampaignStatus
+  channel: MarketingChannel
+  source: string | null
+  objective: string | null
+  product_id: string | null
+  landing_page_id: string | null
+  affiliate_campaign_id: string | null
+  media_buyer_id: string | null
+  market_country_code: string | null
+  market_currency_code: string | null
+  external_campaign_id: string | null
+  utm_campaign: string | null
+  tracking_metadata: Record<string, unknown>
+  start_date: string | null
+  end_date: string | null
+  budget_total: number | null
+  budget_daily: number | null
+  target_orders: number | null
+  target_delivered_orders: number | null
+  target_delivered_revenue: number | null
+  target_delivered_cpa: number | null
+  target_delivered_roas: number | null
+  target_delivery_rate_pct: number | null
+  notes: string | null
+  created_at: string
+  updated_at: string
+  created_by: string | null
+  updated_by: string | null
+  deleted_at: string | null
+}
+
+export interface MarketingSummary {
+  total_ad_spend: number | null
+  orders_created: number
+  delivered_orders: number
+  delivered_revenue: number | null
+  delivered_roas: number | null
+  delivered_cpa: number | null
+  active_campaigns: number
+}
+
+export interface MarketingCampaignListRow {
+  campaign_id: string
+  name: string
+  channel: MarketingChannel
+  status: MarketingCampaignStatus
+  market_country_code: string | null
+  currency_code: string | null
+  product_id: string | null
+  product_name: string | null
+  landing_page_id: string | null
+  landing_page_name: string | null
+  media_buyer_id: string | null
+  media_buyer_name: string | null
+  start_date: string | null
+  end_date: string | null
+  budget_total: number | null
+  spend: number | null
+  budget_utilization_pct: number | null
+  orders_created: number
+  confirmed_orders: number
+  dispatched_orders: number
+  delivered_orders: number
+  cancelled_orders: number
+  returned_orders: number
+  delivery_rate_pct: number | null
+  delivered_revenue: number | null
+  delivered_cpa: number | null
+  roas: number | null
+  cogs_delivered: number | null
+  delivery_cost_delivered: number | null
+  contribution_profit: number | null
+  profit_data_available: boolean
+  created_at: string
+}
+
+export interface MarketingCampaignDetail {
+  campaign_id: string
+  name: string
+  description: string | null
+  status: MarketingCampaignStatus
+  channel: MarketingChannel
+  source: string | null
+  objective: string | null
+  market_country_code: string | null
+  currency_code: string | null
+  product_id: string | null
+  product_name: string | null
+  landing_page_id: string | null
+  landing_page_name: string | null
+  affiliate_campaign_id: string | null
+  affiliate_campaign_name: string | null
+  media_buyer_id: string | null
+  media_buyer_name: string | null
+  utm_campaign: string | null
+  external_campaign_id: string | null
+  start_date: string | null
+  end_date: string | null
+  budget_total: number | null
+  budget_daily: number | null
+  notes: string | null
+  spend: number | null
+  budget_utilization_pct: number | null
+  orders_created: number
+  confirmed_orders: number
+  dispatched_orders: number
+  delivered_orders: number
+  cancelled_orders: number
+  returned_orders: number
+  delivery_rate_pct: number | null
+  cancellation_rate_pct: number | null
+  return_rate_pct: number | null
+  delivered_revenue: number | null
+  total_order_value: number | null
+  average_order_value: number | null
+  delivered_cpa: number | null
+  initial_cpa: number | null
+  roas: number | null
+  cogs_delivered: number | null
+  delivery_cost_delivered: number | null
+  affiliate_commission: number | null
+  contribution_profit: number | null
+  profit_data_available: boolean
+  landing_page_views: number
+  landing_page_form_starts: number
+  target_orders: number | null
+  target_delivered_orders: number | null
+  target_delivered_revenue: number | null
+  target_delivered_cpa: number | null
+  target_delivered_roas: number | null
+  target_delivery_rate_pct: number | null
+}
+
+export interface MarketingTrendPoint {
+  bucket: string
+  spend: number | null
+  orders_created: number
+  delivered_orders: number
+  delivered_revenue: number | null
+}
+
+export interface MarketingChannelPerformanceRow {
+  channel: MarketingChannel | string
+  spend: number | null
+  orders_created: number
+  delivered_orders: number
+  delivered_revenue: number | null
+  delivered_cpa: number | null
+  roas: number | null
+}
+
+export interface MarketingMediaBuyerPerformanceRow {
+  media_buyer_id: string
+  media_buyer_name: string | null
+  campaigns_count: number
+  spend: number | null
+  orders_created: number
+  delivered_orders: number
+  delivered_revenue: number | null
+  delivered_cpa: number | null
+  roas: number | null
+  contribution_profit: number | null
 }
 
 export interface AffiliatePerformanceRow {

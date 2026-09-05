@@ -23,6 +23,11 @@ export interface AdCostFormFields {
   campaign_id?: string | null
   affiliate_id?: string | null
   product_id?: string | null
+  marketing_campaign_id?: string | null
+  channel?: string | null
+  source?: string | null
+  description?: string | null
+  external_reference?: string | null
   period_start: string
   period_end: string
   initial_cost_amount: number

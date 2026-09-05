@@ -14,6 +14,7 @@ import { PermissionGate, usePermission } from '@/contexts/PermissionsContext'
 import { useWorkspace } from '@/contexts/WorkspaceContext'
 import { useApproveAdCost, useCreateAdCost, useRejectAdCost, useAdCosts } from '@/features/adCosts/hooks'
 import { useCampaigns } from '@/features/campaigns/hooks'
+import { useMarketingCampaignList } from '@/features/marketing/hooks'
 import { formatCurrency } from '@/lib/currency'
 
 const statusToneMap: Record<string, 'success' | 'warning' | 'destructive'> = {
@@ -192,9 +193,11 @@ function AdCostsContent() {
 function CreateAdCostDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const { activeWorkspace } = useWorkspace()
   const { data: campaigns } = useCampaigns()
+  const { data: marketingCampaigns } = useMarketingCampaignList({ dateFrom: null, dateTo: null })
   const createAdCost = useCreateAdCost()
 
   const [campaignId, setCampaignId] = React.useState('')
+  const [marketingCampaignId, setMarketingCampaignId] = React.useState('')
   const [periodStart, setPeriodStart] = React.useState('')
   const [periodEnd, setPeriodEnd] = React.useState('')
   const [costAmount, setCostAmount] = React.useState('')
@@ -206,6 +209,7 @@ function CreateAdCostDialog({ open, onOpenChange }: { open: boolean; onOpenChang
   React.useEffect(() => {
     if (!open) {
       setCampaignId('')
+      setMarketingCampaignId('')
       setPeriodStart('')
       setPeriodEnd('')
       setCostAmount('')
@@ -236,6 +240,7 @@ function CreateAdCostDialog({ open, onOpenChange }: { open: boolean; onOpenChang
     try {
       await createAdCost.mutateAsync({
         campaign_id: campaignId || null,
+        marketing_campaign_id: marketingCampaignId || null,
         period_start: periodStart,
         period_end: periodEnd,
         initial_cost_amount: cost,
@@ -258,14 +263,29 @@ function CreateAdCostDialog({ open, onOpenChange }: { open: boolean; onOpenChang
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4 p-6 pt-2">
           <div className="flex flex-col gap-1.5">
-            <Label>Campaign (optional)</Label>
+            <Label>Affiliate Campaign (optional)</Label>
             <Select value={campaignId} onValueChange={setCampaignId}>
               <SelectTrigger>
-                <SelectValue placeholder="No specific campaign" />
+                <SelectValue placeholder="No specific affiliate campaign" />
               </SelectTrigger>
               <SelectContent>
                 {campaigns?.map((c) => (
                   <SelectItem key={c.id} value={c.id}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label>Marketing Campaign (optional)</Label>
+            <Select value={marketingCampaignId} onValueChange={setMarketingCampaignId}>
+              <SelectTrigger>
+                <SelectValue placeholder="No specific marketing campaign" />
+              </SelectTrigger>
+              <SelectContent>
+                {marketingCampaigns?.map((c) => (
+                  <SelectItem key={c.campaign_id} value={c.campaign_id}>
                     {c.name}
                   </SelectItem>
                 ))}

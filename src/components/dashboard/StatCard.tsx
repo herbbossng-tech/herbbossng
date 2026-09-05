@@ -5,9 +5,11 @@ import {
   Clock,
   DollarSign,
   type LucideIcon,
+  Megaphone,
   Percent,
   Phone,
   ShoppingCart,
+  Target,
   TrendingDown,
   TrendingUp,
   UserCheck,
@@ -28,6 +30,8 @@ const iconMap: Record<string, LucideIcon> = {
   boxes: Boxes,
   percent: Percent,
   userCheck: UserCheck,
+  megaphone: Megaphone,
+  target: Target,
 }
 
 const toneClasses: Record<string, string> = {

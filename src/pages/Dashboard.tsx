@@ -28,6 +28,7 @@ import { OrderStatusBadge } from '@/features/orders/components/OrderStatusBadge'
 import { useOrders } from '@/features/orders/hooks'
 import { useProducts } from '@/features/products/hooks'
 import { useSupportSummary } from '@/features/support/hooks'
+import { useMarketingSummary } from '@/features/marketing/hooks'
 import { formatCurrency } from '@/lib/currency'
 import { formatRatio, safeRatePct } from '@/lib/financeMath'
 import { cn } from '@/lib/utils'
@@ -110,6 +111,8 @@ export function Dashboard() {
 
       <SupportAttentionRow />
 
+      <MarketingSnapshotRow />
+
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <TopProductsCard range={range} />
         <NeedsAttentionCard range={range} />
@@ -133,6 +136,33 @@ function SupportAttentionRow() {
     <div className="grid grid-cols-2 gap-3 sm:w-1/2">
       <StatCard label="Support Attention" value={count(summary?.needs_attention_count)} icon="phone" compact href="/support" />
       <StatCard label="Rescue Opportunities" value={count(summary?.rescue_opportunities_count)} icon="userCheck" compact href="/support" />
+    </div>
+  )
+}
+
+// Deliberately restrained: a single row of the four numbers that
+// answer "is marketing working" plus one link into the real module —
+// never the full campaign/channel/budget breakdown, which belongs on
+// /marketing itself.
+function MarketingSnapshotRow() {
+  const canView = usePermission('marketing.view')
+  const { data: summary } = useMarketingSummary({ dateFrom: null, dateTo: null })
+  const { activeWorkspace } = useWorkspace()
+  if (!canView) return null
+  const money = (n: number | null | undefined) => (n === null || n === undefined ? '—' : formatCurrency(n, activeWorkspace.currency_code))
+  const count = (n: number | undefined) => (n === undefined ? '—' : n.toLocaleString())
+  const ratio = (n: number | null | undefined) => (n === null || n === undefined ? '—' : `${n.toLocaleString()}x`)
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:w-2/3">
+        <StatCard label="Ad Spend" value={money(summary?.total_ad_spend)} icon="dollar" compact href="/marketing" />
+        <StatCard label="Delivered Revenue" value={money(summary?.delivered_revenue)} icon="wallet" compact href="/marketing" />
+        <StatCard label="Delivered ROAS" value={ratio(summary?.delivered_roas)} icon="target" compact href="/marketing" />
+        <StatCard label="Delivered Orders" value={count(summary?.delivered_orders)} icon="check" compact href="/marketing" />
+      </div>
+      <Link to="/marketing" className="w-fit text-xs font-medium text-primary hover:underline">
+        View Marketing →
+      </Link>
     </div>
   )
 }

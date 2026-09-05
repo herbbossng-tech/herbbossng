@@ -16,6 +16,15 @@ import { CampaignsPage } from '@/features/campaigns/pages/CampaignsPage'
 import { WalletsPage } from '@/features/wallets/pages/WalletsPage'
 import { WithdrawalsPage } from '@/features/withdrawals/pages/WithdrawalsPage'
 import { AutomationLayout } from '@/features/automation/AutomationLayout'
+import { MarketingLayout } from '@/features/marketing/MarketingLayout'
+import { MarketingOverviewPage } from '@/features/marketing/pages/MarketingOverviewPage'
+import { MarketingCampaignsPage } from '@/features/marketing/pages/MarketingCampaignsPage'
+import { MarketingCampaignDetailPage } from '@/features/marketing/pages/MarketingCampaignDetailPage'
+import { MarketingChannelsPage } from '@/features/marketing/pages/MarketingChannelsPage'
+import { MarketingLandingPagesPage } from '@/features/marketing/pages/MarketingLandingPagesPage'
+import { MarketingProductsPage } from '@/features/marketing/pages/MarketingProductsPage'
+import { MarketingMediaBuyersPage } from '@/features/marketing/pages/MarketingMediaBuyersPage'
+import { MarketingBudgetPage } from '@/features/marketing/pages/MarketingBudgetPage'
 import { AutomationEventsPage } from '@/features/automation/pages/AutomationEventsPage'
 import { AutomationExecutionsPage } from '@/features/automation/pages/AutomationExecutionsPage'
 import { AutomationRulesPage } from '@/features/automation/pages/AutomationRulesPage'
@@ -89,6 +98,7 @@ const placeholderNavItems = allNavItems.filter(
     item.href !== '/operations' &&
     item.href !== '/automation' &&
     item.href !== '/support' &&
+    item.href !== '/marketing' &&
     item.href !== '/settings',
 )
 
@@ -211,6 +221,19 @@ function App() {
           </Route>
 
           <Route path="support" element={<SupportPage />} />
+
+          <Route path="marketing">
+            <Route path="campaigns/:id" element={<MarketingCampaignDetailPage />} />
+            <Route element={<MarketingLayout />}>
+              <Route index element={<MarketingOverviewPage />} />
+              <Route path="campaigns" element={<MarketingCampaignsPage />} />
+              <Route path="channels" element={<MarketingChannelsPage />} />
+              <Route path="landing-pages" element={<MarketingLandingPagesPage />} />
+              <Route path="products" element={<MarketingProductsPage />} />
+              <Route path="media-buyers" element={<MarketingMediaBuyersPage />} />
+              <Route path="budget" element={<MarketingBudgetPage />} />
+            </Route>
+          </Route>
 
           {placeholderNavItems.map((item) => (
             <Route

@@ -48,6 +48,7 @@ import { fetchLandingPages } from '@/features/landingPages/api'
 import { fetchOrders } from '@/features/orders/api'
 import { fetchProducts } from '@/features/products/api'
 import { fetchAutomationRules } from '@/features/automation/api'
+import { fetchMarketingCampaignList } from '@/features/marketing/api'
 import { fetchRoles } from '@/features/roles/api'
 import { fetchWorkspaceStaff } from '@/features/staff/api'
 import { fetchActiveRescueCases } from '@/features/support/api'
@@ -80,6 +81,9 @@ const quickActions = [
   { label: 'Open Support Queue', href: '/support', icon: Headset },
   { label: 'Open Rescue Board', href: '/operations/rescue-board', icon: LifeBuoy },
   { label: 'Open Follow-up Tasks', href: '/operations/tasks', icon: FilePlus2 },
+  { label: 'View Marketing', href: '/marketing', icon: Megaphone },
+  { label: 'Create Marketing Campaign', href: '/marketing/campaigns', icon: PlusCircle },
+  { label: 'Record Ad Spend', href: '/affiliates/ad-costs', icon: Banknote },
 ]
 
 export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
@@ -123,6 +127,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const canSearchBrands = hasPermission('brands.view')
   const canSearchAuditLogs = hasPermission('audit_logs.view')
   const canSearchRescueCases = hasPermission('rescue.view')
+  const canSearchMarketing = hasPermission('marketing.view')
 
   const { data: orderResults } = useQuery({
     queryKey: ['command-order-search', activeWorkspace.id, brandId, term],
@@ -198,6 +203,13 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     enabled: searching && canSearchRescueCases,
   })
   const filteredRescueCases = (rescueCaseResults ?? []).filter((rc) => rc.reason.toLowerCase().includes(term.toLowerCase())).slice(0, 6)
+
+  const { data: marketingCampaignResults } = useQuery({
+    queryKey: ['command-marketing-campaign-search', activeWorkspace.id, brandId],
+    queryFn: () => fetchMarketingCampaignList(activeWorkspace.id, brandId, { dateFrom: null, dateTo: null }),
+    enabled: searching && canSearchMarketing && Boolean(brandId),
+  })
+  const filteredMarketingCampaigns = (marketingCampaignResults ?? []).filter((c) => c.name.toLowerCase().includes(term.toLowerCase())).slice(0, 6)
 
   const visibleNavItems = allNavItems.filter((item) => !item.permission || hasPermission(item.permission))
 
@@ -374,6 +386,23 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                 <Workflow className="h-4 w-4 text-muted-foreground" />
                 <span className="flex-1">{rule.name}</span>
                 <span className="text-xs text-muted-foreground">{rule.status}</span>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        )}
+
+        {searching && canSearchMarketing && (
+          <CommandGroup heading="Marketing">
+            {filteredMarketingCampaigns.length === 0 && (
+              <CommandItem disabled value={`no-marketing-campaigns-${term}`}>
+                No matching marketing campaigns
+              </CommandItem>
+            )}
+            {filteredMarketingCampaigns.map((campaign) => (
+              <CommandItem key={campaign.campaign_id} value={campaign.name} onSelect={() => go(`/marketing/campaigns/${campaign.campaign_id}`)}>
+                <Megaphone className="h-4 w-4 text-muted-foreground" />
+                <span className="flex-1">{campaign.name}</span>
+                <span className="text-xs text-muted-foreground">{campaign.status}</span>
               </CommandItem>
             ))}
           </CommandGroup>
