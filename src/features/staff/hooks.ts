@@ -7,11 +7,14 @@ import {
   assignRoleToStaff,
   createStaffInvitation,
   fetchAssignableStaff,
+  fetchMyAssignmentSettings,
   fetchStaffInvitations,
   fetchStaffRoles,
   fetchWorkspaceStaff,
   removeRoleFromStaff,
   revokeStaffInvitation,
+  setMyAssignmentAvailability,
+  setStaffAssignmentSettings,
   updateStaffProfile,
   updateStaffStatus,
 } from './api'
@@ -119,6 +122,49 @@ export function useAssignRole() {
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: staffKeys.roles(activeWorkspace.id, variables.userId) })
+      invalidate()
+    },
+  })
+}
+
+export function useSetStaffAssignmentSettings() {
+  const { activeWorkspace } = useWorkspace()
+  const invalidate = useInvalidateStaff()
+  return useMutation({
+    mutationFn: ({
+      userId,
+      isAvailableForAssignment,
+      autoAssignmentEnabled,
+      maxActiveOrders,
+    }: {
+      userId: string
+      isAvailableForAssignment: boolean
+      autoAssignmentEnabled: boolean
+      maxActiveOrders: number | null
+    }) => setStaffAssignmentSettings(activeWorkspace.id, userId, isAvailableForAssignment, autoAssignmentEnabled, maxActiveOrders),
+    onSuccess: invalidate,
+  })
+}
+
+export function useMyAssignmentSettings() {
+  const { activeWorkspace } = useWorkspace()
+  const { user } = useAuth()
+  return useQuery({
+    queryKey: ['my-assignment-settings', activeWorkspace.id, user?.id],
+    queryFn: () => fetchMyAssignmentSettings(activeWorkspace.id, user!.id),
+    enabled: Boolean(activeWorkspace.id && user?.id),
+  })
+}
+
+export function useSetMyAssignmentAvailability() {
+  const { activeWorkspace } = useWorkspace()
+  const { user } = useAuth()
+  const queryClient = useQueryClient()
+  const invalidate = useInvalidateStaff()
+  return useMutation({
+    mutationFn: (isAvailableForAssignment: boolean) => setMyAssignmentAvailability(activeWorkspace.id, isAvailableForAssignment),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['my-assignment-settings', activeWorkspace.id, user?.id] })
       invalidate()
     },
   })

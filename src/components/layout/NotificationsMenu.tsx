@@ -1,4 +1,4 @@
-import { Bell } from 'lucide-react'
+import { Bell, Volume2, VolumeX } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 import {
@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useMarkNotificationRead, useNotificationsRealtime, useRecentNotifications, useUnreadNotificationCount } from '@/features/notifications/hooks'
+import { useNotificationSoundPreference } from '@/hooks/useNotificationSound'
 import { cn } from '@/lib/utils'
 
 const priorityDot: Record<string, string> = {
@@ -24,6 +25,7 @@ export function NotificationsMenu() {
   const { data: unreadCount } = useUnreadNotificationCount()
   const { data: recent } = useRecentNotifications()
   const markRead = useMarkNotificationRead()
+  const { muted, setMuted } = useNotificationSoundPreference()
 
   return (
     <DropdownMenu>
@@ -37,8 +39,22 @@ export function NotificationsMenu() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-80">
         <DropdownMenuLabel className="flex items-center justify-between text-sm font-semibold text-foreground">
-          Notifications
-          <span className="text-xs font-normal text-muted-foreground">{unreadCount ?? 0} unread</span>
+          <span className="flex items-center gap-2">
+            Notifications
+            <span className="text-xs font-normal text-muted-foreground">{unreadCount ?? 0} unread</span>
+          </span>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              setMuted(!muted)
+            }}
+            className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-foreground"
+            title={muted ? 'Unmute new-order sound' : 'Mute new-order sound'}
+          >
+            {muted ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
+          </button>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         {(recent?.length ?? 0) === 0 && (

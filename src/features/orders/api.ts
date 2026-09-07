@@ -304,13 +304,16 @@ export async function setOrderTags(id: string, tags: string[], userId: string): 
   return data as Order
 }
 
-export async function assignOrder(id: string, assignedTo: string | null, userId: string): Promise<Order> {
-  const { data, error } = await supabase
-    .from('orders')
-    .update({ assigned_to: assignedTo, updated_by: userId })
-    .eq('id', id)
-    .select('*')
-    .single()
+/**
+ * Manual assign/reassign (assignedTo set) or unassign (assignedTo
+ * null). Routed through the assign_order() RPC (0038) rather than a
+ * raw client update — it records assignment_source='MANUAL' and an
+ * optional reason; previous assignee/actor/timestamp are still
+ * captured for free by the existing orders audit trigger and
+ * log_order_event()'s ASSIGNED event/notifications, unchanged.
+ */
+export async function assignOrder(id: string, assignedTo: string | null, _userId: string, reason?: string | null): Promise<Order> {
+  const { data, error } = await supabase.rpc('assign_order', { p_order_id: id, p_assigned_to: assignedTo, p_reason: reason ?? null }).single()
   if (error) throw error
   return data as Order
 }

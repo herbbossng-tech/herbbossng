@@ -23,6 +23,8 @@ export interface AssignmentRuleFields {
   fixedStaffIds?: string[]
   notes?: string | null
   isActive?: boolean
+  /** Minutes an order/task must remain unassigned before it's eligible for automatic assignment. Default 20. */
+  agingMinutes?: number
 }
 
 export async function createAssignmentRule(workspaceId: string, fields: AssignmentRuleFields, userId: string): Promise<AssignmentRule> {
@@ -36,6 +38,7 @@ export async function createAssignmentRule(workspaceId: string, fields: Assignme
       fixed_staff_ids: fields.fixedStaffIds ?? [],
       notes: fields.notes ?? null,
       is_active: fields.isActive ?? true,
+      aging_minutes: fields.agingMinutes ?? 20,
       created_by: userId,
       updated_by: userId,
     })
@@ -57,6 +60,7 @@ export async function updateAssignmentRule(
   if (fields.fixedStaffIds !== undefined) payload.fixed_staff_ids = fields.fixedStaffIds
   if (fields.notes !== undefined) payload.notes = fields.notes
   if (fields.isActive !== undefined) payload.is_active = fields.isActive
+  if (fields.agingMinutes !== undefined) payload.aging_minutes = fields.agingMinutes
 
   const { data, error } = await supabase.from('assignment_rules').update(payload).eq('id', id).select('*').single()
   if (error) throw error

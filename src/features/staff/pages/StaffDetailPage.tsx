@@ -7,12 +7,16 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/state'
 import { usePermission } from '@/contexts/PermissionsContext'
 import { useBrandsList } from '@/features/brands/hooks'
 import { useRoles } from '@/features/roles/hooks'
-import { useAssignRole, useRemoveRole, useStaff, useStaffRoles, useUpdateStaffStatus } from '@/features/staff/hooks'
+import { useAssignRole, useRemoveRole, useSetStaffAssignmentSettings, useStaff, useStaffRoles, useUpdateStaffStatus } from '@/features/staff/hooks'
+import type { StaffMember } from '@/features/staff/types'
 
 function initials(name: string) {
   return name.split(' ').filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase()).join('')
@@ -211,6 +215,8 @@ function StaffDetailContent() {
         </CardContent>
       </Card>
 
+      {canManage && <AssignmentSettingsCard member={member} />}
+
       <AlertDialog open={confirmTarget !== null} onOpenChange={(open) => !open && setConfirmTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -235,5 +241,68 @@ function StaffDetailContent() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  )
+}
+
+function AssignmentSettingsCard({ member }: { member: StaffMember }) {
+  const setSettings = useSetStaffAssignmentSettings()
+  const [isAvailable, setIsAvailable] = React.useState(member.is_available_for_assignment)
+  const [autoEnabled, setAutoEnabled] = React.useState(member.auto_assignment_enabled)
+  const [maxOrders, setMaxOrders] = React.useState(member.max_active_orders?.toString() ?? '')
+  const [saved, setSaved] = React.useState(false)
+
+  const dirty =
+    isAvailable !== member.is_available_for_assignment ||
+    autoEnabled !== member.auto_assignment_enabled ||
+    maxOrders !== (member.max_active_orders?.toString() ?? '')
+
+  async function handleSave() {
+    setSaved(false)
+    await setSettings.mutateAsync({
+      userId: member.user_id,
+      isAvailableForAssignment: isAvailable,
+      autoAssignmentEnabled: autoEnabled,
+      maxActiveOrders: maxOrders.trim() === '' ? null : Number(maxOrders),
+    })
+    setSaved(true)
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Assignment Settings</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <p className="text-xs text-muted-foreground">
+          Controls whether {[member.first_name, member.last_name].filter(Boolean).join(' ') || member.email} can receive new orders — manually
+          or from the automatic assignment sweep. Currently handling <span className="font-medium text-foreground">{member.active_order_count}</span>{' '}
+          active order(s).
+        </p>
+        <label className="flex items-center gap-2 text-sm">
+          <Checkbox checked={isAvailable} onCheckedChange={(v) => setIsAvailable(v === true)} />
+          Available for new assignments
+        </label>
+        <label className="flex items-center gap-2 text-sm">
+          <Checkbox checked={autoEnabled} onCheckedChange={(v) => setAutoEnabled(v === true)} />
+          Eligible for automatic assignment
+        </label>
+        <div className="flex flex-col gap-1.5 sm:w-64">
+          <Label>Maximum active orders</Label>
+          <Input
+            type="number"
+            min={1}
+            placeholder="Unlimited"
+            value={maxOrders}
+            onChange={(e) => setMaxOrders(e.target.value)}
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <Button size="sm" disabled={!dirty || setSettings.isPending} onClick={handleSave}>
+            {setSettings.isPending ? 'Saving…' : 'Save'}
+          </Button>
+          {saved && !dirty && <span className="text-xs text-success">Saved.</span>}
+        </div>
+      </CardContent>
+    </Card>
   )
 }

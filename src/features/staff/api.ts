@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase'
-import type { Role, UserRole } from '@/types/database'
+import type { Role, StaffAssignmentSettings, UserRole } from '@/types/database'
 
 import type { StaffInvitation, StaffMember } from './types'
 
@@ -79,4 +79,44 @@ export async function createStaffInvitation(workspaceId: string, email: string, 
 export async function revokeStaffInvitation(id: string): Promise<void> {
   const { error } = await supabase.rpc('revoke_staff_invitation', { p_id: id })
   if (error) throw error
+}
+
+export async function setStaffAssignmentSettings(
+  workspaceId: string,
+  userId: string,
+  isAvailableForAssignment: boolean,
+  autoAssignmentEnabled: boolean,
+  maxActiveOrders: number | null,
+): Promise<StaffAssignmentSettings> {
+  const { data, error } = await supabase
+    .rpc('set_staff_assignment_settings', {
+      p_workspace_id: workspaceId,
+      p_user_id: userId,
+      p_is_available_for_assignment: isAvailableForAssignment,
+      p_auto_assignment_enabled: autoAssignmentEnabled,
+      p_max_active_orders: maxActiveOrders,
+    })
+    .single()
+  if (error) throw error
+  return data as StaffAssignmentSettings
+}
+
+/** Reads the caller's own row directly (permitted by select_staff_assignment_settings' user_id = auth.uid() clause). Null means the defaults apply (available, unlimited, auto-assignment on) — no row has ever been written. */
+export async function fetchMyAssignmentSettings(workspaceId: string, userId: string): Promise<StaffAssignmentSettings | null> {
+  const { data, error } = await supabase
+    .from('staff_assignment_settings')
+    .select('*')
+    .eq('workspace_id', workspaceId)
+    .eq('user_id', userId)
+    .maybeSingle()
+  if (error) throw error
+  return data as StaffAssignmentSettings | null
+}
+
+export async function setMyAssignmentAvailability(workspaceId: string, isAvailableForAssignment: boolean): Promise<StaffAssignmentSettings> {
+  const { data, error } = await supabase
+    .rpc('set_my_assignment_availability', { p_workspace_id: workspaceId, p_is_available_for_assignment: isAvailableForAssignment })
+    .single()
+  if (error) throw error
+  return data as StaffAssignmentSettings
 }

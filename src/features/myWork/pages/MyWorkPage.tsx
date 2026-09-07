@@ -19,6 +19,7 @@ import { Link } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/state'
+import { Switch } from '@/components/ui/switch'
 import { useAuth } from '@/contexts/AuthContext'
 import { usePermission } from '@/contexts/PermissionsContext'
 import { useWorkspace } from '@/contexts/WorkspaceContext'
@@ -28,6 +29,7 @@ import { PriorityQueueItem } from '@/features/myWork/components/PriorityQueueIte
 import { relativeTime } from '@/features/myWork/format'
 import { useMyPriorityQueue, useMyRecentOrders, useMyWorkRealtime, useMyWorkSummary } from '@/features/myWork/hooks'
 import { orderStatusLabels, orderStatusTone } from '@/features/orders/statusMeta'
+import { useMyAssignmentSettings, useSetMyAssignmentAvailability } from '@/features/staff/hooks'
 import { formatCurrency } from '@/lib/currency'
 import type { MyWorkQueueGroup, MyWorkQueueItem } from '@/types/database'
 
@@ -94,9 +96,12 @@ function MyWorkContent() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">My Work</h1>
-        <p className="mt-1 text-sm text-muted-foreground">The orders assigned to you, what needs attention today, and what to do next.</p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">My Work</h1>
+          <p className="mt-1 text-sm text-muted-foreground">The orders assigned to you, what needs attention today, and what to do next.</p>
+        </div>
+        <AvailabilityToggle />
       </div>
 
       {summaryError ? (
@@ -294,5 +299,19 @@ function MyWorkContent() {
 
       <LogInteractionDialog open={Boolean(interactionOrderId)} onOpenChange={(open) => !open && setInteractionOrderId(null)} orderId={interactionOrderId} />
     </div>
+  )
+}
+
+function AvailabilityToggle() {
+  const { data: settings } = useMyAssignmentSettings()
+  const setAvailability = useSetMyAssignmentAvailability()
+  // No settings row yet = the documented default (available).
+  const isAvailable = settings?.is_available_for_assignment ?? true
+
+  return (
+    <label className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm">
+      <span className="text-muted-foreground">Available for new assignments</span>
+      <Switch checked={isAvailable} onCheckedChange={(v) => setAvailability.mutate(v)} disabled={setAvailability.isPending} />
+    </label>
   )
 }

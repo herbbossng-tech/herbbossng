@@ -11,6 +11,11 @@ export interface StaffMember {
   created_at: string
   role_names: string[]
   role_slugs: string[]
+  /** Assignment capacity/availability (0038) — defaults applied server-side when no explicit settings row exists. */
+  is_available_for_assignment: boolean
+  auto_assignment_enabled: boolean
+  max_active_orders: number | null
+  active_order_count: number
 }
 
 export interface StaffFilters {

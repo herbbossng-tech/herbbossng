@@ -1,9 +1,9 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { useWorkspace } from '@/contexts/WorkspaceContext'
 import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate'
 
-import { fetchOperationsSummary, fetchRescueBoard } from './api'
+import { fetchOperationsSummary, fetchRescueBoard, fetchWorkforceOpsSummary, runAutoAssignmentSweep } from './api'
 
 export function useOperationsSummary() {
   const { activeWorkspace, activeBrand } = useWorkspace()
@@ -11,6 +11,32 @@ export function useOperationsSummary() {
     queryKey: ['operations-summary', activeWorkspace.id, activeBrand?.id ?? null],
     queryFn: () => fetchOperationsSummary(activeWorkspace.id, activeBrand?.id ?? null),
     enabled: Boolean(activeWorkspace.id),
+  })
+}
+
+export function useWorkforceOpsSummary() {
+  const { activeWorkspace, activeBrand } = useWorkspace()
+  return useQuery({
+    queryKey: ['workforce-ops-summary', activeWorkspace.id, activeBrand?.id ?? null],
+    queryFn: () => fetchWorkforceOpsSummary(activeWorkspace.id, activeBrand?.id ?? null),
+    enabled: Boolean(activeWorkspace.id),
+  })
+}
+
+export function useRunAutoAssignmentSweep() {
+  const { activeWorkspace, activeBrand } = useWorkspace()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (limit?: number) => runAutoAssignmentSweep(activeWorkspace.id, activeBrand?.id ?? null, limit),
+    onSuccess: () => {
+      // Every order the sweep touches is a real UPDATE on the (already
+      // Realtime-published) orders table, so every open Orders/My Work
+      // view — including other staff members' — picks it up on its own
+      // via the existing useRealtimeInvalidate('orders', ...) wiring.
+      // This just makes the caller's own workforce summary refresh
+      // immediately rather than waiting on that round-trip.
+      queryClient.invalidateQueries({ queryKey: ['workforce-ops-summary', activeWorkspace.id] })
+    },
   })
 }
 

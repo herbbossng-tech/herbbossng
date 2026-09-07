@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/state'
@@ -57,8 +58,9 @@ function AssignmentRulesContent() {
           <div>
             <h1 className="text-2xl font-extrabold tracking-tight">Assignment Rules</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Configuration foundation for how Orders and Follow-up Tasks are handed to staff. This does not yet run automatically — "Assign to
-              me" and the staff picker remain the live path; these rules are what a future automation engine will read.
+              How Orders and Follow-up Tasks are automatically handed to staff once they've sat unassigned past the aging threshold below —
+              read live by the automatic assignment sweep. Manual assignment ("Assign to me", the staff picker) always remains available and is
+              never restricted by these rules.
             </p>
           </div>
           {canManage && (
@@ -92,6 +94,7 @@ function AssignmentRulesContent() {
                     <th className="px-5 py-3 font-semibold">Module</th>
                     <th className="px-5 py-3 font-semibold">Brand</th>
                     <th className="px-5 py-3 font-semibold">Strategy</th>
+                    <th className="px-5 py-3 font-semibold">Aging Threshold</th>
                     <th className="px-5 py-3 font-semibold">Status</th>
                     <th className="px-5 py-3 font-semibold" />
                   </tr>
@@ -102,6 +105,15 @@ function AssignmentRulesContent() {
                       <td className="px-5 py-3 font-medium">{moduleLabels[rule.module]}</td>
                       <td className="px-5 py-3 text-muted-foreground">{rule.brand?.name ?? 'All brands'}</td>
                       <td className="px-5 py-3">{strategyLabels[rule.strategy]}</td>
+                      <td className="px-5 py-3 text-muted-foreground">
+                        {rule.strategy === 'manual' ? (
+                          'N/A'
+                        ) : canManage ? (
+                          <AgingMinutesEditor ruleId={rule.id} value={rule.aging_minutes} />
+                        ) : (
+                          `${rule.aging_minutes} min`
+                        )}
+                      </td>
                       <td className="px-5 py-3">
                         <Badge variant={rule.is_active ? 'success' : 'secondary'}>{rule.is_active ? 'Active' : 'Inactive'}</Badge>
                       </td>
@@ -145,6 +157,7 @@ function CreateAssignmentRuleDialog({ open, onOpenChange }: { open: boolean; onO
   const [brandId, setBrandId] = React.useState('all')
   const [fixedStaffIds, setFixedStaffIds] = React.useState<string[]>([])
   const [notes, setNotes] = React.useState('')
+  const [agingMinutes, setAgingMinutes] = React.useState('20')
   const [error, setError] = React.useState<string | null>(null)
 
   React.useEffect(() => {
@@ -154,6 +167,7 @@ function CreateAssignmentRuleDialog({ open, onOpenChange }: { open: boolean; onO
       setBrandId('all')
       setFixedStaffIds([])
       setNotes('')
+      setAgingMinutes('20')
       setError(null)
     }
   }, [open])
@@ -169,6 +183,11 @@ function CreateAssignmentRuleDialog({ open, onOpenChange }: { open: boolean; onO
       setError('Select at least one staff member for the fixed strategy.')
       return
     }
+    const parsedAging = Number(agingMinutes)
+    if (strategy !== 'manual' && (!Number.isInteger(parsedAging) || parsedAging <= 0)) {
+      setError('Aging threshold must be a whole number of minutes greater than 0.')
+      return
+    }
     try {
       await createRule.mutateAsync({
         module,
@@ -176,6 +195,7 @@ function CreateAssignmentRuleDialog({ open, onOpenChange }: { open: boolean; onO
         brandId: brandId === 'all' ? null : brandId,
         fixedStaffIds: strategy === 'fixed' ? fixedStaffIds : [],
         notes: notes || null,
+        agingMinutes: parsedAging,
       })
       onOpenChange(false)
     } catch (err) {
@@ -234,6 +254,15 @@ function CreateAssignmentRuleDialog({ open, onOpenChange }: { open: boolean; onO
               </SelectContent>
             </Select>
           </div>
+          {strategy !== 'manual' && (
+            <div className="flex flex-col gap-1.5">
+              <Label>Aging threshold (minutes)</Label>
+              <Input type="number" min={1} value={agingMinutes} onChange={(e) => setAgingMinutes(e.target.value)} className="w-32" />
+              <p className="text-xs text-muted-foreground">
+                How long an order/task must sit unassigned before the automatic assignment sweep will consider it. Default 20.
+              </p>
+            </div>
+          )}
           {strategy === 'fixed' && (
             <div className="flex flex-col gap-1.5">
               <Label>Staff</Label>
@@ -264,5 +293,38 @@ function CreateAssignmentRuleDialog({ open, onOpenChange }: { open: boolean; onO
         </form>
       </DialogContent>
     </Dialog>
+  )
+}
+
+function AgingMinutesEditor({ ruleId, value }: { ruleId: string; value: number }) {
+  const updateRule = useUpdateAssignmentRule()
+  const [draft, setDraft] = React.useState(value.toString())
+
+  React.useEffect(() => {
+    setDraft(value.toString())
+  }, [value])
+
+  function commit() {
+    const parsed = Number(draft)
+    if (Number.isInteger(parsed) && parsed > 0 && parsed !== value) {
+      updateRule.mutate({ id: ruleId, fields: { agingMinutes: parsed } })
+    } else {
+      setDraft(value.toString())
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-1">
+      <Input
+        type="number"
+        min={1}
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        className="h-8 w-20"
+        disabled={updateRule.isPending}
+      />
+      <span className="text-xs">min</span>
+    </div>
   )
 }

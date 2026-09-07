@@ -422,6 +422,14 @@ export interface Order {
   settlement_status: 'PENDING' | 'PARTIALLY_SETTLED' | 'SETTLED' | 'DISPUTED'
   settled_at: string | null
 
+  /** Set only by assign_order() (MANUAL) or run_auto_assignment_sweep()/the automation engine (AUTO). Null for orders assigned before 0038, or never assigned. */
+  assignment_source: 'MANUAL' | 'AUTO' | null
+  assignment_reason: string | null
+  assignment_rule_id: string | null
+  /** The most recent automatic-assignment attempt for this order, recorded whether or not it resulted in an assignment. Null = never attempted. */
+  last_auto_assignment_attempted_at: string | null
+  last_auto_assignment_result: AutoAssignmentResult | null
+
   created_at: string
   updated_at: string
   created_by: string | null
@@ -1497,11 +1505,57 @@ export interface AssignmentRule {
   fixed_staff_ids: string[]
   is_active: boolean
   notes: string | null
+  /** Minutes an order/task must remain unassigned before it's eligible for automatic assignment. Default 20. Irrelevant when strategy='manual'. */
+  aging_minutes: number
   created_at: string
   updated_at: string
   created_by: string | null
   updated_by: string | null
   deleted_at: string | null
+}
+
+export type AutoAssignmentResult =
+  | 'ASSIGNED'
+  | 'NO_ELIGIBLE_STAFF'
+  | 'NO_AVAILABLE_STAFF'
+  | 'ALL_STAFF_AT_CAPACITY'
+  | 'NO_PERMISSION_MATCH'
+  | 'DISABLED_MANUAL_STRATEGY'
+  | 'OUTSIDE_ASSIGNMENT_WINDOW'
+
+/** get_workspace_staff() row — one per (workspace, person), gated on staff.view/staff.manage. */
+export interface StaffAssignmentSettings {
+  workspace_id: string
+  user_id: string
+  is_available_for_assignment: boolean
+  max_active_orders: number | null
+  auto_assignment_enabled: boolean
+  last_assigned_at: string | null
+  updated_at: string
+  updated_by: string | null
+}
+
+/** run_auto_assignment_sweep() row — one per order the sweep examined. */
+export interface AutoAssignmentSweepResult {
+  order_id: string
+  order_number: string
+  result: AutoAssignmentResult | 'DISABLED_MANUAL_STRATEGY'
+  assigned_to: string | null
+  assignment_reason: string | null
+  candidate_count: number
+}
+
+/** get_workforce_ops_summary() — Management Command Center workforce metrics. Rate/timing fields are null (never a fabricated 0) when there is no attempt history in the window. */
+export interface WorkforceOpsSummary {
+  unassigned_count: number
+  orders_aging_over_threshold_count: number
+  orders_without_eligible_staff_count: number
+  orders_assigned_today_count: number
+  active_staff_count: number
+  available_staff_count: number
+  staff_at_capacity_count: number
+  assignment_success_rate_24h: number | null
+  avg_assignment_time_seconds_24h: number | null
 }
 
 export type ApprovalRuleModule = 'orders' | 'affiliates' | 'withdrawals' | 'ad_costs'

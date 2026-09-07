@@ -3,6 +3,7 @@ import * as React from 'react'
 
 import { useAuth } from '@/contexts/AuthContext'
 import { useWorkspace } from '@/contexts/WorkspaceContext'
+import { playNotificationSound } from '@/hooks/useNotificationSound'
 import { supabase } from '@/lib/supabase'
 
 import {
@@ -116,7 +117,15 @@ export function useNotificationsRealtime() {
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'notifications', filter: `workspace_id=eq.${workspaceId}` },
-        () => invalidate(),
+        (payload) => {
+          invalidate()
+          // Every row that reaches this callback already passed
+          // select_notifications' RLS (own row, or a workspace
+          // broadcast) — no further per-user filtering needed before
+          // sounding the chime. Deduplicated by notification id.
+          const row = payload.new as { id?: string } | undefined
+          if (row?.id) playNotificationSound(row.id)
+        },
       )
       .subscribe()
 
