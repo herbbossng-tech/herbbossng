@@ -525,6 +525,66 @@ export interface OrderDailyStat {
   delivered_revenue: number
 }
 
+/** get_my_work_summary() — hard-scoped server-side to assigned_to = auth.uid(). */
+export interface MyWorkSummary {
+  assigned_to_me_count: number
+  new_count: number
+  pending_confirmation_count: number
+  confirmed_count: number
+  follow_up_required_count: number
+  out_for_delivery_count: number
+  delivered_count: number
+  cancelled_count: number
+  returned_count: number
+  overdue_follow_ups_count: number
+  due_today_follow_ups_count: number
+  oldest_pending_since: string | null
+}
+
+export type MyWorkQueueGroup =
+  | 'OVERDUE_FOLLOW_UP'
+  | 'DUE_TODAY'
+  | 'AWAITING_CONFIRMATION'
+  | 'NOT_YET_CONTACTED'
+  | 'MISSED_CONTACT'
+  | 'RECENTLY_ASSIGNED'
+
+/** get_my_priority_queue() row — an order may legitimately appear under more than one queue_group. */
+export interface MyWorkQueueItem {
+  queue_group: MyWorkQueueGroup
+  order_id: string
+  order_number: string
+  customer_name: string
+  customer_phone: string
+  product_summary: string | null
+  total_amount: number
+  customer_city: string | null
+  customer_state: string | null
+  status: OrderStatus
+  priority: OrderPriority
+  last_interaction_at: string | null
+  last_interaction_summary: string | null
+  next_follow_up_at: string | null
+  updated_at: string
+}
+
+/** get_my_recent_orders() row. */
+export interface MyRecentOrder {
+  order_id: string
+  order_number: string
+  customer_name: string
+  customer_phone: string
+  product_summary: string | null
+  total_amount: number
+  customer_city: string | null
+  customer_state: string | null
+  status: OrderStatus
+  last_interaction_at: string | null
+  last_interaction_summary: string | null
+  next_follow_up_at: string | null
+  updated_at: string
+}
+
 /** Distinct from OrderStatus — a customer relationship state, not an order lifecycle state. */
 export type CustomerStatus = 'active' | 'inactive' | 'blocked'
 

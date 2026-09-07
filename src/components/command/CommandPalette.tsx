@@ -4,6 +4,7 @@ import {
   Banknote,
   Bell,
   Building2,
+  ClipboardList,
   FilePlus2,
   Headset,
   History,
@@ -67,6 +68,7 @@ interface CommandPaletteProps {
 }
 
 const quickActions = [
+  { label: 'Open My Work', href: '/my-work', icon: ClipboardList },
   { label: 'Create Product', href: '/products', icon: PlusCircle },
   { label: 'Create Landing Page', href: '/landing-pages/new', icon: FilePlus2 },
   { label: 'Open Template Gallery', href: '/landing-pages/templates', icon: SquareStack },

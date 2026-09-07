@@ -1,6 +1,6 @@
 import { CheckCircle2, Clock, ClipboardList, Lock, Search, UserCheck } from 'lucide-react'
 import * as React from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -45,7 +45,14 @@ export function TaskManagerPage() {
 function TaskManagerContent() {
   const { user } = useAuth()
   useOperationsRealtime()
-  const [quick, setQuick] = React.useState<QuickFilter>('all')
+  const [searchParams] = useSearchParams()
+  // One-time init from the URL so a deep link (e.g. from the My Work
+  // console's Follow-Up Required / Overdue cards) lands pre-filtered.
+  const [quick, setQuick] = React.useState<QuickFilter>(() => {
+    const q = searchParams.get('quick')
+    const valid: QuickFilter[] = ['all', 'mine', 'overdue', 'due_today', 'completed']
+    return (valid as string[]).includes(q ?? '') ? (q as QuickFilter) : 'all'
+  })
   const [search, setSearch] = React.useState('')
   const [priority, setPriority] = React.useState('all')
   const [taskType, setTaskType] = React.useState('all')

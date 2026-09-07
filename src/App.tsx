@@ -31,6 +31,7 @@ const ProductSettingsPage = React.lazy(() => import('@/features/products/pages/P
 const ProductCreatePage = React.lazy(() => import('@/features/products/pages/ProductCreatePage').then((m) => ({ default: m.ProductCreatePage })))
 const ProductEditPage = React.lazy(() => import('@/features/products/pages/ProductEditPage').then((m) => ({ default: m.ProductEditPage })))
 
+const MyWorkPage = React.lazy(() => import('@/features/myWork/pages/MyWorkPage').then((m) => ({ default: m.MyWorkPage })))
 const OrdersPage = React.lazy(() => import('@/features/orders/pages/OrdersPage').then((m) => ({ default: m.OrdersPage })))
 const CreateOrderPage = React.lazy(() => import('@/features/orders/pages/CreateOrderPage').then((m) => ({ default: m.CreateOrderPage })))
 const OrderDetailPage = React.lazy(() => import('@/features/orders/pages/OrderDetailPage').then((m) => ({ default: m.OrderDetailPage })))
@@ -151,6 +152,7 @@ function App() {
 
           <Route element={<AppLayout />}>
             <Route index element={<Dashboard />} />
+            <Route path="my-work" element={<MyWorkPage />} />
 
             <Route path="products">
               <Route element={<ProductsLayout />}>

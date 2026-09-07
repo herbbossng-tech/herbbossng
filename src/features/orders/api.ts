@@ -109,7 +109,9 @@ export async function fetchOrders(
   if (matchingIds) {
     query = query.in('id', matchingIds)
   }
-  if (filters.status && filters.status !== 'all') {
+  if (filters.statusIn && filters.statusIn.length > 0) {
+    query = query.in('status', filters.statusIn)
+  } else if (filters.status && filters.status !== 'all') {
     query = query.eq('status', filters.status)
   }
   if (filters.source && filters.source !== 'all') {

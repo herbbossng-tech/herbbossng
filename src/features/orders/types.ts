@@ -3,6 +3,8 @@ import type { Order, OrderPriority, OrderSource, OrderStatus } from '@/types/dat
 export interface OrderFilters {
   search?: string
   status?: OrderStatus | 'all'
+  /** Deep-link filter for a set of statuses (e.g. My Work's "Pending Confirmation" spans PENDING + WILL_CALL_BACK). Takes precedence over `status` when set. */
+  statusIn?: OrderStatus[]
   source?: OrderSource | 'all'
   assignedTo?: string | 'all' | 'unassigned'
   productId?: string | 'all'

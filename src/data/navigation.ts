@@ -4,6 +4,7 @@ import {
   Bell,
   Boxes,
   Building2,
+  ClipboardList,
   History,
   LayoutGrid,
   LifeBuoy,
@@ -38,7 +39,10 @@ export interface NavSection {
 
 export const navSections: NavSection[] = [
   {
-    items: [{ label: 'Dashboard', href: '/', icon: LayoutGrid, permission: 'dashboard.view' }],
+    items: [
+      { label: 'Dashboard', href: '/', icon: LayoutGrid, permission: 'dashboard.view' },
+      { label: 'My Work', href: '/my-work', icon: ClipboardList, permission: 'orders.view' },
+    ],
   },
   {
     label: 'Commerce',

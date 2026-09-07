@@ -1,7 +1,7 @@
 import type { SortingState } from '@tanstack/react-table'
 import { Download, Plus, Search, ShoppingCart, UserCheck } from 'lucide-react'
 import * as React from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 
 import { AlertDialog, AlertDialogContent, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
@@ -41,7 +41,24 @@ const sortOptions: SortOption[] = [
 export function OrdersPage() {
   const navigate = useNavigate()
   const { user } = useAuth()
-  const [filters, setFilters] = React.useState<OrderFilters>({ status: 'all', source: 'all', page: 1, pageSize: PAGE_SIZE })
+  const [searchParams] = useSearchParams()
+  // One-time initialization from the URL so a deep link (e.g. from the My
+  // Work console's cards) lands on a properly filtered queue. Deliberately
+  // not kept in sync afterwards — the filter bar below is the source of
+  // truth once the user starts interacting with it.
+  const [filters, setFilters] = React.useState<OrderFilters>(() => {
+    const statusParam = searchParams.get('status')
+    const statusInParam = searchParams.get('statusIn')
+    const assignedToParam = searchParams.get('assignedTo')
+    return {
+      status: (statusParam as OrderFilters['status']) ?? 'all',
+      statusIn: statusInParam ? (statusInParam.split(',') as OrderFilters['statusIn']) : undefined,
+      source: 'all',
+      assignedTo: (assignedToParam as OrderFilters['assignedTo']) ?? undefined,
+      page: 1,
+      pageSize: PAGE_SIZE,
+    }
+  })
   const [searchInput, setSearchInput] = React.useState('')
   const [sorting, setSorting] = React.useState<SortingState>([{ id: 'created_at', desc: true }])
   const [rowSelection, setRowSelection] = React.useState<Record<string, boolean>>({})
@@ -72,6 +89,8 @@ export function OrdersPage() {
   const rows = data?.rows ?? []
   const selectedIds = Object.keys(rowSelection).filter((id) => rowSelection[id])
   const selectedRows = rows.filter((r) => selectedIds.includes(r.id))
+
+  const cameFromDeepLink = Boolean(searchParams.get('status') || searchParams.get('statusIn') || searchParams.get('assignedTo'))
 
   const currentSort =
     sortOptions.find(
@@ -150,6 +169,19 @@ export function OrdersPage() {
       </div>
 
       <OrderStats />
+
+      {cameFromDeepLink && (
+        <div className="flex items-center justify-between rounded-lg border border-primary/20 bg-primary/5 px-4 py-2 text-sm">
+          <span>Showing a filtered queue from My Work.</span>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setFilters({ status: 'all', statusIn: undefined, source: 'all', assignedTo: undefined, page: 1, pageSize: PAGE_SIZE })}
+          >
+            Clear filters
+          </Button>
+        </div>
+      )}
 
       <div className="flex flex-col gap-3">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
