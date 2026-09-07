@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { EmptyState, LoadingState } from '@/components/ui/state'
 import { Progress } from '@/components/ui/progress'
-import { PermissionGate, usePermission } from '@/contexts/PermissionsContext'
+import { PermissionGate, useFinanceVisibility, usePermission } from '@/contexts/PermissionsContext'
 import { useWorkspace } from '@/contexts/WorkspaceContext'
 import { DateRangeFilter, type DateRangePreset } from '@/features/finance/components/DateRangeFilter'
 import { RevenueTrendChart } from '@/features/finance/components/RevenueTrendChart'
@@ -40,13 +40,6 @@ const FUNNEL_STAGES: { key: DeliveryFunnelStage; label: string }[] = [
   { key: 'DELIVERED', label: 'Delivered' },
   { key: 'CASH_COLLECTED', label: 'Delivered & Collected' },
 ]
-
-function useFinanceVisibility() {
-  const canViewFinance = usePermission('finance.view')
-  const canViewAnalytics = usePermission('analytics.view')
-  const canViewReports = usePermission('reports.view')
-  return canViewFinance || canViewAnalytics || canViewReports
-}
 
 export function Dashboard() {
   const { activeWorkspace } = useWorkspace()
@@ -91,10 +84,14 @@ export function Dashboard() {
             }}
           />
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" size="sm">
-              <ExternalLink className="h-4 w-4" />
-              Preview Funnels
-            </Button>
+            <PermissionGate permission="landing_pages.view">
+              <Button variant="outline" size="sm" asChild>
+                <Link to="/landing-pages">
+                  <ExternalLink className="h-4 w-4" />
+                  Preview Funnels
+                </Link>
+              </Button>
+            </PermissionGate>
             <PermissionGate permission="orders.create">
               <Button size="sm" asChild>
                 <Link to="/orders/new">

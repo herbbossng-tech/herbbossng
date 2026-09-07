@@ -40,7 +40,7 @@ export interface NavSection {
 export const navSections: NavSection[] = [
   {
     items: [
-      { label: 'Dashboard', href: '/', icon: LayoutGrid, permission: 'dashboard.view' },
+      { label: 'Dashboard', href: '/dashboard', icon: LayoutGrid, permission: 'dashboard.view' },
       { label: 'My Work', href: '/my-work', icon: ClipboardList, permission: 'orders.view' },
     ],
   },

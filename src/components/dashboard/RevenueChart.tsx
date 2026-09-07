@@ -1,6 +1,8 @@
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
-function formatNaira(value: number) {
+import { formatCurrency } from '@/lib/currency'
+
+function formatCompact(value: number) {
   return `${(value / 1000).toFixed(0)}k`
 }
 
@@ -9,7 +11,7 @@ export interface RevenueChartPoint {
   revenue: number
 }
 
-export function RevenueChart({ data }: { data: RevenueChartPoint[] }) {
+export function RevenueChart({ data, currencyCode }: { data: RevenueChartPoint[]; currencyCode: string }) {
   return (
     <ResponsiveContainer width="100%" height={240}>
       <AreaChart data={data} margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>
@@ -30,7 +32,7 @@ export function RevenueChart({ data }: { data: RevenueChartPoint[] }) {
           axisLine={false}
           tickLine={false}
           tick={{ fill: 'var(--color-muted-foreground)', fontSize: 12 }}
-          tickFormatter={formatNaira}
+          tickFormatter={formatCompact}
           width={48}
         />
         <Tooltip
@@ -42,7 +44,7 @@ export function RevenueChart({ data }: { data: RevenueChartPoint[] }) {
             fontSize: 12,
             color: 'var(--color-foreground)',
           }}
-          formatter={(value) => [`₦${Number(value).toLocaleString()}`, 'Revenue']}
+          formatter={(value) => [formatCurrency(Number(value), currencyCode), 'Revenue']}
         />
         <Area
           type="monotone"

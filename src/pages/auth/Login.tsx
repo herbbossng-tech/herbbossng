@@ -35,7 +35,7 @@ export function Login() {
     }
     const from = (location.state as { from?: Location })?.from
     // Preserve the query string too (e.g. /invitations/accept?token=...) — not just the path.
-    const redirectTo = from ? `${from.pathname}${from.search ?? ''}` : '/'
+    const redirectTo = from ? `${from.pathname}${from.search ?? ''}` : '/dashboard'
     navigate(redirectTo, { replace: true })
   }
 

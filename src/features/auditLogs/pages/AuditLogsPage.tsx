@@ -1,5 +1,6 @@
 import { History, Lock, Search } from 'lucide-react'
 import * as React from 'react'
+import { useSearchParams } from 'react-router-dom'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -42,12 +43,18 @@ export function AuditLogsPage() {
 }
 
 function AuditLogsContent() {
+  // One-time initialization from the URL so a deep link (e.g. the
+  // Operations Command Center's Auto-Assignment card) lands on a
+  // properly filtered log, matching the same convention as Orders'
+  // status/assignedTo deep links. Not kept in sync afterwards — the
+  // filter bar below is the source of truth once the user interacts.
+  const [searchParams] = useSearchParams()
   const [search, setSearch] = React.useState('')
   const [dateFrom, setDateFrom] = React.useState('')
   const [dateTo, setDateTo] = React.useState('')
   const [userId, setUserId] = React.useState('all')
-  const [module, setModule] = React.useState('all')
-  const [action, setAction] = React.useState('all')
+  const [module, setModule] = React.useState(() => searchParams.get('module') ?? 'all')
+  const [action, setAction] = React.useState(() => searchParams.get('action') ?? 'all')
   const [brandId, setBrandId] = React.useState('all')
   const [page, setPage] = React.useState(1)
   const [selected, setSelected] = React.useState<AuditLogRow | null>(null)

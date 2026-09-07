@@ -16,7 +16,7 @@ export function Unauthorized() {
         </p>
       </div>
       <Button asChild size="sm">
-        <Link to="/">Back to dashboard</Link>
+        <Link to="/dashboard">Back to dashboard</Link>
       </Button>
     </div>
   )

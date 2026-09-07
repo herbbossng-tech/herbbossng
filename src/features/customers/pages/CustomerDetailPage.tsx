@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ErrorState, LoadingState } from '@/components/ui/state'
 import { Textarea } from '@/components/ui/textarea'
-import { PermissionGate, usePermission } from '@/contexts/PermissionsContext'
+import { PermissionGate, useFinanceVisibility, usePermission } from '@/contexts/PermissionsContext'
 import { useWorkspace } from '@/contexts/WorkspaceContext'
 import { CustomerEditDialog } from '@/features/customers/components/CustomerEditDialog'
 import { CustomerStatusBadge } from '@/features/customers/components/CustomerStatusBadge'
@@ -45,6 +45,7 @@ export function CustomerDetailPage() {
   const hasSupportManage = usePermission('support.manage')
   const canCreateInteraction = hasSupportCreate || hasSupportManage
   const { data: interactions } = useCustomerInteractions(canViewSupport ? id : undefined)
+  const canViewFinance = useFinanceVisibility()
 
   if (isLoading) return <LoadingState label="Loading customer…" />
   if (isError || !customer) {
@@ -165,7 +166,8 @@ export function CustomerDetailPage() {
                         <th className="px-4 py-2.5 font-semibold">Order</th>
                         <th className="px-4 py-2.5 font-semibold">Date</th>
                         <th className="px-4 py-2.5 font-semibold">Source</th>
-                        <th className="px-4 py-2.5 font-semibold">Amount</th>
+                        <th className="px-4 py-2.5 font-semibold">Assigned to</th>
+                        {canViewFinance && <th className="px-4 py-2.5 font-semibold">Amount</th>}
                         <th className="px-4 py-2.5 font-semibold">Status</th>
                       </tr>
                     </thead>
@@ -179,7 +181,10 @@ export function CustomerDetailPage() {
                           </td>
                           <td className="px-4 py-2.5 text-xs text-muted-foreground">{new Date(order.created_at).toLocaleDateString()}</td>
                           <td className="px-4 py-2.5 text-muted-foreground">{orderSourceLabels[order.source] ?? order.source}</td>
-                          <td className="px-4 py-2.5 font-semibold">{formatCurrency(order.total_amount, order.currency_code)}</td>
+                          <td className="px-4 py-2.5 text-xs text-muted-foreground">{order.assigned_to_email ?? 'Unassigned'}</td>
+                          {canViewFinance && (
+                            <td className="px-4 py-2.5 font-semibold">{formatCurrency(order.total_amount, order.currency_code)}</td>
+                          )}
                           <td className="px-4 py-2.5">
                             <OrderStatusBadge status={order.status} />
                           </td>
@@ -300,26 +305,34 @@ export function CustomerDetailPage() {
                 <span>Cancelled</span>
                 <span className="font-semibold text-muted-foreground">{customer.cancelled_count}</span>
               </div>
-              <div className="mt-2 border-t border-border pt-2" />
-              <div className="flex justify-between text-muted-foreground">
-                <span>Total order value</span>
-                <span className="font-semibold text-foreground">{formatCurrency(customer.total_order_value, currency)}</span>
-              </div>
-              <div className="flex justify-between text-muted-foreground">
-                <span>Delivered value</span>
-                <span className="font-semibold text-success">{formatCurrency(customer.delivered_value, currency)}</span>
-              </div>
-              <div className="flex justify-between text-muted-foreground">
-                <span>Pending value</span>
-                <span className="font-semibold text-warning">{formatCurrency(customer.pending_value, currency)}</span>
-              </div>
-              <div className="flex justify-between text-muted-foreground">
-                <span>Returned value</span>
-                <span className="font-semibold text-destructive">{formatCurrency(customer.returned_value, currency)}</span>
-              </div>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Same COD revenue definitions as Orders/Dashboard — delivered value counts only collected, delivered orders.
-              </p>
+              {canViewFinance ? (
+                <>
+                  <div className="mt-2 border-t border-border pt-2" />
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Total order value</span>
+                    <span className="font-semibold text-foreground">{formatCurrency(customer.total_order_value, currency)}</span>
+                  </div>
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Delivered value</span>
+                    <span className="font-semibold text-success">{formatCurrency(customer.delivered_value, currency)}</span>
+                  </div>
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Pending value</span>
+                    <span className="font-semibold text-warning">{formatCurrency(customer.pending_value, currency)}</span>
+                  </div>
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Returned value</span>
+                    <span className="font-semibold text-destructive">{formatCurrency(customer.returned_value, currency)}</span>
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Same COD revenue definitions as Orders/Dashboard — delivered value counts only collected, delivered orders.
+                  </p>
+                </>
+              ) : (
+                <p className="mt-2 border-t border-border pt-2 text-xs text-muted-foreground">
+                  Order values are hidden — ask a workspace admin for finance.view, analytics.view or reports.view to see them.
+                </p>
+              )}
             </CardContent>
           </Card>
         </div>

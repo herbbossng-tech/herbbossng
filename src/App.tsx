@@ -19,6 +19,7 @@ import { PlaceholderPage } from '@/pages/PlaceholderPage'
 // immediately) stay eager above — splitting those would only add a
 // network round-trip with no benefit. See vite's own build-time
 // "chunk larger than 500kB" warning for the evidence this addresses.
+const HomePage = React.lazy(() => import('@/pages/marketing/HomePage').then((m) => ({ default: m.HomePage })))
 const AcceptInvitationPage = React.lazy(() => import('@/pages/invitations/AcceptInvitationPage').then((m) => ({ default: m.AcceptInvitationPage })))
 const PublicLandingPage = React.lazy(() => import('@/features/landingPages/public/PublicLandingPage').then((m) => ({ default: m.PublicLandingPage })))
 const ThankYouPage = React.lazy(() => import('@/features/landingPages/public/ThankYouPage').then((m) => ({ default: m.ThankYouPage })))
@@ -132,6 +133,7 @@ function App() {
   return (
     <React.Suspense fallback={<LoadingState label="Loading…" />}>
       <Routes>
+        <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
@@ -151,7 +153,7 @@ function App() {
           <Route path="/invitations/accept" element={<AcceptInvitationPage />} />
 
           <Route element={<AppLayout />}>
-            <Route index element={<Dashboard />} />
+            <Route path="dashboard" element={<Dashboard />} />
             <Route path="my-work" element={<MyWorkPage />} />
 
             <Route path="products">

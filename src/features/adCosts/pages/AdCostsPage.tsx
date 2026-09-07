@@ -237,6 +237,10 @@ function CreateAdCostDialog({ open, onOpenChange }: { open: boolean; onOpenChang
       setError('Enter a valid initial orders count.')
       return
     }
+    if (!activeWorkspace.currency_code) {
+      setError('This workspace has no currency configured — set it in Workspace Settings before recording ad spend.')
+      return
+    }
     try {
       await createAdCost.mutateAsync({
         campaign_id: campaignId || null,
@@ -246,7 +250,7 @@ function CreateAdCostDialog({ open, onOpenChange }: { open: boolean; onOpenChang
         initial_cost_amount: cost,
         initial_orders_count: orders,
         delivered_orders_count: deliveredOrders ? Number(deliveredOrders) : null,
-        currency_code: activeWorkspace.currency_code ?? 'NGN',
+        currency_code: activeWorkspace.currency_code,
         notes: notes || null,
       })
       onOpenChange(false)

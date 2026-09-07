@@ -178,21 +178,23 @@ function WorkforceSection() {
               tone={workforce.staff_at_capacity_count > 0 ? 'warning' : 'default'}
             />
           </Link>
-          <Card className="flex flex-col justify-between gap-2 p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Auto-Assignment (24h)</p>
-            <div className="flex items-center gap-2">
-              {workforce.assignment_success_rate_24h === null ? (
-                <Badge variant="secondary">No attempts yet</Badge>
-              ) : (
-                <span className="text-xl font-extrabold tracking-tight">{workforce.assignment_success_rate_24h}%</span>
-              )}
-              {workforce.avg_assignment_time_seconds_24h !== null && (
-                <span className="text-xs text-muted-foreground">
-                  avg {Math.round(workforce.avg_assignment_time_seconds_24h / 60)}m to assign
-                </span>
-              )}
-            </div>
-          </Card>
+          <Link to="/audit-logs?module=orders">
+            <Card className="flex flex-col justify-between gap-2 p-4 transition-colors hover:bg-accent/40">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Auto-Assignment (24h)</p>
+              <div className="flex items-center gap-2">
+                {workforce.assignment_success_rate_24h === null ? (
+                  <Badge variant="secondary">No attempts yet</Badge>
+                ) : (
+                  <span className="text-xl font-extrabold tracking-tight">{workforce.assignment_success_rate_24h}%</span>
+                )}
+                {workforce.avg_assignment_time_seconds_24h !== null && (
+                  <span className="text-xs text-muted-foreground">
+                    avg {Math.round(workforce.avg_assignment_time_seconds_24h / 60)}m to assign
+                  </span>
+                )}
+              </div>
+            </Card>
+          </Link>
         </div>
       )}
     </div>

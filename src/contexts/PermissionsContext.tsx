@@ -130,6 +130,19 @@ export function usePermission(slug: string) {
   return usePermissions().hasPermission(slug)
 }
 
+/**
+ * Whether the current user may see revenue/order-value figures anywhere in
+ * the app — the same three-permission boundary used by the Dashboard and
+ * (via this shared hook) the Customer profile, so financial figures are
+ * gated consistently instead of each page re-deriving its own rule.
+ */
+export function useFinanceVisibility() {
+  const canViewFinance = usePermission('finance.view')
+  const canViewAnalytics = usePermission('analytics.view')
+  const canViewReports = usePermission('reports.view')
+  return canViewFinance || canViewAnalytics || canViewReports
+}
+
 /** Renders children only if the current user holds the given permission (or any of the given permissions). */
 export function PermissionGate({
   permission,

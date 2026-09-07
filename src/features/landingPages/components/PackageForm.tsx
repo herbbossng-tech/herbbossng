@@ -59,7 +59,7 @@ export function PackageForm({ defaultValues, onSubmit, isSubmitting, submitLabel
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="pkgSavings">Savings text (optional)</Label>
-          <Input id="pkgSavings" placeholder="e.g. Save ₦12,000" {...register('savingsText')} />
+          <Input id="pkgSavings" placeholder="e.g. Save 20% today" {...register('savingsText')} />
         </div>
         <div className="flex flex-col gap-1.5 sm:col-span-2">
           <Label htmlFor="pkgOffer">Offer text (optional)</Label>

@@ -21,6 +21,7 @@ export async function fetchCustomers(
   if (filters.search) {
     const term = filters.search.trim()
     const digits = term.replace(/[^0-9]/g, '')
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(term)
 
     const [byFields, byOrderNumber] = await Promise.all([
       supabase
@@ -31,6 +32,7 @@ export async function fetchCustomers(
         .is('deleted_at', null)
         .or(
           [
+            isUuid ? `id.eq.${term}` : null,
             `full_name.ilike.%${term}%`,
             `phone.ilike.%${term}%`,
             `alternate_phone.ilike.%${term}%`,
@@ -115,15 +117,22 @@ export async function fetchCustomer(id: string): Promise<Customer> {
   return data as Customer
 }
 
-export async function fetchCustomerOrders(customerId: string): Promise<Order[]> {
+export interface CustomerOrder extends Order {
+  assigned_to_email: string | null
+}
+
+export async function fetchCustomerOrders(customerId: string): Promise<CustomerOrder[]> {
   const { data, error } = await supabase
     .from('orders')
-    .select('*')
+    .select('*, assigned_profile:profiles!orders_assigned_to_fkey(email)')
     .eq('customer_id', customerId)
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
   if (error) throw error
-  return (data ?? []) as Order[]
+  return (data ?? []).map(({ assigned_profile, ...order }) => ({
+    ...order,
+    assigned_to_email: (assigned_profile as { email: string } | null)?.email ?? null,
+  })) as CustomerOrder[]
 }
 
 export async function fetchCustomerNotes(customerId: string): Promise<CustomerNote[]> {

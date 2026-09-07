@@ -4,7 +4,9 @@ import {
   Banknote,
   Bell,
   Building2,
+  Check,
   ClipboardList,
+  Globe2,
   FilePlus2,
   Headset,
   History,
@@ -67,43 +69,48 @@ interface CommandPaletteProps {
   onOpenChange: (open: boolean) => void
 }
 
+// Every quick action carries the minimum permission required to reach
+// its destination (mirroring allNavItems' own gating) so the palette
+// never advertises an action — "Create Role", "Invite Staff" — to a
+// user who has no access to that module at all. The destination page
+// still applies its own finer-grained gate on the actual mutation.
 const quickActions = [
-  { label: 'Open My Work', href: '/my-work', icon: ClipboardList },
-  { label: 'Create Product', href: '/products', icon: PlusCircle },
-  { label: 'Create Landing Page', href: '/landing-pages/new', icon: FilePlus2 },
-  { label: 'Open Template Gallery', href: '/landing-pages/templates', icon: SquareStack },
-  { label: 'New Order', href: '/orders/new', icon: ShoppingCart },
-  { label: 'Add Customer', href: '/customers/new', icon: Users },
-  { label: 'Open Finance', href: '/finance', icon: Wallet },
-  { label: 'Open Analytics', href: '/analytics', icon: Sparkles },
-  { label: 'Open Reports', href: '/reports', icon: BarChart3 },
-  { label: 'Open Settings', href: '/settings', icon: SettingsIcon },
-  { label: 'Invite Staff', href: '/staff', icon: UserPlus },
-  { label: 'New Affiliate', href: '/affiliates', icon: UsersRound },
-  { label: 'New Campaign', href: '/affiliates/campaigns/new', icon: Megaphone },
-  { label: 'Open Withdrawals', href: '/affiliates/withdrawals', icon: Banknote },
-  { label: 'Create Role', href: '/roles', icon: ShieldCheck },
-  { label: 'Assignment Rules', href: '/settings/assignment-rules', icon: Shuffle },
-  { label: 'Unassigned Orders', href: '/orders?assignedTo=unassigned', icon: ShoppingCart },
-  { label: 'Auto-Assignment Status', href: '/operations', icon: Shuffle },
-  { label: 'Staff Activity', href: '/audit-logs', icon: History },
-  { label: 'Approval Rules', href: '/settings/approval-rules', icon: ShieldAlert },
-  { label: 'Automation Rules', href: '/automation', icon: Workflow },
-  { label: 'New Automation Rule', href: '/automation', icon: PlusCircle },
-  { label: 'Failed Automations', href: '/automation/failed', icon: Workflow },
-  { label: 'Open Support Queue', href: '/support', icon: Headset },
-  { label: 'Open Rescue Board', href: '/operations/rescue-board', icon: LifeBuoy },
-  { label: 'Open Follow-up Tasks', href: '/operations/tasks', icon: FilePlus2 },
-  { label: 'View Marketing', href: '/marketing', icon: Megaphone },
-  { label: 'Create Marketing Campaign', href: '/marketing/campaigns', icon: PlusCircle },
-  { label: 'Record Ad Spend', href: '/affiliates/ad-costs', icon: Banknote },
-  { label: 'Open Communication Templates', href: '/settings/communications/templates', icon: FileText },
-  { label: 'Open Integration Health', href: '/settings/integrations', icon: Puzzle },
+  { label: 'Open My Work', href: '/my-work', icon: ClipboardList, permission: 'orders.view' },
+  { label: 'Create Product', href: '/products', icon: PlusCircle, permission: 'products.create' },
+  { label: 'Create Landing Page', href: '/landing-pages/new', icon: FilePlus2, permission: 'landing_pages.create' },
+  { label: 'Open Template Gallery', href: '/landing-pages/templates', icon: SquareStack, permission: 'landing_pages.templates.view' },
+  { label: 'New Order', href: '/orders/new', icon: ShoppingCart, permission: 'orders.create' },
+  { label: 'Add Customer', href: '/customers/new', icon: Users, permission: 'customers.create' },
+  { label: 'Open Finance', href: '/finance', icon: Wallet, permission: 'finance.view' },
+  { label: 'Open Analytics', href: '/analytics', icon: Sparkles, permission: 'analytics.view' },
+  { label: 'Open Reports', href: '/reports', icon: BarChart3, permission: 'reports.view' },
+  { label: 'Open Settings', href: '/settings', icon: SettingsIcon, permission: 'settings.view' },
+  { label: 'Invite Staff', href: '/staff', icon: UserPlus, permission: 'staff.manage' },
+  { label: 'New Affiliate', href: '/affiliates', icon: UsersRound, permission: 'affiliates.view' },
+  { label: 'New Campaign', href: '/affiliates/campaigns/new', icon: Megaphone, permission: 'campaigns.manage' },
+  { label: 'Open Withdrawals', href: '/affiliates/withdrawals', icon: Banknote, permission: 'withdrawals.view' },
+  { label: 'Create Role', href: '/roles', icon: ShieldCheck, permission: 'roles_permissions.manage' },
+  { label: 'Assignment Rules', href: '/settings/assignment-rules', icon: Shuffle, permission: 'assignment_rules.view' },
+  { label: 'Unassigned Orders', href: '/orders?assignedTo=unassigned', icon: ShoppingCart, permission: 'orders.view' },
+  { label: 'Auto-Assignment Status', href: '/operations', icon: Shuffle, permission: 'operations.view' },
+  { label: 'Staff Activity', href: '/audit-logs', icon: History, permission: 'audit_logs.view' },
+  { label: 'Approval Rules', href: '/settings/approval-rules', icon: ShieldAlert, permission: 'approval_rules.view' },
+  { label: 'Automation Rules', href: '/automation', icon: Workflow, permission: 'automation.view' },
+  { label: 'New Automation Rule', href: '/automation', icon: PlusCircle, permission: 'automation.manage' },
+  { label: 'Failed Automations', href: '/automation/failed', icon: Workflow, permission: 'automation.view' },
+  { label: 'Open Support Queue', href: '/support', icon: Headset, permission: 'support.view' },
+  { label: 'Open Rescue Board', href: '/operations/rescue-board', icon: LifeBuoy, permission: 'support.view' },
+  { label: 'Open Follow-up Tasks', href: '/operations/tasks', icon: FilePlus2, permission: 'tasks.view' },
+  { label: 'View Marketing', href: '/marketing', icon: Megaphone, permission: 'marketing.view' },
+  { label: 'Create Marketing Campaign', href: '/marketing/campaigns', icon: PlusCircle, permission: 'marketing.create' },
+  { label: 'Record Ad Spend', href: '/affiliates/ad-costs', icon: Banknote, permission: 'ad_costs.create' },
+  { label: 'Open Communication Templates', href: '/settings/communications/templates', icon: FileText, permission: 'communications.templates.view' },
+  { label: 'Open Integration Health', href: '/settings/integrations', icon: Puzzle, permission: 'integrations.view' },
 ]
 
 export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const navigate = useNavigate()
-  const { activeWorkspace, activeBrand } = useWorkspace()
+  const { workspaces, activeWorkspace, setActiveWorkspaceId, workspaceBrands, activeBrand, setActiveBrandId } = useWorkspace()
   const { user } = useAuth()
   const { hasPermission } = usePermissions()
   const brandId = activeBrand?.id ?? ''
@@ -265,10 +272,21 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     .slice(0, 6)
 
   const visibleNavItems = allNavItems.filter((item) => !item.permission || hasPermission(item.permission))
+  const visibleQuickActions = quickActions.filter((action) => hasPermission(action.permission))
 
   const go = (href: string) => {
     onOpenChange(false)
     navigate(href)
+  }
+
+  const switchWorkspace = (id: string) => {
+    onOpenChange(false)
+    setActiveWorkspaceId(id)
+  }
+
+  const switchBrand = (id: string) => {
+    onOpenChange(false)
+    setActiveBrandId(id)
   }
 
   return (
@@ -282,7 +300,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
         <CommandEmpty>No results found.</CommandEmpty>
 
         <CommandGroup heading="Quick Actions">
-          {quickActions.map((action) => (
+          {visibleQuickActions.map((action) => (
             <CommandItem key={action.label} value={action.label} onSelect={() => go(action.href)}>
               <action.icon className="h-4 w-4 text-muted-foreground" />
               {action.label}
@@ -291,6 +309,40 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
         </CommandGroup>
 
         <CommandSeparator />
+
+        {workspaces.length > 1 && (
+          <>
+            <CommandGroup heading="Switch Workspace">
+              {workspaces.map((workspace) => (
+                <CommandItem
+                  key={workspace.id}
+                  value={`switch workspace ${workspace.name}`}
+                  onSelect={() => switchWorkspace(workspace.id)}
+                >
+                  <Globe2 className="h-4 w-4 text-muted-foreground" />
+                  <span className="flex-1 truncate">{workspace.name}</span>
+                  {workspace.id === activeWorkspace.id && <Check className="h-4 w-4 text-primary" />}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+            <CommandSeparator />
+          </>
+        )}
+
+        {workspaceBrands.length > 1 && (
+          <>
+            <CommandGroup heading="Switch Brand">
+              {workspaceBrands.map((brand) => (
+                <CommandItem key={brand.id} value={`switch brand ${brand.name}`} onSelect={() => switchBrand(brand.id)}>
+                  <Building2 className="h-4 w-4 text-muted-foreground" />
+                  <span className="flex-1 truncate">{brand.name}</span>
+                  {brand.id === activeBrand?.id && <Check className="h-4 w-4 text-primary" />}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+            <CommandSeparator />
+          </>
+        )}
 
         {searching && canSearchOrders && (
           <CommandGroup heading="Orders">
