@@ -59,6 +59,7 @@ export interface Profile extends Timestamped {
   status: 'active' | 'inactive' | 'suspended' | 'invited'
   last_login_at: string | null
   default_workspace_id: string | null
+  is_platform_admin: boolean
   deleted_at: string | null
 }
 
@@ -111,6 +112,7 @@ export type PermissionModule =
   | 'automation'
   | 'integrations'
   | 'communications'
+  | 'billing'
 
 export type PermissionAction =
   | 'view'
@@ -2016,6 +2018,122 @@ export interface SupportAnalytics {
   rescue_avg_resolution_hours: number | null
   overdue_tasks_current: number
   open_tasks_current: number
+}
+
+export type SubscriptionStatus = 'TRIALING' | 'ACTIVE' | 'PAST_DUE' | 'GRACE_PERIOD' | 'SUSPENDED' | 'CANCELLED' | 'EXPIRED' | 'NONE'
+export type BillingInterval = 'monthly' | 'annual'
+export type PaymentMethodType = 'card' | 'bank_transfer' | 'gateway' | 'crypto' | 'manual'
+export type TenantPaymentStatus = 'PENDING' | 'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'FAILED' | 'REFUNDED'
+
+export interface PlanEntitlements {
+  automation_enabled?: boolean
+  advanced_reports?: boolean
+  marketing_enabled?: boolean
+  affiliates_enabled?: boolean
+  integrations_enabled?: boolean
+  realtime_enabled?: boolean
+  api_access?: boolean
+  custom_domain?: boolean
+  priority_support?: boolean
+}
+
+export interface SubscriptionPlan {
+  id: string
+  slug: string
+  name: string
+  description: string | null
+  monthly_price: number
+  annual_price: number | null
+  currency_code: string
+  trial_days: number
+  max_orders: number | null
+  max_staff: number | null
+  max_warehouses: number | null
+  max_brands: number | null
+  max_landing_pages: number | null
+  entitlements: PlanEntitlements
+  is_active: boolean
+  is_public: boolean
+  is_popular: boolean
+  is_custom_pricing: boolean
+  sort_order: number
+  created_at: string
+  updated_at: string
+}
+
+export interface TenantSubscription {
+  id: string
+  workspace_id: string
+  plan_id: string
+  status: SubscriptionStatus
+  billing_interval: BillingInterval
+  amount: number
+  currency_code: string
+  trial_ends_at: string | null
+  current_period_start: string | null
+  current_period_end: string | null
+  renewal_at: string | null
+  cancelled_at: string | null
+  cancellation_reason: string | null
+  payment_provider: string | null
+  provider_reference: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface PaymentMethodConfig {
+  id: string
+  method_type: PaymentMethodType
+  display_label: string
+  is_active: boolean
+  config: Record<string, unknown>
+  sort_order: number
+}
+
+export interface CryptoPaymentConfig {
+  id: string
+  currency_code: string
+  network: string
+  wallet_address: string
+  display_label: string | null
+  payment_instructions: string | null
+  confirmation_requirements: string | null
+  is_active: boolean
+  sort_order: number
+}
+
+export interface TenantPayment {
+  id: string
+  workspace_id: string
+  subscription_id: string | null
+  plan_id: string
+  billing_interval: BillingInterval
+  amount: number
+  currency_code: string
+  payment_method_type: PaymentMethodType
+  provider: string | null
+  provider_reference: string | null
+  crypto_config_id: string | null
+  crypto_tx_reference: string | null
+  status: TenantPaymentStatus
+  submitted_at: string | null
+  reviewed_at: string | null
+  reviewed_by: string | null
+  rejection_reason: string | null
+  idempotency_key: string
+  created_at: string
+}
+
+export interface WorkspaceEntitlements {
+  plan_id: string | null
+  plan_name: string | null
+  status: SubscriptionStatus
+  max_orders: number | null
+  max_staff: number | null
+  max_warehouses: number | null
+  max_brands: number | null
+  max_landing_pages: number | null
+  entitlements: PlanEntitlements
 }
 
 /**

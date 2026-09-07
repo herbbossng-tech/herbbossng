@@ -65,6 +65,8 @@ const AssignmentRulesPage = React.lazy(() => import('@/features/assignmentRules/
 const ApprovalRulesPage = React.lazy(() => import('@/features/approvalRules/pages/ApprovalRulesPage').then((m) => ({ default: m.ApprovalRulesPage })))
 const IntegrationHealthPage = React.lazy(() => import('@/features/integrations/pages/IntegrationHealthPage').then((m) => ({ default: m.IntegrationHealthPage })))
 const CommunicationTemplatesPage = React.lazy(() => import('@/features/communications/pages/CommunicationTemplatesPage').then((m) => ({ default: m.CommunicationTemplatesPage })))
+const BillingPage = React.lazy(() => import('@/features/billing/pages/BillingPage').then((m) => ({ default: m.BillingPage })))
+const BillingAdminPage = React.lazy(() => import('@/features/billing/pages/BillingAdminPage').then((m) => ({ default: m.BillingAdminPage })))
 
 const BrandsPage = React.lazy(() => import('@/features/brands/pages/BrandsPage').then((m) => ({ default: m.BrandsPage })))
 const BrandDetailPage = React.lazy(() => import('@/features/brands/pages/BrandDetailPage').then((m) => ({ default: m.BrandDetailPage })))
@@ -211,6 +213,8 @@ function App() {
               <Route path="approval-rules" element={<ApprovalRulesPage />} />
               <Route path="integrations" element={<IntegrationHealthPage />} />
               <Route path="communications/templates" element={<CommunicationTemplatesPage />} />
+              <Route path="billing" element={<BillingPage />} />
+              <Route path="billing/admin" element={<BillingAdminPage />} />
             </Route>
 
             <Route path="brands">

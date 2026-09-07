@@ -26,6 +26,56 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { LoadingState } from '@/components/ui/state'
 import { useAuth } from '@/contexts/AuthContext'
+import { usePlatformSetting, usePublicPlans } from '@/features/billing/hooks'
+import { formatCurrency } from '@/lib/currency'
+import type { PlanEntitlements } from '@/types/database'
+
+/**
+ * Homepage commercial/marketing copy is admin-editable: a platform admin can
+ * override any of these fields via platform_settings('homepage') without a
+ * frontend deploy. Anything not overridden falls back to the copy below.
+ * Only plain text fields are accepted — there is no rich-text/HTML field and
+ * no admin-controlled URL is ever used in an href, so there is no path for
+ * a config edit to inject markup or script into this page.
+ */
+interface HomepageConfig {
+  companyName?: string
+  tagline?: string
+  heroBadge?: string
+  heroTitle?: string
+  heroSubtitle?: string
+  primaryCtaLabel?: string
+  secondaryCtaLabel?: string
+  footerText?: string
+  modules?: { name: string; description: string }[]
+}
+
+function useHomepageConfig(): HomepageConfig {
+  const { data } = usePlatformSetting('homepage')
+  return (data ?? {}) as HomepageConfig
+}
+
+const entitlementLabels: Record<keyof PlanEntitlements, string> = {
+  automation_enabled: 'Automation rules',
+  advanced_reports: 'Advanced reports',
+  marketing_enabled: 'Marketing intelligence',
+  affiliates_enabled: 'Affiliate program',
+  integrations_enabled: 'Integrations',
+  realtime_enabled: 'Realtime updates',
+  api_access: 'API access',
+  custom_domain: 'Custom domain',
+  priority_support: 'Priority support',
+}
+
+function planLimitLines(plan: { max_orders: number | null; max_staff: number | null; max_warehouses: number | null; max_brands: number | null; max_landing_pages: number | null }): string[] {
+  const lines: string[] = []
+  lines.push(plan.max_staff == null ? 'Unlimited staff' : `Up to ${plan.max_staff} staff`)
+  lines.push(plan.max_orders == null ? 'Unlimited orders' : `Up to ${plan.max_orders.toLocaleString()} orders/mo`)
+  lines.push(plan.max_brands == null ? 'Unlimited brands' : `Up to ${plan.max_brands} brand${plan.max_brands === 1 ? '' : 's'}`)
+  lines.push(plan.max_landing_pages == null ? 'Unlimited landing pages' : `Up to ${plan.max_landing_pages} landing pages`)
+  lines.push(plan.max_warehouses == null ? 'Unlimited warehouses' : `Up to ${plan.max_warehouses} warehouse${plan.max_warehouses === 1 ? '' : 's'}`)
+  return lines
+}
 
 const modules = [
   {
@@ -191,7 +241,78 @@ function HomeHeader() {
   )
 }
 
+/**
+ * Reads live from subscription_plans (via the public, RLS-scoped
+ * fetchPublicPlans query) — a Super Admin price/limit/most-popular change
+ * in Billing Administration shows up here with zero frontend code change.
+ * Renders nothing while loading or if no active public plan exists yet,
+ * so an unconfigured platform never shows a fabricated price.
+ */
+function PricingSection() {
+  const { data: plans, isLoading } = usePublicPlans()
+  const visiblePlans = (plans ?? []).filter((p) => p.is_active && p.is_public)
+
+  if (isLoading || visiblePlans.length === 0) return null
+
+  return (
+    <section id="pricing" className="border-b border-border/70 bg-card/40">
+      <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-2xl text-center">
+          <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">Simple, transparent pricing</h2>
+          <p className="mt-3 text-muted-foreground">Every plan runs on the same platform — pick the ceiling that matches your operation.</p>
+        </div>
+        <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {visiblePlans.map((plan) => {
+            const entitlementLines = (Object.keys(entitlementLabels) as (keyof PlanEntitlements)[])
+              .filter((key) => plan.entitlements?.[key])
+              .map((key) => entitlementLabels[key])
+            return (
+              <Card
+                key={plan.id}
+                className={`flex flex-col gap-4 p-6 ${plan.is_popular ? 'border-primary/60 shadow-sm ring-1 ring-primary/20' : ''}`}
+              >
+                <div className="flex items-center justify-between">
+                  <p className="font-semibold text-foreground">{plan.name}</p>
+                  {plan.is_popular && <Badge>Most popular</Badge>}
+                </div>
+                {plan.description && <p className="text-sm text-muted-foreground">{plan.description}</p>}
+                <div>
+                  {plan.is_custom_pricing ? (
+                    <p className="text-3xl font-extrabold tracking-tight text-foreground">Custom</p>
+                  ) : (
+                    <p className="text-3xl font-extrabold tracking-tight text-foreground">
+                      {formatCurrency(plan.monthly_price, plan.currency_code)}
+                      <span className="text-sm font-medium text-muted-foreground">/mo</span>
+                    </p>
+                  )}
+                  {plan.trial_days > 0 && !plan.is_custom_pricing && (
+                    <p className="mt-1 text-xs text-muted-foreground">{plan.trial_days}-day free trial</p>
+                  )}
+                </div>
+                <ul className="flex flex-1 flex-col gap-1.5 text-sm text-muted-foreground">
+                  {planLimitLines(plan).map((line) => (
+                    <li key={line}>{line}</li>
+                  ))}
+                  {entitlementLines.map((line) => (
+                    <li key={line}>{line}</li>
+                  ))}
+                </ul>
+                <Button variant={plan.is_popular ? 'default' : 'outline'} asChild>
+                  <Link to="/login">{plan.is_custom_pricing ? 'Talk to us' : 'Get started'}</Link>
+                </Button>
+              </Card>
+            )
+          })}
+        </div>
+      </div>
+    </section>
+  )
+}
+
 function HomeContent() {
+  const config = useHomepageConfig()
+  const moduleOverrides = new Map((config.modules ?? []).map((m) => [m.name, m.description]))
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <HomeHeader />
@@ -208,24 +329,24 @@ function HomeContent() {
         />
         <div className="relative mx-auto max-w-5xl px-4 py-20 text-center sm:px-6 sm:py-28 lg:px-8">
           <Badge variant="secondary" className="mx-auto">
-            Built for African COD commerce operations
+            {config.heroBadge || 'Built for African COD commerce operations'}
           </Badge>
           <h1 className="mt-6 text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-            One operating system for your entire commerce operation
+            {config.heroTitle || 'One operating system for your entire commerce operation'}
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-base text-muted-foreground sm:text-lg">
-            Orders, inventory, delivery, finance, marketing, landing pages, affiliates and customer support — running
-            on one shared record, with every staff member seeing exactly the slice of it their role permits.
+            {config.heroSubtitle ||
+              'Orders, inventory, delivery, finance, marketing, landing pages, affiliates and customer support — running on one shared record, with every staff member seeing exactly the slice of it their role permits.'}
           </p>
           <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Button size="lg" asChild>
               <Link to="/login">
-                Get started
+                {config.primaryCtaLabel || 'Get started'}
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>
             <Button size="lg" variant="outline" asChild>
-              <a href="#modules">Explore the platform</a>
+              <a href="#modules">{config.secondaryCtaLabel || 'Explore the platform'}</a>
             </Button>
           </div>
         </div>
@@ -282,12 +403,14 @@ function HomeContent() {
                   <mod.icon className="h-5 w-5" />
                 </span>
                 <p className="font-semibold text-foreground">{mod.name}</p>
-                <p className="text-sm text-muted-foreground">{mod.description}</p>
+                <p className="text-sm text-muted-foreground">{moduleOverrides.get(mod.name) || mod.description}</p>
               </Card>
             ))}
           </div>
         </div>
       </section>
+
+      <PricingSection />
 
       {/* ROLE-AWARE OPERATIONS */}
       <section className="border-b border-border/70">
@@ -391,9 +514,9 @@ function HomeContent() {
             <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-primary-foreground">
               <Layers className="h-3.5 w-3.5" strokeWidth={2.5} />
             </span>
-            <span className="font-semibold text-foreground">Golden COD — Commerce OS</span>
+            <span className="font-semibold text-foreground">{config.companyName || 'Golden COD — Commerce OS'}</span>
           </div>
-          <p>&copy; {new Date().getFullYear()} Golden COD. All rights reserved.</p>
+          <p>{config.footerText || `© ${new Date().getFullYear()} Golden COD. All rights reserved.`}</p>
         </div>
       </footer>
     </div>

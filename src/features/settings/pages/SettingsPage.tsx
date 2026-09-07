@@ -1,6 +1,7 @@
 import {
   Bell,
   Building2,
+  CreditCard,
   FileText,
   History,
   Package,
@@ -16,6 +17,7 @@ import { Link } from 'react-router-dom'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { usePermissions } from '@/contexts/PermissionsContext'
+import { useIsPlatformAdmin } from '@/features/billing/hooks'
 
 interface SettingsLink {
   label: string
@@ -72,6 +74,12 @@ const sections: SettingsSection[] = [
       { label: 'Integration Health', description: 'Real-time delivery status for outbound SMS/WhatsApp/email and tracking dispatch queues.', href: '/settings/integrations', icon: Puzzle, permission: 'integrations.view' },
     ],
   },
+  {
+    label: 'Billing',
+    links: [
+      { label: 'Billing', description: 'This workspace\'s subscription plan, payment history, and payment method.', href: '/settings/billing', icon: CreditCard, permission: 'billing.view' },
+    ],
+  },
 ]
 
 export function SettingsPage() {
@@ -86,6 +94,7 @@ export function SettingsPage() {
       </div>
 
       <SettingsSections />
+      <PlatformAdminSection />
 
       <Card className="border-dashed">
         <CardHeader>
@@ -136,5 +145,34 @@ function SettingsSections() {
         )
       })}
     </>
+  )
+}
+
+function PlatformAdminSection() {
+  const isPlatformAdmin = useIsPlatformAdmin()
+  if (!isPlatformAdmin) return null
+
+  return (
+    <div>
+      <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-muted-foreground">Platform Administration</h2>
+      <p className="mb-3 -mt-2 text-xs text-muted-foreground">
+        Visible only to you, a GCOS platform administrator — a cross-workspace authority distinct from any workspace's Owner role.
+      </p>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <Link to="/settings/billing/admin">
+          <Card className="h-full transition-colors hover:border-primary/50 hover:bg-accent/40">
+            <CardContent className="flex items-start gap-3 p-5">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <CreditCard className="h-4.5 w-4.5" />
+              </span>
+              <div>
+                <p className="font-semibold text-foreground">Billing Administration</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">Subscription plans, payment methods, crypto wallets, and pending tenant payments across every workspace.</p>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+      </div>
+    </div>
   )
 }
