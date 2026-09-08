@@ -88,12 +88,27 @@ begin
     values (v_ws_a, v_brand_a1, 'SW121-B1', 'website', 'NEW', 'pending', 'Cust B1', '0800200011', 'Addr', 'NGN', 5000, 5000, v_staff_b) returning id into v_o_b1;
 
   -- An overdue follow-up task on the PENDING order (yesterday, so it
-  -- cannot also land in today's due-today window), and a due-today
-  -- task on the CONFIRMED order (a few hours from now, same day).
+  -- cannot also land in today's due-today window), and a due-today,
+  -- NOT-YET-overdue task on the CONFIRMED order. The due-today task
+  -- must satisfy two things regardless of what time this suite happens
+  -- to run: (a) fall within today's UTC calendar date, per
+  -- get_my_priority_queue/get_my_work_summary's date_trunc('day', now())
+  -- window (0037), and (b) stay in the future relative to `now()`, so it
+  -- is never also counted as OVERDUE_FOLLOW_UP (< now()) by scenario 12's
+  -- exact-count assertions. `now() + interval '2 hours'` satisfied (b)
+  -- but broke (a) whenever the suite ran within ~2h of UTC midnight;
+  -- `date_trunc('day', now()) + 12h` (a since-reverted attempt) satisfied
+  -- (a) but broke (b) for the entire second half of every day. Taking
+  -- the earlier of "5 minutes from now" and "the last second of today"
+  -- satisfies both for every possible run time: the former is what's
+  -- normally used, and near end-of-day it clamps to a value that is
+  -- still guaranteed >= now() (today's last second can never be in the
+  -- past) and still < tomorrow's start.
   insert into public.order_tasks (workspace_id, brand_id, order_id, task_type, title, priority, status, assigned_to, due_at)
     values (v_ws_a, v_brand_a1, v_o_pending, 'CALL_BACK', 'Call back overdue', 'normal', 'OPEN', v_staff_a, now() - interval '1 day');
   insert into public.order_tasks (workspace_id, brand_id, order_id, task_type, title, priority, status, assigned_to, due_at)
-    values (v_ws_a, v_brand_a1, v_o_confirmed, 'CONFIRM_ORDER', 'Confirm before dispatch', 'normal', 'OPEN', v_staff_a, now() + interval '2 hours');
+    values (v_ws_a, v_brand_a1, v_o_confirmed, 'CONFIRM_ORDER', 'Confirm before dispatch', 'normal', 'OPEN', v_staff_a,
+      least(now() + interval '5 minutes', date_trunc('day', now()) + interval '1 day' - interval '1 second'));
 
   -- A prior NO_ANSWER contact attempt on the MISSED order — inserted
   -- directly (fixture setup, bypassing RLS as the migration-runner
