@@ -3,8 +3,9 @@ import { CheckCircle2 } from 'lucide-react'
 import * as React from 'react'
 import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom'
 
+import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { fetchPublicOrderConfirmation } from '@/features/landingPages/api'
+import { fetchLandingPageBySlug, fetchPublicOrderConfirmation } from '@/features/landingPages/api'
 import { firePixelPurchase } from '@/features/landingPages/public/tracking'
 import { formatCurrency } from '@/lib/currency'
 import type { Order } from '@/types/database'
@@ -45,6 +46,18 @@ export function ThankYouPage() {
   const state = (location.state ?? {}) as ThankYouLocationState
   const orderId = searchParams.get('order') ?? state.order?.id ?? null
 
+  // Thank-you content is editable per page (thank_you_config, added in
+  // 0044) — fetched here rather than carried in navigate() state so a
+  // refresh/direct/bookmarked visit renders identically to the "just
+  // ordered" path.
+  const { data: page } = useQuery({
+    queryKey: ['public-landing-page', slug],
+    queryFn: () => fetchLandingPageBySlug(slug as string),
+    enabled: Boolean(slug),
+    retry: false,
+  })
+  const config = page?.thank_you_config ?? {}
+
   // Fast path: navigate() state is already the full order (the common
   // case — no refresh happened). Only fall back to a fetch (refresh, or
   // a direct/bookmarked visit) when state is missing but an order id is
@@ -56,6 +69,7 @@ export function ThankYouPage() {
   })
 
   const order: ConfirmedOrder | undefined = state.order ?? fetchedOrder ?? undefined
+  const showOrderSummary = config.showOrderSummary ?? true
 
   React.useEffect(() => {
     if (!orderId || !order) return
@@ -69,12 +83,12 @@ export function ThankYouPage() {
       <div className="flex h-16 w-16 items-center justify-center rounded-full bg-success/15 text-success">
         <CheckCircle2 className="h-9 w-9" />
       </div>
-      <h1 className="mt-4 text-2xl font-extrabold">Your order has been received!</h1>
+      <h1 className="mt-4 text-2xl font-extrabold">{config.headline || 'Your order has been received!'}</h1>
       <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-        You will pay when your order is delivered — no payment has been taken online.
+        {config.message || 'You will pay when your order is delivered — no payment has been taken online.'}
       </p>
 
-      {order ? (
+      {showOrderSummary && order ? (
         <Card className="mt-6 w-full max-w-sm p-5 text-left">
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Order number</span>
@@ -96,9 +110,28 @@ export function ThankYouPage() {
             </p>
           )}
         </Card>
-      ) : (
+      ) : !showOrderSummary && order ? null : (
         <Card className="mt-6 w-full max-w-sm p-5 text-sm text-muted-foreground">
           Your order was submitted successfully. Our team will contact you shortly to confirm delivery details.
+        </Card>
+      )}
+
+      {config.ctaLabel && (
+        <Button asChild size="lg" className="mt-6 rounded-xl font-bold">
+          <a href={config.ctaTarget || '#'}>{config.ctaLabel}</a>
+        </Button>
+      )}
+
+      {config.upsell?.enabled && (
+        <Card className="mt-8 w-full max-w-sm overflow-hidden p-5 text-left">
+          {config.upsell.imageUrl && <img src={config.upsell.imageUrl} alt="" className="mb-3 h-32 w-full rounded-lg object-cover" />}
+          {config.upsell.title && <p className="font-bold text-foreground">{config.upsell.title}</p>}
+          {config.upsell.body && <p className="mt-1 text-sm text-muted-foreground">{config.upsell.body}</p>}
+          {config.upsell.ctaLabel && (
+            <Button asChild className="mt-3 w-full rounded-xl font-bold">
+              <a href={config.upsell.ctaTarget || '#'}>{config.upsell.ctaLabel}</a>
+            </Button>
+          )}
         </Card>
       )}
 

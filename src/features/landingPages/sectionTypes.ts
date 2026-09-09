@@ -1,6 +1,7 @@
 import type { LandingPageSectionType } from '@/types/database'
 
 export interface HeroConfig {
+  eyebrow?: string
   headline: string
   subheadline?: string
   imageUrl?: string
@@ -14,34 +15,49 @@ export interface TrustBadge {
 }
 export interface TrustStripConfig {
   items: TrustBadge[]
+  /** 'ticker' renders a continuously-scrolling announcement bar (the top-of-page strip in long-form COD funnels); 'default' is the plain centered row. */
+  style?: 'default' | 'ticker'
 }
 
 export interface TextConfig {
+  eyebrow?: string
   title?: string
   body: string
+  ctaLabel?: string
+  ctaTarget?: string
 }
 
 export interface ImageTextConfig {
+  eyebrow?: string
   title?: string
-  body: string
+  body?: string
   imageUrl?: string
   imagePosition: 'left' | 'right'
+  ctaLabel?: string
+  ctaTarget?: string
+  /** 'banner' renders a full-bleed marketing image with the text/CTA overlaid at the bottom rather than side-by-side — for the poster-style graphics common in long-form COD funnels. */
+  layout?: 'side-by-side' | 'banner'
 }
 
 export interface BenefitItem {
   icon?: string
   title: string
   description?: string
+  imageUrl?: string
 }
 export interface BenefitsConfig {
   title?: string
   items: BenefitItem[]
+  /** 'warning' renders each item as a symptom/problem card (accent left border, muted icon well) instead of a positive checkmark benefit card — same data shape, different framing. */
+  tone?: 'positive' | 'warning'
 }
 
 export interface HowItWorksStep {
   title: string
   description?: string
   imageUrl?: string
+  /** Optional short duration/eyebrow label shown above the title (e.g. "First Few Days") when rendered as a timeline. */
+  eyebrow?: string
 }
 export interface HowItWorksConfig {
   title?: string
@@ -54,6 +70,7 @@ export interface Testimonial {
   quote: string
   rating?: number
   imageUrl?: string
+  verified?: boolean
 }
 export interface TestimonialsConfig {
   title?: string
@@ -70,9 +87,11 @@ export interface FaqConfig {
 }
 
 export interface CtaBannerConfig {
-  headline: string
+  headline?: string
   buttonLabel: string
   ctaTarget?: string
+  /** 'urgency' renders a slim single-line dark ticker-style banner (top-of-page); 'final' renders a full block with headline (default). */
+  style?: 'final' | 'urgency'
 }
 
 export interface PackageSelectorConfig {

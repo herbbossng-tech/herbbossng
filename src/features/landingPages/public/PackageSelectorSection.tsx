@@ -19,11 +19,11 @@ export function PackageSelectorSection({ config, packages, currencyCode, selecte
   if (packages.length === 0) return null
 
   return (
-    <section id="packages" className="px-5 py-10 sm:px-8 sm:py-14">
+    <section id="packages" className="px-5 py-12 sm:px-8 sm:py-16">
       <div className="mx-auto max-w-2xl">
-        {config.title && <h2 className="text-center text-2xl font-bold text-foreground">{config.title}</h2>}
+        {config.title && <h2 className="text-center text-2xl font-extrabold text-foreground sm:text-3xl">{config.title}</h2>}
         {config.subtitle && <p className="mt-1 text-center text-sm text-muted-foreground">{config.subtitle}</p>}
-        <div className="mt-6 flex flex-col gap-3">
+        <div className="mt-8 flex flex-col gap-4">
           {packages.map((pkg) => {
             const selected = pkg.id === selectedPackageId
             return (
@@ -34,10 +34,15 @@ export function PackageSelectorSection({ config, packages, currencyCode, selecte
                 onClick={() => onSelect(pkg.id)}
                 onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onSelect(pkg.id)}
                 className={cn(
-                  'flex cursor-pointer items-center justify-between gap-3 p-4 transition-colors',
-                  selected ? 'border-primary bg-primary/10' : 'hover:border-primary/50',
+                  'relative flex cursor-pointer items-center justify-between gap-3 overflow-visible rounded-2xl p-4 transition-all',
+                  selected ? 'border-2 border-primary shadow-md' : 'border border-border hover:border-primary/40',
                 )}
               >
+                {pkg.badge && (
+                  <Badge className="absolute -top-3 right-4 rounded-full border-transparent bg-primary px-3 py-1 text-[11px] text-primary-foreground shadow-sm">
+                    {pkg.badge}
+                  </Badge>
+                )}
                 <div className="flex items-center gap-3">
                   <span
                     className={cn(
@@ -48,17 +53,18 @@ export function PackageSelectorSection({ config, packages, currencyCode, selecte
                     {selected && <Check className="h-3 w-3" />}
                   </span>
                   <div>
-                    <div className="flex items-center gap-2">
-                      <p className="font-semibold text-foreground">{pkg.name}</p>
-                      {pkg.badge && <Badge variant="warning">{pkg.badge}</Badge>}
-                    </div>
-                    {pkg.savings_text && <p className="text-xs text-success">{pkg.savings_text}</p>}
-                    {pkg.offer_text && <p className="text-xs text-muted-foreground">{pkg.offer_text}</p>}
+                    <p className="font-bold text-foreground">{pkg.name}</p>
+                    {pkg.savings_text && (
+                      <Badge variant="success" className="mt-1 rounded-full">
+                        {pkg.savings_text}
+                      </Badge>
+                    )}
+                    {pkg.offer_text && <p className="mt-1 text-xs text-muted-foreground">{pkg.offer_text}</p>}
                   </div>
                 </div>
                 <div className="shrink-0 text-right">
-                  <p className="font-bold text-foreground">{formatCurrency(pkg.price, currencyCode)}</p>
                   {pkg.compare_at_price && <p className="text-xs text-muted-foreground line-through">{formatCurrency(pkg.compare_at_price, currencyCode)}</p>}
+                  <p className="text-lg font-extrabold text-foreground">{formatCurrency(pkg.price, currencyCode)}</p>
                 </div>
               </Card>
             )

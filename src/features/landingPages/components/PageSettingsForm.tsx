@@ -9,7 +9,14 @@ import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { useUpdateLandingPage } from '@/features/landingPages/hooks'
 import { TrackingSettingsForm } from '@/features/landingPages/components/TrackingSettingsForm'
-import type { FloatingCtaConfig, LandingPage, LandingPageFormConfig, LandingPageSeoConfig, WhatsappCtaConfig } from '@/types/database'
+import type {
+  FloatingCtaConfig,
+  LandingPage,
+  LandingPageFormConfig,
+  LandingPageSeoConfig,
+  LandingPageThankYouConfig,
+  WhatsappCtaConfig,
+} from '@/types/database'
 
 export function PageSettingsForm({ page }: { page: LandingPage }) {
   const updatePage = useUpdateLandingPage(page.id)
@@ -21,6 +28,7 @@ export function PageSettingsForm({ page }: { page: LandingPage }) {
   const [whatsapp, setWhatsapp] = React.useState<WhatsappCtaConfig>(page.whatsapp_config ?? { enabled: false, phone: null, message: null, label: 'Chat With Us' })
   const [floating, setFloating] = React.useState<FloatingCtaConfig>(page.floating_cta_config ?? { enabled: false, label: 'Order Now' })
   const [orderSummaryEnabled, setOrderSummaryEnabled] = React.useState(page.order_summary_enabled)
+  const [thankYou, setThankYou] = React.useState<LandingPageThankYouConfig>(page.thank_you_config ?? {})
 
   async function save() {
     await updatePage.mutateAsync({
@@ -31,6 +39,7 @@ export function PageSettingsForm({ page }: { page: LandingPage }) {
       whatsapp_config: whatsapp,
       floating_cta_config: floating,
       order_summary_enabled: orderSummaryEnabled,
+      thank_you_config: thankYou,
     })
   }
 
@@ -145,6 +154,90 @@ export function PageSettingsForm({ page }: { page: LandingPage }) {
               <Input value={floating.label} onChange={(e) => setFloating((f) => ({ ...f, label: e.target.value }))} />
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Thank You Page</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1.5">
+            <Label>Headline</Label>
+            <Input
+              value={thankYou.headline ?? ''}
+              onChange={(e) => setThankYou((t) => ({ ...t, headline: e.target.value }))}
+              placeholder="Your order has been received!"
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label>Confirmation message</Label>
+            <Textarea
+              rows={2}
+              value={thankYou.message ?? ''}
+              onChange={(e) => setThankYou((t) => ({ ...t, message: e.target.value }))}
+              placeholder="You will pay when your order is delivered — no payment has been taken online."
+            />
+          </div>
+          <label className="flex items-center gap-2 text-sm">
+            <Switch checked={thankYou.showOrderSummary ?? true} onCheckedChange={(checked) => setThankYou((t) => ({ ...t, showOrderSummary: checked }))} />
+            Show the order summary card
+          </label>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-1.5">
+              <Label>CTA label (optional)</Label>
+              <Input value={thankYou.ctaLabel ?? ''} onChange={(e) => setThankYou((t) => ({ ...t, ctaLabel: e.target.value }))} placeholder="e.g. Chat on WhatsApp" />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label>CTA link</Label>
+              <Input value={thankYou.ctaTarget ?? ''} onChange={(e) => setThankYou((t) => ({ ...t, ctaTarget: e.target.value }))} placeholder="https://…" />
+            </div>
+          </div>
+
+          <div className="mt-2 border-t border-border pt-4">
+            <label className="flex items-center gap-2 text-sm">
+              <Switch
+                checked={!!thankYou.upsell?.enabled}
+                onCheckedChange={(checked) => setThankYou((t) => ({ ...t, upsell: { ...t.upsell, enabled: checked } }))}
+              />
+              Show an upsell / related-product card
+            </label>
+            {thankYou.upsell?.enabled && (
+              <div className="mt-3 flex flex-col gap-3">
+                <div className="flex flex-col gap-1.5">
+                  <Label>Upsell title</Label>
+                  <Input
+                    value={thankYou.upsell?.title ?? ''}
+                    onChange={(e) => setThankYou((t) => ({ ...t, upsell: { ...t.upsell, enabled: true, title: e.target.value } }))}
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label>Upsell body</Label>
+                  <Textarea
+                    rows={2}
+                    value={thankYou.upsell?.body ?? ''}
+                    onChange={(e) => setThankYou((t) => ({ ...t, upsell: { ...t.upsell, enabled: true, body: e.target.value } }))}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-1.5">
+                    <Label>Upsell CTA label</Label>
+                    <Input
+                      value={thankYou.upsell?.ctaLabel ?? ''}
+                      onChange={(e) => setThankYou((t) => ({ ...t, upsell: { ...t.upsell, enabled: true, ctaLabel: e.target.value } }))}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <Label>Upsell CTA link</Label>
+                    <Input
+                      value={thankYou.upsell?.ctaTarget ?? ''}
+                      onChange={(e) => setThankYou((t) => ({ ...t, upsell: { ...t.upsell, enabled: true, ctaTarget: e.target.value } }))}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
 

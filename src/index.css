@@ -147,6 +147,24 @@
   --ring: oklch(0.55 0.15 145 / 0.5);
 }
 
+/* Continuously-scrolling announcement ticker (TrustStripSection style="ticker"). */
+@keyframes lp-ticker {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+.animate-lp-ticker {
+  animation: lp-ticker 22s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-lp-ticker {
+    animation: none;
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

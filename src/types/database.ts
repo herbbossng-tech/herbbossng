@@ -699,6 +699,24 @@ export interface LandingPageSeoConfig {
   noindex?: boolean
 }
 
+export interface LandingPageThankYouUpsellConfig {
+  enabled: boolean
+  title?: string
+  body?: string
+  imageUrl?: string
+  ctaLabel?: string
+  ctaTarget?: string
+}
+
+export interface LandingPageThankYouConfig {
+  headline?: string
+  message?: string
+  ctaLabel?: string
+  ctaTarget?: string
+  showOrderSummary?: boolean
+  upsell?: LandingPageThankYouUpsellConfig
+}
+
 export interface LandingPage {
   id: string
   workspace_id: string
@@ -720,6 +738,7 @@ export interface LandingPage {
   whatsapp_config: WhatsappCtaConfig
   floating_cta_config: FloatingCtaConfig
   order_summary_enabled: boolean
+  thank_you_config: LandingPageThankYouConfig
 
   /** Copied from the owning workspace at creation time, or set explicitly per-page — see set_landing_page_market() (0031). */
   market_country_code: string | null

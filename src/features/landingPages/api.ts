@@ -228,6 +228,7 @@ export interface UpdateLandingPageFields {
   whatsapp_config?: unknown
   floating_cta_config?: unknown
   order_summary_enabled?: boolean
+  thank_you_config?: unknown
   status?: string
   published_at?: string | null
 }

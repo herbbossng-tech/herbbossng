@@ -139,102 +139,113 @@ export function CodOrderForm({
     }
   }
 
+  const inputClass = 'bg-secondary/30 border-transparent focus-visible:border-primary focus-visible:bg-background'
+  const labelClass = 'text-xs font-bold uppercase tracking-wide text-muted-foreground'
+
   return (
-    <section id="order-form" className="px-5 py-10 sm:px-8 sm:py-14">
-      <Card className="mx-auto max-w-lg p-5 sm:p-6">
-        {sectionConfig.title && <h2 className="mb-4 text-xl font-bold text-foreground">{sectionConfig.title}</h2>}
-        <form onSubmit={handleSubmit(submit)} onChangeCapture={trackFormStarted} className="flex flex-col gap-3">
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="lp-fullName">
-              Full Name <span className="text-destructive">*</span>
-            </Label>
-            <Input id="lp-fullName" required aria-required="true" {...register('fullName')} aria-invalid={!!errors.fullName} />
-            {errors.fullName && <p className="text-xs text-destructive">{errors.fullName.message}</p>}
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="lp-phone">
-              Phone Number <span className="text-destructive">*</span>
-            </Label>
-            <Input id="lp-phone" required aria-required="true" placeholder={market.phonePlaceholder} {...register('phone')} aria-invalid={!!errors.phone} />
-            {errors.phone && <p className="text-xs text-destructive">{errors.phone.message}</p>}
-          </div>
-          {formConfig.collectAlternatePhone && (
+    <section id="order-form" className="px-5 py-12 sm:px-8 sm:py-16">
+      <div className="mx-auto max-w-lg">
+        <h2 className="mb-5 text-center text-2xl font-extrabold text-foreground sm:text-3xl">{sectionConfig.title || 'Your Information'}</h2>
+        <Card className="rounded-2xl p-5 shadow-sm sm:p-6">
+          <form onSubmit={handleSubmit(submit)} onChangeCapture={trackFormStarted} className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="lp-altPhone">Alternate phone (optional)</Label>
-              <Input id="lp-altPhone" placeholder={market.phonePlaceholder} {...register('alternatePhone')} />
-            </div>
-          )}
-          {formConfig.collectEmail && (
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="lp-email">Email (optional)</Label>
-              <Input id="lp-email" type="email" {...register('email')} aria-invalid={!!errors.email} />
-              {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
-            </div>
-          )}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="lp-state">
-                State / Region <span className="text-destructive">*</span>
+              <Label htmlFor="lp-fullName" className={labelClass}>
+                Full Name <span className="text-destructive">*</span>
               </Label>
-              <Input id="lp-state" required aria-required="true" {...register('state')} aria-invalid={!!errors.state} />
-              {errors.state && <p className="text-xs text-destructive">{errors.state.message}</p>}
+              <Input id="lp-fullName" required aria-required="true" placeholder="Your Full Name" className={inputClass} {...register('fullName')} aria-invalid={!!errors.fullName} />
+              {errors.fullName && <p className="text-xs text-destructive">{errors.fullName.message}</p>}
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="lp-city">
+              <Label htmlFor="lp-address" className={labelClass}>
+                Delivery Address <span className="text-destructive">*</span>
+              </Label>
+              <Textarea id="lp-address" required aria-required="true" rows={2} placeholder="House number, street, area" className={inputClass} {...register('address')} aria-invalid={!!errors.address} />
+              {errors.address && <p className="text-xs text-destructive">{errors.address.message}</p>}
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="lp-phone" className={labelClass}>
+                Phone Number <span className="text-destructive">*</span>
+              </Label>
+              <Input id="lp-phone" required aria-required="true" placeholder={market.phonePlaceholder} className={inputClass} {...register('phone')} aria-invalid={!!errors.phone} />
+              {errors.phone && <p className="text-xs text-destructive">{errors.phone.message}</p>}
+            </div>
+            {formConfig.collectAlternatePhone && (
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="lp-altPhone" className={labelClass}>
+                  Alternate phone (optional)
+                </Label>
+                <Input id="lp-altPhone" placeholder={market.phonePlaceholder} className={inputClass} {...register('alternatePhone')} />
+              </div>
+            )}
+            {formConfig.collectEmail && (
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="lp-email" className={labelClass}>
+                  Email (optional)
+                </Label>
+                <Input id="lp-email" type="email" placeholder="you@email.com" className={inputClass} {...register('email')} aria-invalid={!!errors.email} />
+                {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
+              </div>
+            )}
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="lp-city" className={labelClass}>
                 City <span className="text-destructive">*</span>
               </Label>
-              <Input id="lp-city" required aria-required="true" {...register('city')} aria-invalid={!!errors.city} />
+              <Input id="lp-city" required aria-required="true" placeholder="Your City" className={inputClass} {...register('city')} aria-invalid={!!errors.city} />
               {errors.city && <p className="text-xs text-destructive">{errors.city.message}</p>}
             </div>
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="lp-address">
-              Delivery Address <span className="text-destructive">*</span>
-            </Label>
-            <Textarea id="lp-address" required aria-required="true" rows={2} {...register('address')} aria-invalid={!!errors.address} />
-            {errors.address && <p className="text-xs text-destructive">{errors.address.message}</p>}
-          </div>
-          {formConfig.collectLandmark && (
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="lp-landmark">Landmark (optional)</Label>
-              <Input id="lp-landmark" placeholder="e.g. Near the market" {...register('landmark')} />
+              <Label htmlFor="lp-state" className={labelClass}>
+                State <span className="text-destructive">*</span>
+              </Label>
+              <Input id="lp-state" required aria-required="true" placeholder="Your State" className={inputClass} {...register('state')} aria-invalid={!!errors.state} />
+              {errors.state && <p className="text-xs text-destructive">{errors.state.message}</p>}
             </div>
-          )}
-          {formConfig.collectNotes && (
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="lp-notes">Notes (optional)</Label>
-              <Textarea id="lp-notes" rows={2} {...register('notes')} />
-            </div>
-          )}
-
-          {orderSummaryEnabled && selectedPackage && (
-            <div className="mt-2 rounded-lg border border-border bg-secondary/20 p-4 text-sm">
-              <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">Order Summary</p>
-              <p className="font-medium text-foreground">{selectedPackage.name}</p>
-              <div className="mt-2 flex justify-between text-muted-foreground">
-                <span>Subtotal</span>
-                <span>{formatCurrency(selectedPackage.price, currencyCode)}</span>
+            {formConfig.collectLandmark && (
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="lp-landmark" className={labelClass}>
+                  Landmark (optional)
+                </Label>
+                <Input id="lp-landmark" placeholder="e.g. Near the market" className={inputClass} {...register('landmark')} />
               </div>
-              <div className="flex justify-between text-muted-foreground">
-                <span>Shipping</span>
-                <span>{shippingFee === 0 ? 'Free' : formatCurrency(shippingFee, currencyCode)}</span>
+            )}
+            {formConfig.collectNotes && (
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="lp-notes" className={labelClass}>
+                  Notes (optional)
+                </Label>
+                <Textarea id="lp-notes" rows={2} className={inputClass} {...register('notes')} />
               </div>
-              <div className="mt-2 flex justify-between border-t border-border pt-2 text-base font-bold text-foreground">
-                <span>Total</span>
-                <span>{formatCurrency(total, currencyCode)}</span>
+            )}
+
+            {orderSummaryEnabled && selectedPackage && (
+              <div className="mt-2 rounded-xl border border-border bg-secondary/30 p-4 text-sm">
+                <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">Order Summary</p>
+                <p className="font-semibold text-foreground">{selectedPackage.name}</p>
+                <div className="mt-2 flex justify-between text-muted-foreground">
+                  <span>Subtotal</span>
+                  <span>{formatCurrency(selectedPackage.price, currencyCode)}</span>
+                </div>
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Shipping</span>
+                  <span>{shippingFee === 0 ? 'Free' : formatCurrency(shippingFee, currencyCode)}</span>
+                </div>
+                <div className="mt-2 flex justify-between border-t border-border pt-2 text-base font-extrabold text-foreground">
+                  <span>Total</span>
+                  <span>{formatCurrency(total, currencyCode)}</span>
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {submitError && <p className="text-sm text-destructive">{submitError}</p>}
+            {submitError && <p className="text-sm text-destructive">{submitError}</p>}
 
-          <Button type="submit" size="lg" className="mt-2" disabled={submitting || !selectedPackage}>
-            {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-            {selectedPackage ? `Place Order — ${formatCurrency(total, currencyCode)}` : 'Select a package above'}
-          </Button>
-          <p className="text-center text-xs text-muted-foreground">Pay on Delivery — you only pay when your order arrives.</p>
-        </form>
-      </Card>
+            <Button type="submit" size="lg" className="mt-2 rounded-xl text-sm font-bold" disabled={submitting || !selectedPackage}>
+              {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
+              {selectedPackage ? `Place Order — ${formatCurrency(total, currencyCode)}` : 'Select a package above'}
+            </Button>
+            <p className="text-center text-xs text-muted-foreground">Pay on Delivery — you only pay when your order arrives.</p>
+          </form>
+        </Card>
+      </div>
     </section>
   )
 }

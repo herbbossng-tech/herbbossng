@@ -183,7 +183,7 @@ export function PublicLandingPage() {
         />
       ))}
 
-      <FloatingOrderCta config={page.floating_cta_config} />
+      <FloatingOrderCta config={page.floating_cta_config} price={selectedPackage?.price} currencyCode={page.market_currency_code} />
       <WhatsappCta config={page.whatsapp_config} />
     </div>
   )
@@ -213,9 +213,9 @@ function RenderSection({
     case 'TRUST_STRIP':
       return <TrustStripSection config={config as unknown as TrustStripConfig} />
     case 'TEXT':
-      return <TextSection config={config as unknown as TextConfig} />
+      return <TextSection config={config as unknown as TextConfig} onCtaClick={onCtaClick} />
     case 'IMAGE_TEXT':
-      return <ImageTextSection config={config as unknown as ImageTextConfig} />
+      return <ImageTextSection config={config as unknown as ImageTextConfig} onCtaClick={onCtaClick} />
     case 'BENEFITS':
       return <BenefitsSection config={config as unknown as BenefitsConfig} />
     case 'HOW_IT_WORKS':
