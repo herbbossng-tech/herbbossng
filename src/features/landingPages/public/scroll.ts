@@ -1,11 +1,12 @@
 /**
  * Scrolls to a specific section by id (a section's configured ctaTarget/
  * anchor) when given and present on the page; otherwise falls back to the
- * order form, then the package selector — the pre-existing default every
- * CTA used before per-section anchors were wired up.
+ * package selector first, then the order form — a CTA should land the
+ * visitor on "choose your package" as the natural next step, not skip
+ * straight past it into the order form.
  */
 export function scrollToOrderArea(anchorId?: string) {
-  const el = (anchorId ? document.getElementById(anchorId) : null) ?? document.getElementById('order-form') ?? document.getElementById('packages')
+  const el = (anchorId ? document.getElementById(anchorId) : null) ?? document.getElementById('packages') ?? document.getElementById('order-form')
   el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 

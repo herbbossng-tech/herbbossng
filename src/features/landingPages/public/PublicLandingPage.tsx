@@ -17,6 +17,7 @@ import {
   ImageTextSection,
   IngredientsSection,
   ProblemAwarenessSection,
+  PublicFooter,
   TestimonialsSection,
   TextSection,
   TrustStripSection,
@@ -182,6 +183,8 @@ export function PublicLandingPage() {
           )}
         />
       ))}
+
+      <PublicFooter pageName={page.name} tagline={page.description} />
 
       <FloatingOrderCta config={page.floating_cta_config} price={selectedPackage?.price} currencyCode={page.market_currency_code} />
       <WhatsappCta config={page.whatsapp_config} />

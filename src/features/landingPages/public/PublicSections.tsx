@@ -472,3 +472,16 @@ export function CtaBannerSection({ config, onCtaClick }: { config: CtaBannerConf
     </section>
   )
 }
+
+/** Closing band for the public page/thank-you page — uses only the page's own name/description (already fetched, nothing fabricated) so every landing page gets a real footer with zero extra config. */
+export function PublicFooter({ pageName, tagline }: { pageName: string; tagline?: string | null }) {
+  return (
+    <footer className="px-5 py-8 text-center sm:px-8" style={darkSurfaceStyle()}>
+      <p className="text-sm font-semibold">
+        {pageName}
+        {tagline ? <span className="font-normal opacity-70"> — {tagline}</span> : null}
+      </p>
+      <p className="mt-2 text-xs opacity-60">© {new Date().getFullYear()} {pageName}. All rights reserved.</p>
+    </footer>
+  )
+}

@@ -6,6 +6,7 @@ import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { fetchLandingPageBySlug, fetchPublicOrderConfirmation } from '@/features/landingPages/api'
+import { PublicFooter } from '@/features/landingPages/public/PublicSections'
 import { firePixelPurchase } from '@/features/landingPages/public/tracking'
 import { formatCurrency } from '@/lib/currency'
 import type { Order } from '@/types/database'
@@ -139,6 +140,12 @@ export function ThankYouPage() {
         <Link to={`/l/${slug}`} className="mt-8 text-xs text-muted-foreground hover:text-primary">
           Back to page
         </Link>
+      )}
+
+      {page && (
+        <div className="mt-10 w-full">
+          <PublicFooter pageName={page.name} tagline={page.description} />
+        </div>
       )}
     </div>
   )

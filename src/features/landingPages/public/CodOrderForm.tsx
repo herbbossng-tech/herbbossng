@@ -143,7 +143,7 @@ export function CodOrderForm({
   const labelClass = 'text-xs font-bold uppercase tracking-wide text-muted-foreground'
 
   return (
-    <section id="order-form" className="px-5 py-12 sm:px-8 sm:py-16">
+    <section id="order-form" className="px-5 pb-12 pt-4 sm:px-8 sm:pb-16 sm:pt-6">
       <div className="mx-auto max-w-lg">
         <h2 className="mb-5 text-center text-2xl font-extrabold text-foreground sm:text-3xl">{sectionConfig.title || 'Your Information'}</h2>
         <Card className="rounded-2xl p-5 shadow-sm sm:p-6">

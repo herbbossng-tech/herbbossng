@@ -19,7 +19,7 @@ export function PackageSelectorSection({ config, packages, currencyCode, selecte
   if (packages.length === 0) return null
 
   return (
-    <section id="packages" className="px-5 py-12 sm:px-8 sm:py-16">
+    <section id="packages" className="px-5 pb-4 pt-12 sm:px-8 sm:pb-6 sm:pt-16">
       <div className="mx-auto max-w-2xl">
         {config.title && <h2 className="text-center text-2xl font-extrabold text-foreground sm:text-3xl">{config.title}</h2>}
         {config.subtitle && <p className="mt-1 text-center text-sm text-muted-foreground">{config.subtitle}</p>}
