@@ -69,8 +69,15 @@ export interface HowItWorksStep {
   eyebrow?: string
 }
 export interface HowItWorksConfig {
+  eyebrow?: string
   title?: string
   steps: HowItWorksStep[]
+  /**
+   * 'numbered' (default when omitted and no step has its own eyebrow): a plain vertical list with numbered circles.
+   * 'timeline': a connected vertical timeline with a per-step eyebrow/duration label (auto-selected when steps have one, even if unset).
+   * 'cards': a side-by-side card grid with an italic Roman-numeral mark per card and a colored top border — for a "how to use it" style ritual/instructions block.
+   */
+  layout?: 'numbered' | 'timeline' | 'cards'
 }
 
 export interface Testimonial {

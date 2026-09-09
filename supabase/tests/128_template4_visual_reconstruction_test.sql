@@ -262,4 +262,25 @@ begin
   raise notice 'OK 11: Template 4''s two image-led sections correctly use layout=photo.';
 end $$;
 
+\echo '=== 12. Template 4''s "The Ritual" section uses the card-grid layout with an eyebrow and updated title ==='
+do $$
+declare v_sections jsonb; v_ritual jsonb;
+begin
+  select starter_sections into v_sections from public.landing_page_templates where template_key = 'template_4';
+  select s->'config' into v_ritual from jsonb_array_elements(v_sections) s
+    where s->>'type' = 'HOW_IT_WORKS' and s->'config'->>'eyebrow' = 'The Ritual' limit 1;
+  assert v_ritual is not null, 'expected a HOW_IT_WORKS section with eyebrow "The Ritual"';
+  assert v_ritual->>'layout' = 'cards', format('expected layout=cards on the ritual section, got %s', v_ritual->>'layout');
+  assert v_ritual->>'title' = 'How to use it', format('expected title "How to use it", got %s', v_ritual->>'title');
+  assert jsonb_array_length(v_ritual->'steps') = 3, 'expected the ritual section to still have its original 3 steps';
+
+  -- The other seeded HOW_IT_WORKS section ("What A Daily Ritual Looks
+  -- Like") already has per-step eyebrows and must be left as a timeline,
+  -- not switched to cards by this change.
+  perform 1 from jsonb_array_elements(v_sections) s
+    where s->>'type' = 'HOW_IT_WORKS' and s->'config'->>'title' = 'What A Daily Ritual Looks Like' and s->'config'->>'layout' = 'cards';
+  assert not found, 'the per-step-eyebrow HOW_IT_WORKS section must not be switched to layout=cards';
+  raise notice 'OK 12: Template 4''s ritual section correctly uses layout=cards with eyebrow/title set, and the timeline section is untouched.';
+end $$;
+
 \echo '=== ALL TEMPLATE 4 VISUAL RECONSTRUCTION TESTS PASSED ==='

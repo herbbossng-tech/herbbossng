@@ -230,8 +230,23 @@ export function SectionConfigEditor({ landingPageId, type, config, onChange }: S
       const c = config as unknown as HowItWorksConfig
       return (
         <div className="flex flex-col gap-4">
+          <Field label="Eyebrow (small label above the title, optional)">
+            <Input value={c.eyebrow ?? ''} onChange={(e) => set({ eyebrow: e.target.value })} />
+          </Field>
           <Field label="Title">
             <Input value={c.title ?? ''} onChange={(e) => set({ title: e.target.value })} />
+          </Field>
+          <Field label="Layout">
+            <Select value={c.layout ?? 'numbered'} onValueChange={(v) => set({ layout: v })}>
+              <SelectTrigger className="w-56">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="numbered">Numbered list</SelectItem>
+                <SelectItem value="timeline">Timeline (per-step label)</SelectItem>
+                <SelectItem value="cards">Card grid</SelectItem>
+              </SelectContent>
+            </Select>
           </Field>
           <ListEditor<HowItWorksStep>
             items={c.steps ?? []}
@@ -240,6 +255,9 @@ export function SectionConfigEditor({ landingPageId, type, config, onChange }: S
             addLabel="Add step"
             renderItem={(item, update) => (
               <div className="flex flex-col gap-2">
+                {c.layout === 'timeline' && (
+                  <Input placeholder="Step label (e.g. First Few Days)" value={item.eyebrow ?? ''} onChange={(e) => update({ eyebrow: e.target.value })} />
+                )}
                 <Input placeholder="Step title" value={item.title} onChange={(e) => update({ title: e.target.value })} />
                 <Textarea rows={2} placeholder="Description (optional)" value={item.description ?? ''} onChange={(e) => update({ description: e.target.value })} />
               </div>

@@ -262,15 +262,38 @@ export function BenefitsSection({ config }: { config: BenefitsConfig }) {
 
 export function HowItWorksSection({ config }: { config: HowItWorksConfig }) {
   if (!config.steps?.length) return null
-  const hasEyebrows = config.steps.some((s) => s.eyebrow)
+  const hasStepEyebrows = config.steps.some((s) => s.eyebrow)
+  const layout = config.layout ?? (hasStepEyebrows ? 'timeline' : 'numbered')
+
+  if (layout === 'cards') {
+    return (
+      <section className={SECTION_PADDING}>
+        <div className="mx-auto max-w-4xl">
+          {config.eyebrow && <Eyebrow>{config.eyebrow}</Eyebrow>}
+          {config.title && <h2 className="mb-8 text-center text-2xl font-extrabold text-foreground sm:text-3xl">{config.title}</h2>}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            {config.steps.map((step, i) => (
+              <Card key={i} className="rounded-2xl border-t-4 border-t-primary p-5">
+                <p className="font-serif text-lg italic text-primary">{toRoman(i + 1)}</p>
+                <p className="mt-3 font-semibold text-foreground">{step.title}</p>
+                {step.description && <p className="mt-1 text-sm text-muted-foreground">{step.description}</p>}
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+    )
+  }
+
   return (
     <section className={SECTION_PADDING}>
       <div className="mx-auto max-w-2xl">
+        {config.eyebrow && <Eyebrow>{config.eyebrow}</Eyebrow>}
         {config.title && <h2 className="mb-8 text-center text-2xl font-extrabold text-foreground sm:text-3xl">{config.title}</h2>}
-        <div className={cn('flex flex-col', hasEyebrows ? 'gap-0 border-l-2 border-primary/30 pl-6' : 'gap-5')}>
+        <div className={cn('flex flex-col', layout === 'timeline' ? 'gap-0 border-l-2 border-primary/30 pl-6' : 'gap-5')}>
           {config.steps.map((step, i) => (
-            <div key={i} className={cn('relative flex gap-4', hasEyebrows && 'pb-8 last:pb-0')}>
-              {hasEyebrows ? (
+            <div key={i} className={cn('relative flex gap-4', layout === 'timeline' && 'pb-8 last:pb-0')}>
+              {layout === 'timeline' ? (
                 <span className="absolute -left-[1.9rem] top-1 h-3 w-3 rounded-full border-2 border-primary bg-background" />
               ) : (
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">{i + 1}</span>
