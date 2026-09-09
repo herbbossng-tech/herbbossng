@@ -26,7 +26,18 @@ export interface LandingPageFormValues {
   marketCountryCode: string
 }
 
-/** A reusable starter configuration — system templates (workspace_id null) are read-only; a workspace clones one to customize it. See migration 0031. */
+export interface LandingPageStarterPackage {
+  name: string
+  quantity: number
+  price: number
+  compare_at_price?: number | null
+  badge?: string | null
+  savings_text?: string | null
+  offer_text?: string | null
+  is_default?: boolean
+}
+
+/** A reusable starter configuration — system templates (workspace_id null) are read-only; a workspace clones one to customize it. See migration 0031 (sections) / 0045 (packages). */
 export interface LandingPageTemplate {
   id: string
   workspace_id: string | null
@@ -38,6 +49,7 @@ export interface LandingPageTemplate {
   is_system: boolean
   status: 'active' | 'archived'
   starter_sections: { type: LandingPageSection['type']; config: unknown }[]
+  starter_packages: LandingPageStarterPackage[]
   default_theme: Record<string, unknown>
   source_template_id: string | null
   created_at: string

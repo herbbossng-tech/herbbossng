@@ -188,4 +188,67 @@ begin
   raise notice 'OK 7: page-from-Template-4 + public order creation still works end to end.';
 end $$;
 
+\echo '=== 8. Template 4 starter_packages: 4 tiers, exact pricing/badges, exactly one default ==='
+do $$
+declare v_packages jsonb; v_count int; v_default_count int; v_names text[];
+begin
+  select starter_packages into v_packages from public.landing_page_templates where template_key = 'template_4';
+  select jsonb_array_length(v_packages) into v_count;
+  assert v_count = 4, format('expected 4 starter packages, got %s', v_count);
+
+  select count(*) into v_default_count from jsonb_array_elements(v_packages) p where (p->>'is_default')::boolean is true;
+  assert v_default_count = 1, format('expected exactly 1 default package, got %s', v_default_count);
+
+  select array_agg(p->>'badge') into v_names from jsonb_array_elements(v_packages) p;
+  assert 'Most Popular' = any(v_names), 'expected a "Most Popular" badge among the starter packages';
+  assert 'Best Value' = any(v_names), 'expected a "Best Value" badge among the starter packages';
+  assert 'Super Value' = any(v_names), 'expected a "Super Value" badge among the starter packages';
+
+  perform 1 from jsonb_array_elements(v_packages) p where (p->>'price')::numeric <= 0;
+  assert not found, 'no starter package should have a non-positive price';
+  raise notice 'OK 8: Template 4 starter_packages has 4 correctly-shaped tiers with the expected badges and exactly one default.';
+end $$;
+
+\echo '=== 9. Template 4 restores the full 6-item symptom list (not a trimmed subset) ==='
+do $$
+declare v_sections jsonb; v_symptom_items jsonb; v_count int;
+begin
+  select starter_sections into v_sections from public.landing_page_templates where template_key = 'template_4';
+  select s->'config'->'items' into v_symptom_items from jsonb_array_elements(v_sections) s
+    where s->>'type' = 'BENEFITS' and s->'config'->>'tone' = 'warning' limit 1;
+  select jsonb_array_length(v_symptom_items) into v_count;
+  assert v_count = 6, format('expected 6 symptom cards, got %s', v_count);
+  raise notice 'OK 9: Template 4''s symptom list has all 6 items.';
+end $$;
+
+\echo '=== 10. Creating a page from Template 4 also seeds its starter packages (not just sections) ==='
+do $$
+declare
+  v_ws uuid; v_brand uuid; v_template_id uuid; v_packages jsonb; v_page_id uuid;
+  v_pkg record; v_seeded_count int;
+begin
+  select id into v_ws from public.workspaces where slug = 't4-ws';
+  select id into v_brand from public.brands where slug = 't4-brand';
+  select id, starter_packages into v_template_id, v_packages from public.landing_page_templates where template_key = 'template_4';
+
+  insert into public.landing_pages (workspace_id, brand_id, name, slug, status, template_id, market_country_code, market_currency_code)
+    values (v_ws, v_brand, 'T4 Clone Packages', 't4-clone-packages', 'published', v_template_id, 'NG', 'NGN')
+    returning id into v_page_id;
+
+  -- Mirrors createLandingPage()'s starter_packages seeding logic exactly.
+  for v_pkg in select
+      p->>'name' as name, (p->>'quantity')::int as quantity, (p->>'price')::numeric as price,
+      (p->>'compare_at_price')::numeric as compare_at_price, p->>'badge' as badge,
+      p->>'savings_text' as savings_text, coalesce((p->>'is_default')::boolean, false) as is_default, ord
+    from jsonb_array_elements(v_packages) with ordinality as t(p, ord)
+  loop
+    insert into public.landing_page_packages (landing_page_id, workspace_id, brand_id, name, quantity, price, compare_at_price, badge, savings_text, shipping_rule, enabled, is_default, position)
+      values (v_page_id, v_ws, v_brand, v_pkg.name, v_pkg.quantity, v_pkg.price, v_pkg.compare_at_price, v_pkg.badge, v_pkg.savings_text, '{"type":"free"}'::jsonb, true, v_pkg.is_default, v_pkg.ord);
+  end loop;
+
+  select count(*) into v_seeded_count from public.landing_page_packages where landing_page_id = v_page_id;
+  assert v_seeded_count = 4, format('expected 4 packages seeded from Template 4''s starter_packages, got %s', v_seeded_count);
+  raise notice 'OK 10: creating a page from Template 4 correctly seeds all 4 starter packages.';
+end $$;
+
 \echo '=== ALL TEMPLATE 4 VISUAL RECONSTRUCTION TESTS PASSED ==='

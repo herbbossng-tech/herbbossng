@@ -213,6 +213,28 @@ export async function createLandingPage(
     if (sectionsError) throw sectionsError
   }
 
+  if (template && template.starter_packages.length > 0) {
+    const { error: packagesError } = await supabase.from('landing_page_packages').insert(
+      template.starter_packages.map((p, index) => ({
+        landing_page_id: page.id,
+        workspace_id: workspaceId,
+        brand_id: brandId,
+        name: p.name,
+        quantity: p.quantity,
+        price: p.price,
+        compare_at_price: p.compare_at_price ?? null,
+        badge: p.badge ?? null,
+        savings_text: p.savings_text ?? null,
+        offer_text: p.offer_text ?? null,
+        shipping_rule: { type: 'free' },
+        enabled: true,
+        is_default: p.is_default ?? false,
+        position: index,
+      })),
+    )
+    if (packagesError) throw packagesError
+  }
+
   return page
 }
 

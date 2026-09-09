@@ -7,6 +7,8 @@ export interface HeroConfig {
   imageUrl?: string
   ctaLabel?: string
   ctaTarget?: string
+  /** A short static pill of text under the CTA (e.g. "From KSh 2,699 · Free delivery") — editable copy, not computed from package data, so it never contradicts a page's real pricing without being deliberately edited. */
+  priceLabel?: string
 }
 
 export interface TrustBadge {
@@ -46,6 +48,7 @@ export interface BenefitItem {
   imageUrl?: string
 }
 export interface BenefitsConfig {
+  eyebrow?: string
   title?: string
   items: BenefitItem[]
   /** 'warning' renders each item as a symptom/problem card (accent left border, muted icon well) instead of a positive checkmark benefit card — same data shape, different framing. */

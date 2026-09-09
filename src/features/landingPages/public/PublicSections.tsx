@@ -79,6 +79,9 @@ export function HeroSection({ config, onCtaClick }: { config: HeroConfig; onCtaC
         <h1 className="text-3xl font-extrabold leading-tight tracking-tight sm:text-5xl">{config.headline || 'Your Headline Here'}</h1>
         {config.subheadline && <p className="max-w-lg text-base opacity-80 sm:text-lg">{config.subheadline}</p>}
         <SectionCta label={config.ctaLabel} target={config.ctaTarget} onCtaClick={onCtaClick} variant="inverted" />
+        {config.priceLabel && (
+          <span className="rounded-full bg-white/95 px-4 py-1.5 text-xs font-bold text-foreground shadow-sm">{config.priceLabel}</span>
+        )}
         {config.imageUrl && (
           <div className="relative mt-4 w-full max-w-md">
             <img src={config.imageUrl} alt="" className="w-full rounded-2xl border border-white/10 object-cover shadow-2xl" />
@@ -185,7 +188,7 @@ export function BenefitsSection({ config }: { config: BenefitsConfig }) {
   return (
     <section className={cn(SECTION_PADDING, isWarning && 'bg-secondary/20')}>
       <div className="mx-auto max-w-4xl">
-        {isWarning && <Eyebrow>{config.title ? '' : 'Worth Paying Attention To'}</Eyebrow>}
+        {config.eyebrow && <Eyebrow>{config.eyebrow}</Eyebrow>}
         {config.title && <h2 className="mb-8 text-center text-2xl font-extrabold text-foreground sm:text-3xl">{config.title}</h2>}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {config.items.map((item, i) => (
