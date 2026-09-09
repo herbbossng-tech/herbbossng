@@ -107,6 +107,46 @@
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
 }
 
+/*
+ * Public storefront scope: landing pages / thank-you pages are seen by
+ * end customers deciding whether to buy, not by staff — they must
+ * never inherit the internal admin dashboard's dark navy theme above.
+ * Scoping a light, commerce-appropriate palette to this class (rather
+ * than editing the section components themselves) means every public
+ * section component picks it up for free via the same bg-background/
+ * text-foreground/Button/Card utility classes they already use — see
+ * PublicLandingPage.tsx and ThankYouPage.tsx, which apply this class
+ * and layer each landing page's own theme_config (--primary/--radius,
+ * inherited from its template's default_theme at creation time) on
+ * top as inline style overrides for per-template accent differentiation.
+ */
+.lp-storefront {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.2 0.02 260);
+
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.2 0.02 260);
+
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.2 0.02 260);
+
+  --primary: oklch(0.55 0.15 145);
+  --primary-foreground: oklch(0.98 0.01 90);
+
+  --secondary: oklch(0.96 0.01 90);
+  --secondary-foreground: oklch(0.25 0.02 260);
+
+  --muted: oklch(0.96 0.01 90);
+  --muted-foreground: oklch(0.48 0.02 260);
+
+  --accent: oklch(0.96 0.01 90);
+  --accent-foreground: oklch(0.25 0.02 260);
+
+  --border: oklch(0.9 0.01 90);
+  --input: oklch(0.9 0.01 90);
+  --ring: oklch(0.55 0.15 145 / 0.5);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

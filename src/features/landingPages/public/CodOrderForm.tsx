@@ -145,13 +145,17 @@ export function CodOrderForm({
         {sectionConfig.title && <h2 className="mb-4 text-xl font-bold text-foreground">{sectionConfig.title}</h2>}
         <form onSubmit={handleSubmit(submit)} onChangeCapture={trackFormStarted} className="flex flex-col gap-3">
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="lp-fullName">Full name</Label>
-            <Input id="lp-fullName" {...register('fullName')} aria-invalid={!!errors.fullName} />
+            <Label htmlFor="lp-fullName">
+              Full Name <span className="text-destructive">*</span>
+            </Label>
+            <Input id="lp-fullName" required aria-required="true" {...register('fullName')} aria-invalid={!!errors.fullName} />
             {errors.fullName && <p className="text-xs text-destructive">{errors.fullName.message}</p>}
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="lp-phone">Phone number</Label>
-            <Input id="lp-phone" placeholder={market.phonePlaceholder} {...register('phone')} aria-invalid={!!errors.phone} />
+            <Label htmlFor="lp-phone">
+              Phone Number <span className="text-destructive">*</span>
+            </Label>
+            <Input id="lp-phone" required aria-required="true" placeholder={market.phonePlaceholder} {...register('phone')} aria-invalid={!!errors.phone} />
             {errors.phone && <p className="text-xs text-destructive">{errors.phone.message}</p>}
           </div>
           {formConfig.collectAlternatePhone && (
@@ -169,19 +173,25 @@ export function CodOrderForm({
           )}
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="lp-state">State/Region</Label>
-              <Input id="lp-state" {...register('state')} aria-invalid={!!errors.state} />
+              <Label htmlFor="lp-state">
+                State / Region <span className="text-destructive">*</span>
+              </Label>
+              <Input id="lp-state" required aria-required="true" {...register('state')} aria-invalid={!!errors.state} />
               {errors.state && <p className="text-xs text-destructive">{errors.state.message}</p>}
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="lp-city">City</Label>
-              <Input id="lp-city" {...register('city')} aria-invalid={!!errors.city} />
+              <Label htmlFor="lp-city">
+                City <span className="text-destructive">*</span>
+              </Label>
+              <Input id="lp-city" required aria-required="true" {...register('city')} aria-invalid={!!errors.city} />
               {errors.city && <p className="text-xs text-destructive">{errors.city.message}</p>}
             </div>
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="lp-address">Delivery address</Label>
-            <Textarea id="lp-address" rows={2} {...register('address')} aria-invalid={!!errors.address} />
+            <Label htmlFor="lp-address">
+              Delivery Address <span className="text-destructive">*</span>
+            </Label>
+            <Textarea id="lp-address" required aria-required="true" rows={2} {...register('address')} aria-invalid={!!errors.address} />
             {errors.address && <p className="text-xs text-destructive">{errors.address.message}</p>}
           </div>
           {formConfig.collectLandmark && (

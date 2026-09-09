@@ -600,6 +600,38 @@ export async function createPublicOrder(slug: string, input: PublicOrderInput): 
   return data as Order
 }
 
+export interface PublicOrderConfirmation {
+  id: string
+  order_number: string
+  total_amount: number
+  currency_code: string
+  customer_phone: string | null
+  landing_page_id: string | null
+  landing_page_slug: string | null
+  utm_source: string | null
+  utm_medium: string | null
+  utm_campaign: string | null
+  utm_term: string | null
+  utm_content: string | null
+  fbclid: string | null
+  ttclid: string | null
+  created_at: string
+}
+
+/**
+ * Lets the thank-you page rehydrate order/value/currency/attribution
+ * data after a hard refresh, when React Router's navigate() state
+ * (all it previously had) is gone. Returns null for an unknown/random
+ * order id rather than throwing, so a direct/fabricated visit to the
+ * thank-you URL never fires a Purchase pixel.
+ */
+export async function fetchPublicOrderConfirmation(orderId: string): Promise<PublicOrderConfirmation | null> {
+  const { data, error } = await supabase.rpc('get_public_order_confirmation', { p_order_id: orderId })
+  if (error) throw error
+  const row = Array.isArray(data) ? data[0] : data
+  return (row as PublicOrderConfirmation | undefined) ?? null
+}
+
 /** Best-effort analytics beacon — never throws, never blocks the page. */
 export async function trackLandingPageEvent(
   slug: string,

@@ -33,3 +33,30 @@ export async function updateWorkspace(id: string, fields: WorkspaceUpdateFields,
   if (error) throw error
   return data as Workspace
 }
+
+export interface CreateWorkspaceInput {
+  name: string
+  countryCode: string
+  currencyCode: string
+  timezone?: string | null
+  brandName?: string | null
+}
+
+/**
+ * Creates a genuinely new, independent workspace and grants the caller
+ * Owner of it — never touches any workspace the caller already belongs
+ * to. See create_workspace() (migration 0040) for the full contract.
+ */
+export async function createWorkspace(input: CreateWorkspaceInput): Promise<Workspace> {
+  const { data, error } = await supabase
+    .rpc('create_workspace', {
+      p_name: input.name,
+      p_country_code: input.countryCode,
+      p_currency_code: input.currencyCode,
+      p_timezone: input.timezone ?? null,
+      p_brand_name: input.brandName ?? null,
+    })
+    .single()
+  if (error) throw error
+  return data as Workspace
+}

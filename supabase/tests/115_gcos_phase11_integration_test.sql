@@ -69,7 +69,10 @@ begin
   reset role;
 
   select count(*) into v_pending_count from public.tracking_dispatch_log where order_id = v_order.id and status = 'pending';
-  assert v_pending_count = 2, format('expected 2 pending tracking events (meta+tiktok), got %s', v_pending_count);
+  -- 0042: PURCHASE is now enqueued alongside ORDER_CREATED at order
+  -- placement (not only at delivery), so a fully configured order now
+  -- enqueues 4 rows (ORDER_CREATED+PURCHASE, each x meta+tiktok).
+  assert v_pending_count = 4, format('expected 4 pending tracking events (ORDER_CREATED+PURCHASE x meta+tiktok), got %s', v_pending_count);
   raise notice 'OK 1: % pending tracking_dispatch_log rows enqueued for order %', v_pending_count, v_order.id;
   raise notice 'P11_ORDER1=%', v_order.id;
 end $$;
@@ -92,7 +95,7 @@ begin
       v_tiktok_seen := true;
     end if;
   end loop;
-  assert v_count = 2, format('expected to claim 2 rows, got %s', v_count);
+  assert v_count = 4, format('expected to claim 4 rows (ORDER_CREATED+PURCHASE x meta+tiktok, 0042), got %s', v_count);
   assert v_meta_seen and v_tiktok_seen, 'expected both meta and tiktok rows to be claimed';
   raise notice 'OK 2: claimed % rows with correctly resolved secrets/order data', v_count;
 end $$;
@@ -110,8 +113,15 @@ end $$;
 do $$
 declare v_meta_id uuid; v_tiktok_id uuid; v_meta_status text; v_tiktok_status text; v_tiktok_next_retry timestamptz; v_tiktok_attempts int;
 begin
-  select id into v_meta_id from public.tracking_dispatch_log where provider = 'meta' and status = 'processing';
-  select id into v_tiktok_id from public.tracking_dispatch_log where provider = 'tiktok' and status = 'processing';
+  -- 0042: order 1 now has 2 processing rows per provider (ORDER_CREATED
+  -- + PURCHASE, both enqueued at order-placement time) — scope to
+  -- ORDER_CREATED explicitly so this step (and 5-7 below) deterministically
+  -- exercises ONE specific row exactly as originally designed; the
+  -- PURCHASE row is untouched by steps 4-7 and is swept up later by
+  -- step 8's age-based reclaim on a different order, so it never leaks
+  -- into any later assertion in this file.
+  select id into v_meta_id from public.tracking_dispatch_log where provider = 'meta' and status = 'processing' and event_type = 'ORDER_CREATED';
+  select id into v_tiktok_id from public.tracking_dispatch_log where provider = 'tiktok' and status = 'processing' and event_type = 'ORDER_CREATED';
 
   perform public.record_tracking_dispatch_result(v_meta_id, true, '{"events_received":1}'::jsonb);
   perform public.record_tracking_dispatch_result(v_tiktok_id, false, '{"code":50002}'::jsonb, 'simulated TikTok 5xx timeout', true, 'server_error');
@@ -130,7 +140,7 @@ end $$;
 do $$
 declare v_meta_id uuid; v_status text;
 begin
-  select id into v_meta_id from public.tracking_dispatch_log where provider = 'meta' and status = 'sent';
+  select id into v_meta_id from public.tracking_dispatch_log where provider = 'meta' and status = 'sent' and event_type = 'ORDER_CREATED';
   perform public.record_tracking_dispatch_result(v_meta_id, false, null, 'a stale duplicate callback', true, 'unknown');
   select status into v_status from public.tracking_dispatch_log where id = v_meta_id;
   assert v_status = 'sent', format('a resolved row must never be flipped by a late callback, got %s', v_status);
@@ -155,7 +165,7 @@ end $$;
 do $$
 declare v_tiktok_id uuid; v_status text;
 begin
-  select id into v_tiktok_id from public.tracking_dispatch_log where provider = 'tiktok' and status = 'processing';
+  select id into v_tiktok_id from public.tracking_dispatch_log where provider = 'tiktok' and status = 'processing' and event_type = 'ORDER_CREATED';
   update public.tracking_dispatch_log set attempts = max_attempts where id = v_tiktok_id;
   perform public.record_tracking_dispatch_result(v_tiktok_id, false, null, 'still failing', true, 'server_error');
   select status into v_status from public.tracking_dispatch_log where id = v_tiktok_id;
@@ -178,7 +188,7 @@ begin
   update public.tracking_dispatch_log set claimed_at = now() - interval '20 minutes' where order_id = v_order.id;
 
   select count(*) into v_count from public.claim_tracking_dispatch_batch('rescuing-worker', 10);
-  assert v_count = 2, format('expected the stuck rows to be reclaimed, got %s', v_count);
+  assert v_count = 4, format('expected the stuck rows to be reclaimed (ORDER_CREATED+PURCHASE x meta+tiktok, 0042), got %s', v_count);
   raise notice 'OK 8: a crashed worker''s stuck processing rows are safely reclaimed, never permanently stranded.';
 end $$;
 

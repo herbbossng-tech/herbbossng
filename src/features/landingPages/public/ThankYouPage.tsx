@@ -1,7 +1,11 @@
+import { useQuery } from '@tanstack/react-query'
 import { CheckCircle2 } from 'lucide-react'
-import { Link, useLocation, useParams } from 'react-router-dom'
+import * as React from 'react'
+import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom'
 
 import { Card } from '@/components/ui/card'
+import { fetchPublicOrderConfirmation } from '@/features/landingPages/api'
+import { firePixelPurchase } from '@/features/landingPages/public/tracking'
 import { formatCurrency } from '@/lib/currency'
 import type { Order } from '@/types/database'
 
@@ -10,14 +14,58 @@ interface ThankYouLocationState {
   packageName?: string
 }
 
+interface ConfirmedOrder {
+  order_number: string
+  total_amount: number
+  currency_code: string
+  customer_phone: string | null
+}
+
+/** Guards against a refresh (or React strict-mode double-invoke) firing Purchase more than once for the same order in this browser. */
+function hasFiredPurchase(orderId: string): boolean {
+  try {
+    return sessionStorage.getItem(`gcos.purchaseFired.${orderId}`) === '1'
+  } catch {
+    return false
+  }
+}
+
+function markPurchaseFired(orderId: string): void {
+  try {
+    sessionStorage.setItem(`gcos.purchaseFired.${orderId}`, '1')
+  } catch {
+    // sessionStorage unavailable (private browsing, etc.) — tracking is never allowed to break the page.
+  }
+}
+
 export function ThankYouPage() {
   const { slug } = useParams<{ slug: string }>()
   const location = useLocation()
+  const [searchParams] = useSearchParams()
   const state = (location.state ?? {}) as ThankYouLocationState
-  const order = state.order
+  const orderId = searchParams.get('order') ?? state.order?.id ?? null
+
+  // Fast path: navigate() state is already the full order (the common
+  // case — no refresh happened). Only fall back to a fetch (refresh, or
+  // a direct/bookmarked visit) when state is missing but an order id is
+  // present in the URL.
+  const { data: fetchedOrder } = useQuery({
+    queryKey: ['public-order-confirmation', orderId],
+    queryFn: () => fetchPublicOrderConfirmation(orderId as string),
+    enabled: !state.order && !!orderId,
+  })
+
+  const order: ConfirmedOrder | undefined = state.order ?? fetchedOrder ?? undefined
+
+  React.useEffect(() => {
+    if (!orderId || !order) return
+    if (hasFiredPurchase(orderId)) return
+    markPurchaseFired(orderId)
+    firePixelPurchase({ orderId, currency: order.currency_code, value: order.total_amount })
+  }, [orderId, order])
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-background px-5 py-12 text-center text-foreground">
+    <div className="lp-storefront flex min-h-screen flex-col items-center justify-center bg-background px-5 py-12 text-center text-foreground">
       <div className="flex h-16 w-16 items-center justify-center rounded-full bg-success/15 text-success">
         <CheckCircle2 className="h-9 w-9" />
       </div>
@@ -42,9 +90,11 @@ export function ThankYouPage() {
             <span>Amount to pay on delivery</span>
             <span>{formatCurrency(order.total_amount, order.currency_code)}</span>
           </div>
-          <p className="mt-3 text-xs text-muted-foreground">
-            Our team will contact you at <span className="font-medium text-foreground">{order.customer_phone}</span> to confirm your order.
-          </p>
+          {order.customer_phone && (
+            <p className="mt-3 text-xs text-muted-foreground">
+              Our team will contact you at <span className="font-medium text-foreground">{order.customer_phone}</span> to confirm your order.
+            </p>
+          )}
         </Card>
       ) : (
         <Card className="mt-6 w-full max-w-sm p-5 text-sm text-muted-foreground">

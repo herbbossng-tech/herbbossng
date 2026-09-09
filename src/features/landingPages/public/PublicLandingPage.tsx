@@ -42,6 +42,40 @@ import type {
 } from '@/features/landingPages/sectionTypes'
 import type { LandingPageSection, Order } from '@/types/database'
 
+interface LandingPageThemeConfig {
+  primaryColor?: string
+  radius?: 'sm' | 'md' | 'lg' | 'xl'
+}
+
+const RADIUS_REM: Record<NonNullable<LandingPageThemeConfig['radius']>, string> = {
+  sm: '0.375rem',
+  md: '0.5rem',
+  lg: '0.75rem',
+  xl: '1rem',
+}
+
+/**
+ * Turns a landing page's theme_config (inherited from its template's
+ * default_theme at creation time — see createLandingPage()) into the
+ * scoped CSS variable overrides that give each template its own
+ * accent color/roundedness on top of the shared .lp-storefront light
+ * base (index.css). Every public section component already renders
+ * via bg-primary/rounded-lg/etc., so this is the only change needed
+ * for genuine per-template visual differentiation.
+ */
+function landingPageThemeStyle(themeConfig: unknown): React.CSSProperties {
+  const config = (themeConfig ?? {}) as LandingPageThemeConfig
+  const style: Record<string, string> = {}
+  if (config.primaryColor) {
+    style['--primary'] = config.primaryColor
+    style['--ring'] = config.primaryColor
+  }
+  if (config.radius && RADIUS_REM[config.radius]) {
+    style['--radius'] = RADIUS_REM[config.radius]
+  }
+  return style as React.CSSProperties
+}
+
 export function PublicLandingPage() {
   const { slug } = useParams<{ slug: string }>()
   const navigate = useNavigate()
@@ -100,12 +134,12 @@ export function PublicLandingPage() {
       trackLandingPageEvent(page.slug, 'thank_you_view', getSessionId())
       firePixelOrderCreated({ orderId: order.id, currency: order.currency_code, value: order.total_amount })
     }
-    navigate(`/l/${slug}/thank-you`, { state: { order, packageName: selectedPackage?.name } })
+    navigate(`/l/${slug}/thank-you?order=${order.id}`, { state: { order, packageName: selectedPackage?.name } })
   }
 
   if (pageLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background text-muted-foreground">
+      <div className="lp-storefront flex min-h-screen items-center justify-center bg-background text-muted-foreground">
         <p className="text-sm">Loading…</p>
       </div>
     )
@@ -113,7 +147,7 @@ export function PublicLandingPage() {
 
   if (pageError || !page) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-2 bg-background px-6 text-center text-foreground">
+      <div className="lp-storefront flex min-h-screen flex-col items-center justify-center gap-2 bg-background px-6 text-center text-foreground">
         <p className="text-xl font-bold">This page isn&apos;t available</p>
         <p className="text-sm text-muted-foreground">It may have been unpublished or the link may be incorrect.</p>
       </div>
@@ -124,7 +158,7 @@ export function PublicLandingPage() {
   const orderedSections = [...(sections ?? [])].sort((a, b) => a.position - b.position)
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="lp-storefront min-h-screen bg-background text-foreground" style={landingPageThemeStyle(page.theme_config)}>
       {orderedSections.map((section) => (
         <RenderSection
           key={section.id}

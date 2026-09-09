@@ -7,14 +7,16 @@ import { fetchPublicLandingPageTracking } from '@/features/landingPages/api'
  * THIS page (get_landing_page_public_tracking(), page-override → brand
  * default, 0031) and no-op entirely when nothing is configured.
  *
- * CRITICAL COD discipline: this module NEVER fires a "Purchase" event.
- * Creating a COD order is not realized revenue — only a delivered order
- * with cash collected is (see orders_enqueue_tracking_events(), 0031
- * PART G, which enqueues the one real PURCHASE-equivalent event
- * server-side, dispatched through Meta CAPI/TikTok Events API using
- * secrets that never reach the browser). The browser only ever sees
- * PageView/ViewContent/a custom SelectPackage/FormStart/OrderCreated —
- * none of which claim revenue.
+ * Purchase (0042): a successful order placement is the checkout event
+ * from the advertiser's point of view, so firePixelPurchase() below
+ * fires immediately on the thank-you page once a real order is known —
+ * not merely because the page was viewed/the form was started/submit
+ * was clicked. Its event_id is byte-for-byte the same deterministic
+ * key (PURCHASE:<provider>:<order_id>) the server-side
+ * enqueue_tracking_event() (0031/0042) uses for the Meta CAPI/TikTok
+ * Events API copy, so the two are deduplicated as one conversion. This
+ * is a distinct concept from GCOS's own internal Finance
+ * delivered-revenue rule, which is untouched.
  */
 
 declare global {
@@ -161,4 +163,19 @@ export function firePixelOrderCreated(data: { orderId: string; currency?: string
   // sends later using that exact same tracking_dispatch_log.event_id.
   fireMeta('SubmitApplication', { currency: data.currency ?? undefined, value: data.value, eventID: `ORDER_CREATED:meta:${data.orderId}` }, true)
   fireTiktok('SubmitForm', { currency: data.currency ?? undefined, value: data.value, event_id: `ORDER_CREATED:tiktok:${data.orderId}` })
+}
+
+/**
+ * Fired on the thank-you page once a real order is confirmed (0042) —
+ * never merely because the page was viewed or the form was
+ * submitted. event_id is the exact same deterministic key
+ * (PURCHASE:<provider>:<order_id>) create_public_order()'s
+ * enqueue_tracking_event() call uses server-side, so Meta/TikTok
+ * deduplicate this browser copy against the CAPI/Events API copy as
+ * one conversion. The caller (ThankYouPage) is responsible for only
+ * invoking this once per order — see its sessionStorage guard.
+ */
+export function firePixelPurchase(data: { orderId: string; currency?: string | null; value?: number }): void {
+  fireMeta('Purchase', { currency: data.currency ?? undefined, value: data.value, eventID: `PURCHASE:meta:${data.orderId}` })
+  fireTiktok('CompletePayment', { currency: data.currency ?? undefined, value: data.value, event_id: `PURCHASE:tiktok:${data.orderId}` })
 }

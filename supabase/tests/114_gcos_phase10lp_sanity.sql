@@ -270,17 +270,30 @@ begin
   raise notice 'LP_TRACK_ORDER_ID=%', v_order.id;
 end $$;
 
--- 17. Order Created != Revenue: no PURCHASE row until delivered+collected.
+-- 17. (0042) PURCHASE is now enqueued immediately on order creation —
+-- the ad-platform conversion signal fires at successful checkout, not
+-- at delivery, so Meta/TikTok get same-day data instead of waiting
+-- days for a COD delivery. This is a DIFFERENT concept from GCOS's own
+-- internal Finance revenue recognition (get_finance_summary()), which
+-- is completely unchanged and still only counts delivered+collected
+-- orders as revenue — see 126_purchase_conversion_tracking_test.sql
+-- for the dedicated suite covering this in full (order-placement
+-- enqueue, refresh/duplicate-submission dedup, the delivered+collected
+-- safety-net no-op, and get_public_order_confirmation()).
 do $$
 declare v_order_id uuid; v_count int;
 begin
   select id into v_order_id from public.orders where idempotency_key = 'track-token-1';
   select count(*) into v_count from public.tracking_dispatch_log where order_id = v_order_id and event_type = 'PURCHASE';
-  assert v_count = 0, 'a freshly-created order must NEVER have a PURCHASE dispatch row — Order Created != Revenue';
-  raise notice 'OK 17: no PURCHASE event on order creation (COD discipline preserved)';
+  assert v_count = 2, format('0042: a freshly-created order with tracking configured must have exactly 2 PURCHASE dispatch rows (meta+tiktok) enqueued at order-placement time, got %s', v_count);
+  raise notice 'OK 17: PURCHASE is enqueued immediately at order creation (0042) — GCOS''s own Finance revenue definition is a separate, untouched concept';
 end $$;
 
--- 18. Delivered + cash collected -> exactly one PURCHASE per provider; a delivered-but-uncollected order gets none.
+-- 18. (0042) Delivered + cash collected is now a harmless catch-up
+-- safety net, not the primary PURCHASE trigger (see #17 above) — the
+-- count stays at exactly 2 (never grows to 4) because the delivery
+-- branch's enqueue attempt hits the same deterministic event_id
+-- already inserted at order-placement time and is a guaranteed no-op.
 select set_config('app.test_user_id', '00000000-0000-0000-0000-0000000000e1', false);
 set role authenticated;
 do $$
@@ -295,8 +308,8 @@ begin
   update public.orders set status = 'DELIVERED' where id = v_order_id;
 
   select count(*) into v_count from public.tracking_dispatch_log where order_id = v_order_id and event_type = 'PURCHASE';
-  assert v_count = 2, format('DELIVERED with the default full-cash-collected rule must enqueue exactly 2 PURCHASE rows (meta+tiktok), got %s', v_count);
-  raise notice 'OK 18: delivered + cash collected correctly enqueues PURCHASE (the ONLY Purchase-equivalent event) exactly once per configured provider — matches the existing Finance delivered-revenue rule exactly';
+  assert v_count = 2, format('0042: delivered+collected must remain a no-op once PURCHASE already exists from order placement — count must stay at exactly 2 (meta+tiktok), got %s', v_count);
+  raise notice 'OK 18: delivered+collected safety-net branch correctly stays a no-op — no duplicate PURCHASE conversion is ever sent for the same order';
 end $$;
 
 -- ============================================================
