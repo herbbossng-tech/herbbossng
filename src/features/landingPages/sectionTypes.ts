@@ -7,6 +7,8 @@ export interface HeroConfig {
   imageUrl?: string
   ctaLabel?: string
   ctaTarget?: string
+  /** Whether the CTA button shows at all, independent of ctaLabel — lets an editor hide the button without losing the label text. Defaults to true (shown) when omitted, so existing pages are unaffected. */
+  ctaEnabled?: boolean
   /** A short static pill of text under the CTA (e.g. "From KSh 2,699 · Free delivery") — editable copy, not computed from package data, so it never contradicts a page's real pricing without being deliberately edited. */
   priceLabel?: string
 }
@@ -27,6 +29,7 @@ export interface TextConfig {
   body: string
   ctaLabel?: string
   ctaTarget?: string
+  ctaEnabled?: boolean
 }
 
 export interface ImageTextConfig {
@@ -37,6 +40,7 @@ export interface ImageTextConfig {
   imagePosition: 'left' | 'right'
   ctaLabel?: string
   ctaTarget?: string
+  ctaEnabled?: boolean
   /** 'banner' renders a full-bleed marketing image with the text/CTA overlaid at the bottom rather than side-by-side — for the poster-style graphics common in long-form COD funnels. */
   layout?: 'side-by-side' | 'banner'
 }
@@ -53,6 +57,8 @@ export interface BenefitsConfig {
   items: BenefitItem[]
   /** 'warning' renders each item as a symptom/problem card (accent left border, muted icon well) instead of a positive checkmark benefit card — same data shape, different framing. */
   tone?: 'positive' | 'warning'
+  /** 'photo' renders each item as an image tile with a caption (a clear "add photo" placeholder when imageUrl is empty) instead of the icon+title+description card — for photo-grid sections like "still struggling with these issues?" galleries. */
+  layout?: 'card' | 'photo'
 }
 
 export interface HowItWorksStep {

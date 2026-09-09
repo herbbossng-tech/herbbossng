@@ -251,4 +251,15 @@ begin
   raise notice 'OK 10: creating a page from Template 4 correctly seeds all 4 starter packages.';
 end $$;
 
+\echo '=== 11. Template 4''s two image-led sections use the photo-grid layout ==='
+do $$
+declare v_sections jsonb; v_count int;
+begin
+  select starter_sections into v_sections from public.landing_page_templates where template_key = 'template_4';
+  select count(*) into v_count from jsonb_array_elements(v_sections) s
+    where s->>'type' = 'BENEFITS' and s->'config'->>'layout' = 'photo';
+  assert v_count = 2, format('expected 2 photo-grid BENEFITS sections in Template 4, got %s', v_count);
+  raise notice 'OK 11: Template 4''s two image-led sections correctly use layout=photo.';
+end $$;
+
 \echo '=== ALL TEMPLATE 4 VISUAL RECONSTRUCTION TESTS PASSED ==='

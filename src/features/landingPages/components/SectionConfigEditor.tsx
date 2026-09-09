@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { LandingPageImageField } from '@/features/landingPages/components/LandingPageImageField'
 import type {
@@ -43,6 +44,39 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     <div className="flex flex-col gap-1.5">
       <Label>{label}</Label>
       {children}
+    </div>
+  )
+}
+
+/** Optional button fields shared by section types that may or may not want a CTA (Hero, Text, Image+Text) — an explicit enabled switch so a workspace can hide the button without losing the label they already typed. */
+function CtaFields({
+  label,
+  target,
+  enabled,
+  onChange,
+}: {
+  label?: string
+  target?: string
+  enabled?: boolean
+  onChange: (patch: { ctaLabel?: string; ctaTarget?: string; ctaEnabled?: boolean }) => void
+}) {
+  const isEnabled = enabled ?? true
+  return (
+    <div className="flex flex-col gap-3 rounded-lg border border-border p-3">
+      <label className="flex items-center justify-between gap-2 text-sm font-medium">
+        Show a button on this section
+        <Switch checked={isEnabled} onCheckedChange={(checked) => onChange({ ctaEnabled: checked })} />
+      </label>
+      {isEnabled && (
+        <>
+          <Field label="Button label">
+            <Input value={label ?? ''} onChange={(e) => onChange({ ctaLabel: e.target.value })} placeholder="e.g. Order Now" />
+          </Field>
+          <Field label="Scrolls to (optional section id, e.g. order-form)">
+            <Input value={target ?? ''} onChange={(e) => onChange({ ctaTarget: e.target.value })} placeholder="order-form" />
+          </Field>
+        </>
+      )}
     </div>
   )
 }
@@ -93,9 +127,7 @@ export function SectionConfigEditor({ landingPageId, type, config, onChange }: S
             <Textarea rows={2} value={c.subheadline ?? ''} onChange={(e) => set({ subheadline: e.target.value })} />
           </Field>
           <LandingPageImageField landingPageId={landingPageId} label="Hero image" value={c.imageUrl} onChange={(url) => set({ imageUrl: url })} />
-          <Field label="CTA button label">
-            <Input value={c.ctaLabel ?? ''} onChange={(e) => set({ ctaLabel: e.target.value })} />
-          </Field>
+          <CtaFields label={c.ctaLabel} target={c.ctaTarget} enabled={c.ctaEnabled} onChange={set} />
         </div>
       )
     }
@@ -126,6 +158,7 @@ export function SectionConfigEditor({ landingPageId, type, config, onChange }: S
           <Field label="Body">
             <Textarea rows={5} value={c.body ?? ''} onChange={(e) => set({ body: e.target.value })} />
           </Field>
+          <CtaFields label={c.ctaLabel} target={c.ctaTarget} enabled={c.ctaEnabled} onChange={set} />
         </div>
       )
     }
@@ -151,15 +184,28 @@ export function SectionConfigEditor({ landingPageId, type, config, onChange }: S
               </SelectContent>
             </Select>
           </Field>
+          <CtaFields label={c.ctaLabel} target={c.ctaTarget} enabled={c.ctaEnabled} onChange={set} />
         </div>
       )
     }
     case 'BENEFITS': {
       const c = config as unknown as BenefitsConfig
+      const isPhoto = c.layout === 'photo'
       return (
         <div className="flex flex-col gap-4">
           <Field label="Title">
             <Input value={c.title ?? ''} onChange={(e) => set({ title: e.target.value })} />
+          </Field>
+          <Field label="Layout">
+            <Select value={c.layout ?? 'card'} onValueChange={(v) => set({ layout: v })}>
+              <SelectTrigger className="w-52">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="card">Cards (icon + text)</SelectItem>
+                <SelectItem value="photo">Photo grid</SelectItem>
+              </SelectContent>
+            </Select>
           </Field>
           <ListEditor<BenefitItem>
             items={c.items ?? []}
@@ -168,8 +214,12 @@ export function SectionConfigEditor({ landingPageId, type, config, onChange }: S
             addLabel="Add benefit"
             renderItem={(item, update) => (
               <div className="flex flex-col gap-2">
-                <Input placeholder="Benefit title" value={item.title} onChange={(e) => update({ title: e.target.value })} />
-                <Textarea rows={2} placeholder="Description (optional)" value={item.description ?? ''} onChange={(e) => update({ description: e.target.value })} />
+                <Input placeholder={isPhoto ? 'Caption' : 'Benefit title'} value={item.title} onChange={(e) => update({ title: e.target.value })} />
+                {isPhoto ? (
+                  <LandingPageImageField landingPageId={landingPageId} label="Photo" value={item.imageUrl} onChange={(url) => update({ imageUrl: url })} />
+                ) : (
+                  <Textarea rows={2} placeholder="Description (optional)" value={item.description ?? ''} onChange={(e) => update({ description: e.target.value })} />
+                )}
               </div>
             )}
           />

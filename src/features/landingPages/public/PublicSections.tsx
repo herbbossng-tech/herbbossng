@@ -1,4 +1,4 @@
-import { Check, ChevronDown, ShieldCheck, Star, X } from 'lucide-react'
+import { Check, ChevronDown, Image as ImageIcon, ShieldCheck, Star, X } from 'lucide-react'
 import * as React from 'react'
 
 import { Badge } from '@/components/ui/badge'
@@ -54,8 +54,21 @@ function Eyebrow({ children, tone = 'default' }: { children: React.ReactNode; to
   )
 }
 
-function SectionCta({ label, target, onCtaClick, variant = 'default' }: { label?: string; target?: string; onCtaClick?: () => void; variant?: 'default' | 'inverted' }) {
-  if (!label) return null
+function SectionCta({
+  label,
+  target,
+  onCtaClick,
+  variant = 'default',
+  enabled = true,
+}: {
+  label?: string
+  target?: string
+  onCtaClick?: () => void
+  variant?: 'default' | 'inverted'
+  /** Lets an editor hide the button without clearing the label text — defaults to shown when omitted, so existing pages with no explicit value are unaffected. */
+  enabled?: boolean
+}) {
+  if (!label || !enabled) return null
   return (
     <Button
       size="lg"
@@ -72,18 +85,26 @@ function SectionCta({ label, target, onCtaClick, variant = 'default' }: { label?
 }
 
 export function HeroSection({ config, onCtaClick }: { config: HeroConfig; onCtaClick?: () => void }) {
+  const hasImage = !!config.imageUrl
   return (
-    <section className={cn(SECTION_PADDING, 'text-center')} style={darkSurfaceStyle()}>
-      <div className="mx-auto flex max-w-2xl flex-col items-center gap-4">
-        {config.eyebrow && <Eyebrow tone="inverted">{config.eyebrow}</Eyebrow>}
-        <h1 className="text-3xl font-extrabold leading-tight tracking-tight sm:text-5xl">{config.headline || 'Your Headline Here'}</h1>
-        {config.subheadline && <p className="max-w-lg text-base opacity-80 sm:text-lg">{config.subheadline}</p>}
-        <SectionCta label={config.ctaLabel} target={config.ctaTarget} onCtaClick={onCtaClick} variant="inverted" />
-        {config.priceLabel && (
-          <span className="rounded-full bg-white/95 px-4 py-1.5 text-xs font-bold text-foreground shadow-sm">{config.priceLabel}</span>
+    <section className={SECTION_PADDING} style={darkSurfaceStyle()}>
+      <div
+        className={cn(
+          'mx-auto flex max-w-5xl flex-col items-center gap-8 text-center',
+          hasImage && 'sm:flex-row sm:items-center sm:text-left',
         )}
-        {config.imageUrl && (
-          <div className="relative mt-4 w-full max-w-md">
+      >
+        <div className={cn('flex flex-col items-center gap-4', hasImage && 'sm:items-start sm:flex-1')}>
+          {config.eyebrow && <Eyebrow tone="inverted">{config.eyebrow}</Eyebrow>}
+          <h1 className="text-3xl font-extrabold leading-tight tracking-tight sm:text-5xl">{config.headline || 'Your Headline Here'}</h1>
+          {config.subheadline && <p className="max-w-lg text-base opacity-80 sm:text-lg">{config.subheadline}</p>}
+          <SectionCta label={config.ctaLabel} target={config.ctaTarget} onCtaClick={onCtaClick} variant="inverted" enabled={config.ctaEnabled} />
+          {config.priceLabel && (
+            <span className="rounded-full bg-white/95 px-4 py-1.5 text-xs font-bold text-foreground shadow-sm">{config.priceLabel}</span>
+          )}
+        </div>
+        {hasImage && (
+          <div className="w-full max-w-md shrink-0 sm:flex-1">
             <img src={config.imageUrl} alt="" className="w-full rounded-2xl border border-white/10 object-cover shadow-2xl" />
           </div>
         )}
@@ -134,7 +155,7 @@ export function TextSection({ config, onCtaClick }: { config: TextConfig; onCtaC
         {config.eyebrow && <Eyebrow>{config.eyebrow}</Eyebrow>}
         {config.title && <h2 className="text-2xl font-extrabold text-foreground sm:text-3xl">{config.title}</h2>}
         {config.body && <p className="whitespace-pre-line text-muted-foreground">{config.body}</p>}
-        <SectionCta label={config.ctaLabel} target={config.ctaTarget} onCtaClick={onCtaClick} />
+        <SectionCta label={config.ctaLabel} target={config.ctaTarget} onCtaClick={onCtaClick} enabled={config.ctaEnabled} />
       </div>
     </section>
   )
@@ -150,7 +171,7 @@ export function ImageTextSection({ config, onCtaClick }: { config: ImageTextConf
           {(config.title || config.ctaLabel) && (
             <div className="flex flex-col items-center gap-3 bg-black/60 p-5 text-center text-white">
               {config.title && <p className="text-lg font-bold">{config.title}</p>}
-              <SectionCta label={config.ctaLabel} target={config.ctaTarget} onCtaClick={onCtaClick} variant="inverted" />
+              <SectionCta label={config.ctaLabel} target={config.ctaTarget} onCtaClick={onCtaClick} variant="inverted" enabled={config.ctaEnabled} />
             </div>
           )}
         </div>
@@ -171,9 +192,9 @@ export function ImageTextSection({ config, onCtaClick }: { config: ImageTextConf
           )}
           {config.title && <h2 className="mb-3 text-2xl font-extrabold text-foreground sm:text-3xl">{config.title}</h2>}
           {config.body && <p className="whitespace-pre-line text-muted-foreground">{config.body}</p>}
-          {config.ctaLabel && (
+          {config.ctaLabel && config.ctaEnabled !== false && (
             <div className="mt-4 flex justify-center sm:justify-start">
-              <SectionCta label={config.ctaLabel} target={config.ctaTarget} onCtaClick={onCtaClick} />
+              <SectionCta label={config.ctaLabel} target={config.ctaTarget} onCtaClick={onCtaClick} enabled={config.ctaEnabled} />
             </div>
           )}
         </div>
@@ -185,39 +206,54 @@ export function ImageTextSection({ config, onCtaClick }: { config: ImageTextConf
 export function BenefitsSection({ config }: { config: BenefitsConfig }) {
   if (!config.items?.length) return null
   const isWarning = config.tone === 'warning'
+  const isPhoto = config.layout === 'photo'
   return (
     <section className={cn(SECTION_PADDING, isWarning && 'bg-secondary/20')}>
       <div className="mx-auto max-w-4xl">
         {config.eyebrow && <Eyebrow>{config.eyebrow}</Eyebrow>}
         {config.title && <h2 className="mb-8 text-center text-2xl font-extrabold text-foreground sm:text-3xl">{config.title}</h2>}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {config.items.map((item, i) => (
-            <Card
-              key={i}
-              className={cn(
-                'overflow-hidden p-5 transition-shadow hover:shadow-md',
-                isWarning ? 'border-l-4 border-l-destructive/60' : 'border-l-4 border-l-primary',
-              )}
-            >
-              {item.imageUrl && <img src={item.imageUrl} alt="" className="mb-3 h-32 w-full rounded-lg object-cover" />}
-              <div className="flex items-start gap-3">
-                {item.icon && (
-                  <span
-                    className={cn(
-                      'flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-lg',
-                      isWarning ? 'bg-destructive/10' : 'bg-primary/10',
-                    )}
-                  >
-                    {item.icon}
-                  </span>
+        <div className={cn('grid grid-cols-1 gap-4', isPhoto ? 'grid-cols-2 sm:grid-cols-4' : 'sm:grid-cols-2')}>
+          {config.items.map((item, i) =>
+            isPhoto ? (
+              <div key={i} className="flex flex-col items-center gap-2 text-center">
+                {item.imageUrl ? (
+                  <img src={item.imageUrl} alt={item.title} className="aspect-square w-full rounded-xl object-cover shadow-sm" />
+                ) : (
+                  <div className="flex aspect-square w-full flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-border bg-secondary/20 text-muted-foreground">
+                    <ImageIcon className="h-6 w-6" />
+                    <span className="text-[10px] font-medium uppercase tracking-wide">Add Photo</span>
+                  </div>
                 )}
-                <div>
-                  <p className="font-semibold text-foreground">{item.title}</p>
-                  {item.description && <p className="mt-1 text-sm text-muted-foreground">{item.description}</p>}
-                </div>
+                <p className="text-xs font-semibold text-foreground sm:text-sm">{item.title}</p>
               </div>
-            </Card>
-          ))}
+            ) : (
+              <Card
+                key={i}
+                className={cn(
+                  'overflow-hidden p-5 transition-shadow hover:shadow-md',
+                  isWarning ? 'border-l-4 border-l-destructive/60' : 'border-l-4 border-l-primary',
+                )}
+              >
+                {item.imageUrl && <img src={item.imageUrl} alt="" className="mb-3 h-32 w-full rounded-lg object-cover" />}
+                <div className="flex items-start gap-3">
+                  {item.icon && (
+                    <span
+                      className={cn(
+                        'flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-lg',
+                        isWarning ? 'bg-destructive/10' : 'bg-primary/10',
+                      )}
+                    >
+                      {item.icon}
+                    </span>
+                  )}
+                  <div>
+                    <p className="font-semibold text-foreground">{item.title}</p>
+                    {item.description && <p className="mt-1 text-sm text-muted-foreground">{item.description}</p>}
+                  </div>
+                </div>
+              </Card>
+            ),
+          )}
         </div>
       </div>
     </section>
