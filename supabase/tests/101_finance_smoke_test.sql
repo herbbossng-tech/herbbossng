@@ -215,17 +215,24 @@ begin
   raise notice 'Zero-data states OK (no crash across all 7 RPCs)';
 end $$;
 
--- Order status value breakdown: always 11 rows, in lifecycle order, "Repeated Order" must never appear.
+-- Order status value breakdown: always 14 rows, in lifecycle order.
+-- 0043 (GCOS Order Status Lifecycle Remediation) is a deliberate,
+-- documented reversal of the prior assertion here: this test used to
+-- assert exactly 11 rows and that "Repeated Order" (status ilike
+-- '%repeat%') must NEVER appear, because at the time REPEATED_ORDER
+-- was not a real order.status value — only the unrelated, still-
+-- untouched customer-level is_repeat_customer boolean existed. 0043
+-- adds REPEATED_ORDER as a genuine 14th canonical order-level status
+-- per an explicit product decision (see that migration's header
+-- comment), so it now correctly appears here like any other status.
 do $$
 declare
-  v_ws1 uuid; v_brand1 uuid; v_count int; v_bad int;
+  v_ws1 uuid; v_brand1 uuid; v_count int;
 begin
   select id into v_ws1 from public.workspaces where slug = 'test-ng';
   select id into v_brand1 from public.brands where slug = 'test-brand-ng';
   select count(*) into v_count from public.get_order_status_value_breakdown(v_ws1, v_brand1, null, null);
-  assert v_count = 11, 'expected exactly 11 status rows, got ' || v_count;
-  select count(*) into v_bad from public.get_order_status_value_breakdown(v_ws1, v_brand1, null, null) where status ilike '%repeat%';
-  assert v_bad = 0, 'Repeated Order must never appear as a lifecycle status';
+  assert v_count = 14, 'expected exactly 14 status rows (0043 canonical lifecycle), got ' || v_count;
 
   perform 1 from public.get_order_status_value_breakdown(v_ws1, v_brand1, null, null) where status = 'DELIVERED' and order_count = 2 and order_value = 13500;
   if not found then raise exception 'DELIVERED status row mismatch'; end if;
