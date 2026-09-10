@@ -134,7 +134,7 @@ function ConnectDialog({
 }) {
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-md">
+      <DialogContent className={provider === 'google_sheets' ? 'max-h-[85vh] max-w-lg overflow-y-auto' : 'max-w-md'}>
         <DialogHeader>
           <DialogTitle>{existing ? `Edit ${externalConnectionProviderLabel[provider]} connection` : `Connect ${externalConnectionProviderLabel[provider]}`}</DialogTitle>
           <DialogDescription>Credentials are stored server-side and never displayed again once saved.</DialogDescription>
@@ -170,7 +170,7 @@ function ShopifyForm({ brandId, existing, onClose }: { brandId: string; existing
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-3 p-6 pt-2">
       <p className="text-xs text-muted-foreground">
         Create a custom app in your Shopify Admin (Settings → Apps and sales channels → Develop apps), grant it read access to Orders/Products,
         then paste its Admin API access token and API secret key below. After saving, add a webhook for the <code>orders/create</code> and{' '}
@@ -221,7 +221,7 @@ function WooCommerceForm({ brandId, existing, onClose }: { brandId: string; exis
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-3 p-6 pt-2">
       <p className="text-xs text-muted-foreground">
         Generate a REST API key pair in your WordPress admin (WooCommerce → Settings → Advanced → REST API) with Read permissions, then paste it
         below. The store URL must be a plain https:// address — GCOS refuses any URL pointing at a private/internal network address.
@@ -310,16 +310,19 @@ function GoogleSheetsForm({ brandId, existing, onClose }: { brandId: string; exi
   }
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between rounded-md border p-3">
-        <div className="flex items-center gap-2 text-sm">
-          {existing?.google_connected ? <CheckCircle2 className="h-4 w-4 text-success" /> : null}
-          {existing?.google_connected ? 'Signed in with Google' : 'Not signed in yet'}
+    <div className="flex flex-col gap-3 p-6 pt-2">
+      <div className="flex flex-col gap-2 rounded-md border p-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-sm">
+            {existing?.google_connected ? <CheckCircle2 className="h-4 w-4 text-success" /> : null}
+            {existing?.google_connected ? 'Signed in with Google' : 'Not signed in yet'}
+          </div>
+          <Button type="button" size="sm" variant="outline" onClick={connectGoogle} disabled={upsert.isPending}>
+            <ExternalLink className="h-3.5 w-3.5" />
+            {existing?.google_connected ? 'Re-authorize' : 'Sign in with Google'}
+          </Button>
         </div>
-        <Button type="button" size="sm" variant="outline" onClick={connectGoogle} disabled={upsert.isPending}>
-          <ExternalLink className="h-3.5 w-3.5" />
-          {existing?.google_connected ? 'Re-authorize' : 'Sign in with Google'}
-        </Button>
+        {error && <p className="text-xs text-destructive">{error}</p>}
       </div>
 
       <div className="flex flex-col gap-1.5">
