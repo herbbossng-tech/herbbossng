@@ -72,8 +72,12 @@ function CtaFields({
           <Field label="Button label">
             <Input value={label ?? ''} onChange={(e) => onChange({ ctaLabel: e.target.value })} placeholder="e.g. Order Now" />
           </Field>
-          <Field label="Scrolls to (optional section id, e.g. order-form)">
+          <Field label="Scrolls to (optional section id, e.g. order-form, packages)">
             <Input value={target ?? ''} onChange={(e) => onChange({ ctaTarget: e.target.value })} placeholder="order-form" />
+            <p className="text-xs text-muted-foreground">
+              Use <span className="font-mono">order-form</span> for the order form, or <span className="font-mono">packages</span> to bring the package
+              selector into view. Leave blank to use the page&apos;s default (packages, then the order form).
+            </p>
           </Field>
         </>
       )}
@@ -223,6 +227,7 @@ export function SectionConfigEditor({ landingPageId, type, config, onChange }: S
               </div>
             )}
           />
+          <CtaFields label={c.ctaLabel} target={c.ctaTarget} enabled={c.ctaEnabled} onChange={set} />
         </div>
       )
     }
@@ -263,6 +268,7 @@ export function SectionConfigEditor({ landingPageId, type, config, onChange }: S
               </div>
             )}
           />
+          <CtaFields label={c.ctaLabel} target={c.ctaTarget} enabled={c.ctaEnabled} onChange={set} />
         </div>
       )
     }
@@ -288,6 +294,7 @@ export function SectionConfigEditor({ landingPageId, type, config, onChange }: S
               </div>
             )}
           />
+          <CtaFields label={c.ctaLabel} target={c.ctaTarget} enabled={c.ctaEnabled} onChange={set} />
         </div>
       )
     }
@@ -310,6 +317,7 @@ export function SectionConfigEditor({ landingPageId, type, config, onChange }: S
               </div>
             )}
           />
+          <CtaFields label={c.ctaLabel} target={c.ctaTarget} enabled={c.ctaEnabled} onChange={set} />
         </div>
       )
     }
@@ -357,6 +365,7 @@ export function SectionConfigEditor({ landingPageId, type, config, onChange }: S
           <Field label="Body">
             <Textarea rows={4} value={c.body ?? ''} onChange={(e) => set({ body: e.target.value })} />
           </Field>
+          <CtaFields label={c.ctaLabel} target={c.ctaTarget} enabled={c.ctaEnabled} onChange={set} />
         </div>
       )
     }
@@ -379,6 +388,7 @@ export function SectionConfigEditor({ landingPageId, type, config, onChange }: S
               </div>
             )}
           />
+          <CtaFields label={c.ctaLabel} target={c.ctaTarget} enabled={c.ctaEnabled} onChange={set} />
         </div>
       )
     }
@@ -404,6 +414,7 @@ export function SectionConfigEditor({ landingPageId, type, config, onChange }: S
               </div>
             )}
           />
+          <CtaFields label={c.ctaLabel} target={c.ctaTarget} enabled={c.ctaEnabled} onChange={set} />
         </div>
       )
     }
@@ -417,6 +428,7 @@ export function SectionConfigEditor({ landingPageId, type, config, onChange }: S
           <Field label="Body">
             <Textarea rows={3} value={c.body ?? ''} onChange={(e) => set({ body: e.target.value })} />
           </Field>
+          <CtaFields label={c.ctaLabel} target={c.ctaTarget} enabled={c.ctaEnabled} onChange={set} />
         </div>
       )
     }

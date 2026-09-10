@@ -203,7 +203,7 @@ export function ImageTextSection({ config, onCtaClick }: { config: ImageTextConf
   )
 }
 
-export function BenefitsSection({ config }: { config: BenefitsConfig }) {
+export function BenefitsSection({ config, onCtaClick }: { config: BenefitsConfig; onCtaClick?: () => void }) {
   if (!config.items?.length) return null
   const isWarning = config.tone === 'warning'
   const isPhoto = config.layout === 'photo'
@@ -255,15 +255,25 @@ export function BenefitsSection({ config }: { config: BenefitsConfig }) {
             ),
           )}
         </div>
+        {config.ctaLabel && config.ctaEnabled !== false && (
+          <div className="mt-8 flex justify-center">
+            <SectionCta label={config.ctaLabel} target={config.ctaTarget} onCtaClick={onCtaClick} enabled={config.ctaEnabled} />
+          </div>
+        )}
       </div>
     </section>
   )
 }
 
-export function HowItWorksSection({ config }: { config: HowItWorksConfig }) {
+export function HowItWorksSection({ config, onCtaClick }: { config: HowItWorksConfig; onCtaClick?: () => void }) {
   if (!config.steps?.length) return null
   const hasStepEyebrows = config.steps.some((s) => s.eyebrow)
   const layout = config.layout ?? (hasStepEyebrows ? 'timeline' : 'numbered')
+  const cta = config.ctaLabel && config.ctaEnabled !== false ? (
+    <div className="mt-8 flex justify-center">
+      <SectionCta label={config.ctaLabel} target={config.ctaTarget} onCtaClick={onCtaClick} enabled={config.ctaEnabled} />
+    </div>
+  ) : null
 
   if (layout === 'cards') {
     return (
@@ -280,6 +290,7 @@ export function HowItWorksSection({ config }: { config: HowItWorksConfig }) {
               </Card>
             ))}
           </div>
+          {cta}
         </div>
       </section>
     )
@@ -306,12 +317,13 @@ export function HowItWorksSection({ config }: { config: HowItWorksConfig }) {
             </div>
           ))}
         </div>
+        {cta}
       </div>
     </section>
   )
 }
 
-export function TestimonialsSection({ config }: { config: TestimonialsConfig }) {
+export function TestimonialsSection({ config, onCtaClick }: { config: TestimonialsConfig; onCtaClick?: () => void }) {
   if (!config.items?.length) return null
   return (
     <section className={cn(SECTION_PADDING, 'bg-secondary/20')}>
@@ -343,12 +355,17 @@ export function TestimonialsSection({ config }: { config: TestimonialsConfig }) 
             </Card>
           ))}
         </div>
+        {config.ctaLabel && config.ctaEnabled !== false && (
+          <div className="mt-8 flex justify-center">
+            <SectionCta label={config.ctaLabel} target={config.ctaTarget} onCtaClick={onCtaClick} enabled={config.ctaEnabled} />
+          </div>
+        )}
       </div>
     </section>
   )
 }
 
-export function FaqSection({ config }: { config: FaqConfig }) {
+export function FaqSection({ config, onCtaClick }: { config: FaqConfig; onCtaClick?: () => void }) {
   const [openIndex, setOpenIndex] = React.useState<number | null>(0)
   if (!config.items?.length) return null
   return (
@@ -375,33 +392,43 @@ export function FaqSection({ config }: { config: FaqConfig }) {
             )
           })}
         </div>
+        {config.ctaLabel && config.ctaEnabled !== false && (
+          <div className="mt-8 flex justify-center">
+            <SectionCta label={config.ctaLabel} target={config.ctaTarget} onCtaClick={onCtaClick} enabled={config.ctaEnabled} />
+          </div>
+        )}
       </div>
     </section>
   )
 }
 
-export function ProblemAwarenessSection({ config }: { config: ProblemAwarenessConfig }) {
+export function ProblemAwarenessSection({ config, onCtaClick }: { config: ProblemAwarenessConfig; onCtaClick?: () => void }) {
   if (!config.headline && !config.body) return null
   return (
     <section className={cn(SECTION_PADDING, 'bg-secondary/20 text-center')}>
       <div className="mx-auto max-w-2xl">
         {config.headline && <h2 className="mb-3 text-2xl font-extrabold text-foreground sm:text-3xl">{config.headline}</h2>}
         {config.body && <p className="whitespace-pre-line text-muted-foreground">{config.body}</p>}
+        {config.ctaLabel && config.ctaEnabled !== false && (
+          <div className="mt-4 flex justify-center">
+            <SectionCta label={config.ctaLabel} target={config.ctaTarget} onCtaClick={onCtaClick} enabled={config.ctaEnabled} />
+          </div>
+        )}
       </div>
     </section>
   )
 }
 
-export function IngredientsSection({ config }: { config: IngredientsConfig }) {
+export function IngredientsSection({ config, onCtaClick }: { config: IngredientsConfig; onCtaClick?: () => void }) {
   if (!config.items?.length) return null
   return (
     <section className={SECTION_PADDING} style={darkSurfaceStyle()}>
-      <div className="mx-auto max-w-3xl">
+      <div className="mx-auto max-w-4xl">
         <Eyebrow tone="inverted">The Formula</Eyebrow>
         {config.headline && <h2 className="mb-8 text-center text-2xl font-extrabold sm:text-3xl">{config.headline}</h2>}
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+        <div className="flex flex-col gap-4 sm:flex-row sm:flex-nowrap sm:justify-center">
           {config.items.map((item, i) => (
-            <div key={i} className="flex flex-col items-center gap-2 rounded-xl border border-white/15 bg-white/5 p-4 text-center">
+            <div key={i} className="flex min-w-0 flex-1 basis-0 flex-col items-center gap-2 rounded-xl border border-white/15 bg-white/5 p-4 text-center">
               <span className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-white/40 font-serif text-sm italic">
                 {toRoman(i + 1)}
               </span>
@@ -410,6 +437,11 @@ export function IngredientsSection({ config }: { config: IngredientsConfig }) {
             </div>
           ))}
         </div>
+        {config.ctaLabel && config.ctaEnabled !== false && (
+          <div className="mt-8 flex justify-center">
+            <SectionCta label={config.ctaLabel} target={config.ctaTarget} onCtaClick={onCtaClick} variant="inverted" enabled={config.ctaEnabled} />
+          </div>
+        )}
       </div>
     </section>
   )
@@ -420,7 +452,7 @@ function toRoman(n: number): string {
   return numerals[n - 1] ?? String(n)
 }
 
-export function ComparisonSection({ config }: { config: ComparisonConfig }) {
+export function ComparisonSection({ config, onCtaClick }: { config: ComparisonConfig; onCtaClick?: () => void }) {
   if (!config.rows?.length) return null
   return (
     <section className={SECTION_PADDING}>
@@ -451,12 +483,17 @@ export function ComparisonSection({ config }: { config: ComparisonConfig }) {
             </ul>
           </Card>
         </div>
+        {config.ctaLabel && config.ctaEnabled !== false && (
+          <div className="mt-8 flex justify-center">
+            <SectionCta label={config.ctaLabel} target={config.ctaTarget} onCtaClick={onCtaClick} enabled={config.ctaEnabled} />
+          </div>
+        )}
       </div>
     </section>
   )
 }
 
-export function GuaranteeSection({ config }: { config: GuaranteeConfig }) {
+export function GuaranteeSection({ config, onCtaClick }: { config: GuaranteeConfig; onCtaClick?: () => void }) {
   if (!config.headline && !config.body) return null
   return (
     <section className={cn(SECTION_PADDING, 'text-center')} style={darkSurfaceStyle()}>
@@ -464,6 +501,9 @@ export function GuaranteeSection({ config }: { config: GuaranteeConfig }) {
         <ShieldCheck className="h-9 w-9" />
         {config.headline && <h2 className="text-xl font-extrabold sm:text-2xl">{config.headline}</h2>}
         {config.body && <p className="text-sm opacity-80">{config.body}</p>}
+        {config.ctaLabel && config.ctaEnabled !== false && (
+          <SectionCta label={config.ctaLabel} target={config.ctaTarget} onCtaClick={onCtaClick} variant="inverted" enabled={config.ctaEnabled} />
+        )}
       </div>
     </section>
   )

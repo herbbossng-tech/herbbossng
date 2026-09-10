@@ -220,13 +220,13 @@ function RenderSection({
     case 'IMAGE_TEXT':
       return <ImageTextSection config={config as unknown as ImageTextConfig} onCtaClick={onCtaClick} />
     case 'BENEFITS':
-      return <BenefitsSection config={config as unknown as BenefitsConfig} />
+      return <BenefitsSection config={config as unknown as BenefitsConfig} onCtaClick={onCtaClick} />
     case 'HOW_IT_WORKS':
-      return <HowItWorksSection config={config as unknown as HowItWorksConfig} />
+      return <HowItWorksSection config={config as unknown as HowItWorksConfig} onCtaClick={onCtaClick} />
     case 'TESTIMONIALS':
-      return <TestimonialsSection config={config as unknown as TestimonialsConfig} />
+      return <TestimonialsSection config={config as unknown as TestimonialsConfig} onCtaClick={onCtaClick} />
     case 'FAQ':
-      return <FaqSection config={config as unknown as FaqConfig} />
+      return <FaqSection config={config as unknown as FaqConfig} onCtaClick={onCtaClick} />
     case 'CTA_BANNER':
       return <CtaBannerSection config={config as unknown as CtaBannerConfig} onCtaClick={onCtaClick} />
     case 'PACKAGE_SELECTOR':
@@ -242,13 +242,13 @@ function RenderSection({
     case 'ORDER_FORM':
       return <>{renderOrderForm(config as unknown as OrderFormConfig)}</>
     case 'PROBLEM_AWARENESS':
-      return <ProblemAwarenessSection config={config as unknown as ProblemAwarenessConfig} />
+      return <ProblemAwarenessSection config={config as unknown as ProblemAwarenessConfig} onCtaClick={onCtaClick} />
     case 'INGREDIENTS':
-      return <IngredientsSection config={config as unknown as IngredientsConfig} />
+      return <IngredientsSection config={config as unknown as IngredientsConfig} onCtaClick={onCtaClick} />
     case 'COMPARISON':
-      return <ComparisonSection config={config as unknown as ComparisonConfig} />
+      return <ComparisonSection config={config as unknown as ComparisonConfig} onCtaClick={onCtaClick} />
     case 'GUARANTEE':
-      return <GuaranteeSection config={config as unknown as GuaranteeConfig} />
+      return <GuaranteeSection config={config as unknown as GuaranteeConfig} onCtaClick={onCtaClick} />
     default:
       return null
   }

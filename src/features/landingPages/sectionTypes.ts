@@ -59,6 +59,9 @@ export interface BenefitsConfig {
   tone?: 'positive' | 'warning'
   /** 'photo' renders each item as an image tile with a caption (a clear "add photo" placeholder when imageUrl is empty) instead of the icon+title+description card — for photo-grid sections like "still struggling with these issues?" galleries. */
   layout?: 'card' | 'photo'
+  ctaLabel?: string
+  ctaTarget?: string
+  ctaEnabled?: boolean
 }
 
 export interface HowItWorksStep {
@@ -78,6 +81,9 @@ export interface HowItWorksConfig {
    * 'cards': a side-by-side card grid with an italic Roman-numeral mark per card and a colored top border — for a "how to use it" style ritual/instructions block.
    */
   layout?: 'numbered' | 'timeline' | 'cards'
+  ctaLabel?: string
+  ctaTarget?: string
+  ctaEnabled?: boolean
 }
 
 export interface Testimonial {
@@ -91,6 +97,9 @@ export interface Testimonial {
 export interface TestimonialsConfig {
   title?: string
   items: Testimonial[]
+  ctaLabel?: string
+  ctaTarget?: string
+  ctaEnabled?: boolean
 }
 
 export interface FaqItem {
@@ -100,6 +109,9 @@ export interface FaqItem {
 export interface FaqConfig {
   title?: string
   items: FaqItem[]
+  ctaLabel?: string
+  ctaTarget?: string
+  ctaEnabled?: boolean
 }
 
 export interface CtaBannerConfig {
@@ -122,6 +134,9 @@ export interface OrderFormConfig {
 export interface ProblemAwarenessConfig {
   headline: string
   body: string
+  ctaLabel?: string
+  ctaTarget?: string
+  ctaEnabled?: boolean
 }
 
 export interface IngredientItem {
@@ -131,6 +146,9 @@ export interface IngredientItem {
 export interface IngredientsConfig {
   headline?: string
   items: IngredientItem[]
+  ctaLabel?: string
+  ctaTarget?: string
+  ctaEnabled?: boolean
 }
 
 export interface ComparisonRow {
@@ -141,11 +159,17 @@ export interface ComparisonRow {
 export interface ComparisonConfig {
   headline?: string
   rows: ComparisonRow[]
+  ctaLabel?: string
+  ctaTarget?: string
+  ctaEnabled?: boolean
 }
 
 export interface GuaranteeConfig {
   headline: string
   body: string
+  ctaLabel?: string
+  ctaTarget?: string
+  ctaEnabled?: boolean
 }
 
 export const sectionTypeLabels: Record<LandingPageSectionType, string> = {

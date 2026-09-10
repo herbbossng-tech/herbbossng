@@ -4,10 +4,16 @@
  * package selector first, then the order form — a CTA should land the
  * visitor on "choose your package" as the natural next step, not skip
  * straight past it into the order form.
+ *
+ * The package selector (id "packages") is centered in the viewport rather
+ * than pinned to the top — landing on it top-aligned can crop its heading
+ * under a sticky header/CTA and reads as jarring; centering keeps it in
+ * context with what's above and below.
  */
 export function scrollToOrderArea(anchorId?: string) {
   const el = (anchorId ? document.getElementById(anchorId) : null) ?? document.getElementById('packages') ?? document.getElementById('order-form')
-  el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  if (!el) return
+  el.scrollIntoView({ behavior: 'smooth', block: el.id === 'packages' ? 'center' : 'start' })
 }
 
 export function getSessionId(): string {
