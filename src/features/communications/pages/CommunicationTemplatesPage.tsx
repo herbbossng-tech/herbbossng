@@ -96,9 +96,13 @@ function CommunicationTemplatesContent() {
                       <td className="px-5 py-3 text-right">
                         <PermissionGate permission="communications.templates.manage">
                           <div className="flex justify-end gap-2">
-                            {t.workspace_id === activeWorkspace.id && (
+                            {t.workspace_id === activeWorkspace.id ? (
                               <Button size="sm" variant="outline" onClick={() => setEditing(t)}>
                                 Edit
+                              </Button>
+                            ) : (
+                              <Button size="sm" variant="outline" onClick={() => setEditing(t)}>
+                                Customize
                               </Button>
                             )}
                             {t.workspace_id && (
@@ -134,6 +138,7 @@ function TemplateEditorDialog({
 }) {
   const { activeWorkspace, activeBrand } = useWorkspace()
   const upsert = useUpsertCommunicationTemplate()
+  const isOverride = template !== null && template.workspace_id !== activeWorkspace.id
 
   const [key, setKey] = React.useState('')
   const [name, setName] = React.useState('')
@@ -186,9 +191,15 @@ function TemplateEditorDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{template ? 'Edit Template' : 'New Template'}</DialogTitle>
+          <DialogTitle>{!template ? 'New Template' : isOverride ? 'Customize Template' : 'Edit Template'}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4 p-6 pt-2">
+          {isOverride && (
+            <p className="rounded-md border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+              This creates your own copy of this template, scoped to {activeBrand && brandScoped ? activeBrand.name : activeWorkspace.name}. The
+              system default is never changed and stays available as a fallback if you later disable your copy.
+            </p>
+          )}
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
               <Label>Key</Label>
