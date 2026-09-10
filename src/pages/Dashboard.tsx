@@ -63,12 +63,9 @@ export function Dashboard() {
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-success" />
             LIVE OPERATIONS ACTIVE
           </div>
-          <h1 className="text-3xl font-extrabold tracking-tight">
-            Golden <span className="text-primary">COD</span> Operations Dashboard
-          </h1>
+          <h1 className="text-3xl font-extrabold tracking-tight">{activeWorkspace.name} Operations Dashboard</h1>
           <p className="mt-1 max-w-xl text-sm text-muted-foreground">
-            Store-wide revenue, orders, fulfillment and cash position for{' '}
-            <span className="font-semibold text-foreground">{activeWorkspace.name}</span> in the selected period.
+            Store-wide revenue, orders, fulfillment and cash position in the selected period.
           </p>
         </div>
         <div className="flex shrink-0 flex-col items-start gap-3 lg:items-end">
