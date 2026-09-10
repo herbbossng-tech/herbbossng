@@ -71,8 +71,7 @@ export function LandingPagePreviewPage() {
         </Button>
       </div>
 
-      {/* Reserves space below the sticky "Preview Mode" banner above so a sticky ticker section doesn't stack on top of it at the same top offset. */}
-      <div className="text-foreground" style={{ '--lp-sticky-top': '44px' } as React.CSSProperties}>
+      <div className="text-foreground">
         {orderedSections.map((section) => {
           const config = section.config as Record<string, unknown>
           const wrapperClass = section.enabled ? undefined : 'opacity-40'
