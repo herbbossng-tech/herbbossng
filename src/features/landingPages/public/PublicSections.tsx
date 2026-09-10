@@ -137,12 +137,15 @@ export function TrustStripSection({ config }: { config: TrustStripConfig }) {
     )
   }
 
+  // A floating, shadowed card pulled up over whatever precedes it (typically
+  // a dark Hero) via the negative top margin — the "trust badges peeking up
+  // over the hero seam" look, rather than a plain full-width bordered bar.
   return (
-    <section className="border-y border-border bg-secondary/30 px-5 py-4">
-      <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm font-medium text-foreground">
+    <section className="relative z-10 -mt-6 px-5 pb-6 sm:-mt-8 sm:px-8 sm:pb-8">
+      <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-center gap-x-6 gap-y-3 rounded-2xl bg-card px-6 py-4 text-sm font-medium text-foreground shadow-xl sm:gap-x-10">
         {config.items.map((item, i) => (
-          <span key={i} className="flex items-center gap-1.5">
-            {item.icon ? <span>{item.icon}</span> : <Check className="h-3.5 w-3.5 text-primary" />}
+          <span key={i} className="flex items-center gap-2">
+            {item.icon ? <span className="text-base leading-none">{item.icon}</span> : <Check className="h-4 w-4 text-primary" />}
             {item.text}
           </span>
         ))}

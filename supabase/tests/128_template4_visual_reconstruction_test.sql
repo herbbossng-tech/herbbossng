@@ -302,4 +302,20 @@ begin
   raise notice 'OK 13: Template 4''s scrolling ticker is the first section, with no sections lost or duplicated.';
 end $$;
 
+\echo '=== 14. Template 4''s default (non-ticker) trust strip has a matching icon on every item ==='
+do $$
+declare v_sections jsonb; v_default_strip jsonb; v_total int; v_missing_icon int;
+begin
+  select starter_sections into v_sections from public.landing_page_templates where template_key = 'template_4';
+  select s->'config' into v_default_strip from jsonb_array_elements(v_sections) s
+    where s->>'type' = 'TRUST_STRIP' and coalesce(s->'config'->>'style', 'default') <> 'ticker' limit 1;
+  assert v_default_strip is not null, 'expected a non-ticker TRUST_STRIP section in Template 4';
+
+  select count(*) into v_total from jsonb_array_elements(v_default_strip->'items');
+  select count(*) into v_missing_icon from jsonb_array_elements(v_default_strip->'items') item where item->>'icon' is null;
+  assert v_total = 4, format('expected the default trust strip to still have 4 items, got %s', v_total);
+  assert v_missing_icon = 0, format('expected every default trust-strip item to have an icon, %s of %s are missing one', v_missing_icon, v_total);
+  raise notice 'OK 14: Template 4''s default trust strip has an icon on every item.';
+end $$;
+
 \echo '=== ALL TEMPLATE 4 VISUAL RECONSTRUCTION TESTS PASSED ==='
