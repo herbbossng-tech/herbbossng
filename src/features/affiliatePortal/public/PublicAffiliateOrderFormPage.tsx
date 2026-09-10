@@ -15,8 +15,9 @@ import { getMarketConfig, validateMarketPhone } from '@/lib/validation/market'
 import { cn } from '@/lib/utils'
 import type { LandingPageFormConfig } from '@/types/database'
 
+import { Checkbox } from '@/components/ui/checkbox'
 import { getProductImageUrl, submitPublicAffiliateOrder } from '../api'
-import { usePublicAffiliateOrderForm } from '../hooks'
+import { usePublicAffiliateOrderForm, useRecordPublicOrderFormView } from '../hooks'
 
 const schema = z.object({
   fullName: z.string().min(2, 'Enter your full name'),
@@ -51,11 +52,14 @@ export function PublicAffiliateOrderFormPage() {
   const containerRef = useEmbedAutoResize(embed)
 
   const { data: form, isLoading, isError } = usePublicAffiliateOrderForm(formId)
+  const recordView = useRecordPublicOrderFormView()
   const [selectedPackageId, setSelectedPackageId] = React.useState<string | null>(null)
+  const [selectedAddonIds, setSelectedAddonIds] = React.useState<string[]>([])
   const [submitError, setSubmitError] = React.useState<string | null>(null)
   const [submitting, setSubmitting] = React.useState(false)
   const [orderNumber, setOrderNumber] = React.useState<string | null>(null)
   const submissionToken = React.useRef(crypto.randomUUID())
+  const viewRecorded = React.useRef(false)
 
   const market = React.useMemo(() => getMarketConfig(form?.workspace_country_code), [form?.workspace_country_code])
   const formConfig = (form?.form_config ?? {}) as LandingPageFormConfig
@@ -66,6 +70,14 @@ export function PublicAffiliateOrderFormPage() {
       if (defaultPkg) setSelectedPackageId(defaultPkg.id)
     }
   }, [form, selectedPackageId])
+
+  React.useEffect(() => {
+    if (form && !viewRecorded.current) {
+      viewRecorded.current = true
+      recordView.mutate(form.id)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form])
 
   const {
     register,
@@ -100,6 +112,7 @@ export function PublicAffiliateOrderFormPage() {
         landmark: values.landmark || undefined,
         customerNotes: values.notes || undefined,
         submissionToken: submissionToken.current,
+        addonIds: selectedAddonIds,
       })
       setOrderNumber((order as { order_number: string }).order_number)
     } catch {
@@ -136,7 +149,13 @@ export function PublicAffiliateOrderFormPage() {
   }
 
   const selectedPackage = form.packages.find((p) => p.id === selectedPackageId) ?? null
+  const addonsTotal = form.addons.filter((a) => selectedAddonIds.includes(a.id)).reduce((sum, a) => sum + a.price, 0)
+  const orderTotal = (selectedPackage?.price ?? 0) + addonsTotal
   const inputClass = 'bg-secondary/30 border-transparent focus-visible:border-primary focus-visible:bg-background'
+
+  function toggleAddon(addonId: string, checked: boolean) {
+    setSelectedAddonIds((prev) => (checked ? [...prev, addonId] : prev.filter((id) => id !== addonId)))
+  }
 
   return (
     <div ref={containerRef} className="mx-auto max-w-md px-4 py-6 sm:px-6">
@@ -154,10 +173,15 @@ export function PublicAffiliateOrderFormPage() {
             type="button"
             onClick={() => setSelectedPackageId(pkg.id)}
             className={cn(
-              'flex items-center justify-between rounded-xl border-2 px-4 py-3 text-left transition-colors',
+              'relative flex items-center justify-between rounded-xl border-2 px-4 py-3 text-left transition-colors',
               selectedPackageId === pkg.id ? 'border-primary bg-primary/5' : 'border-border',
             )}
           >
+            {pkg.badge && (
+              <span className="absolute -top-2 left-3 rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary-foreground">
+                {pkg.badge}
+              </span>
+            )}
             <span className="text-sm font-semibold text-foreground">{pkg.name}</span>
             <span className="flex items-baseline gap-2">
               {pkg.compare_at_price && pkg.compare_at_price > pkg.price && (
@@ -168,6 +192,24 @@ export function PublicAffiliateOrderFormPage() {
           </button>
         ))}
       </div>
+
+      {form.addons.length > 0 && (
+        <div className="mb-5 flex flex-col gap-2 rounded-xl border border-border p-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Add-ons</p>
+          {form.addons.map((addon) => (
+            <label key={addon.id} className="flex cursor-pointer items-center justify-between gap-2 py-1">
+              <span className="flex items-center gap-2 text-sm text-foreground">
+                <Checkbox
+                  checked={selectedAddonIds.includes(addon.id)}
+                  onCheckedChange={(checked) => toggleAddon(addon.id, checked === true)}
+                />
+                {addon.name}
+              </span>
+              <span className="text-sm font-medium text-foreground">+{formatCurrency(addon.price, form.workspace_currency_code)}</span>
+            </label>
+          ))}
+        </div>
+      )}
 
       <Card className="rounded-2xl p-5 shadow-sm">
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
@@ -219,7 +261,7 @@ export function PublicAffiliateOrderFormPage() {
           {submitError && <p className="text-xs text-destructive">{submitError}</p>}
 
           <Button type="submit" size="lg" disabled={submitting} className="w-full">
-            {submitting ? 'Placing order…' : `Order Now${selectedPackage ? ` — ${formatCurrency(selectedPackage.price, form.workspace_currency_code)}` : ''}`}
+            {submitting ? 'Placing order…' : `Order Now${selectedPackage ? ` — ${formatCurrency(orderTotal, form.workspace_currency_code)}` : ''}`}
           </Button>
         </form>
       </Card>

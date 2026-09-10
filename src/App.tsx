@@ -45,6 +45,15 @@ const AffiliateDashboardPage = React.lazy(() =>
 const AffiliateOrderFormsPage = React.lazy(() =>
   import('@/features/affiliatePortal/pages/AffiliateOrderFormsPage').then((m) => ({ default: m.AffiliateOrderFormsPage })),
 )
+const AffiliateCampaignsPage = React.lazy(() =>
+  import('@/features/affiliatePortal/pages/AffiliateCampaignsPage').then((m) => ({ default: m.AffiliateCampaignsPage })),
+)
+const AffiliateCampaignDetailPage = React.lazy(() =>
+  import('@/features/affiliatePortal/pages/AffiliateCampaignDetailPage').then((m) => ({ default: m.AffiliateCampaignDetailPage })),
+)
+const AffiliateMyOrdersPage = React.lazy(() =>
+  import('@/features/affiliatePortal/pages/AffiliateMyOrdersPage').then((m) => ({ default: m.AffiliateMyOrdersPage })),
+)
 
 const ProductsLayout = React.lazy(() => import('@/features/products/ProductsLayout').then((m) => ({ default: m.ProductsLayout })))
 const ProductsListPage = React.lazy(() => import('@/features/products/pages/ProductsListPage').then((m) => ({ default: m.ProductsListPage })))
@@ -181,7 +190,10 @@ function App() {
           <Route path="/affiliate/reset-password" element={<AffiliateResetPasswordPage />} />
           <Route element={<AffiliatePortalLayout />}>
             <Route path="/affiliate" element={<AffiliateDashboardPage />} />
+            <Route path="/affiliate/campaigns" element={<AffiliateCampaignsPage />} />
+            <Route path="/affiliate/campaigns/:campaignId" element={<AffiliateCampaignDetailPage />} />
             <Route path="/affiliate/order-forms" element={<AffiliateOrderFormsPage />} />
+            <Route path="/affiliate/orders" element={<AffiliateMyOrdersPage />} />
           </Route>
         </Route>
 

@@ -1002,6 +1002,7 @@ export interface AffiliateCampaign {
   qualifying_event: QualifyingEvent
   affiliate_access: AffiliateAccess
   allowed_activities: string[]
+  instructions: string | null
   start_at: string | null
   end_at: string | null
   created_at: string
@@ -1052,10 +1053,20 @@ export interface AffiliateOrderFormPackage {
   price: number
   compare_at_price: number | null
   shipping_rule: Json
+  badge: string | null
   position: number
   is_default: boolean
   created_at: string
   updated_at: string
+}
+
+export interface AffiliateOrderFormAddon {
+  id: string
+  order_form_id: string
+  name: string
+  price: number
+  position: number
+  created_at: string
 }
 
 export interface PublicAffiliateOrderForm {
@@ -1077,15 +1088,66 @@ export interface PublicAffiliateOrderForm {
     price: number
     compare_at_price: number | null
     is_default: boolean
+    badge: string | null
+  }>
+  addons: Array<{
+    id: string
+    name: string
+    price: number
   }>
 }
 
+export interface AffiliateOrderFormWithStats {
+  id: string
+  internal_title: string
+  status: 'ACTIVE' | 'ARCHIVED'
+  product_id: string
+  campaign_id: string
+  created_at: string
+  orders_count: number
+  views_count: number
+  conversion_rate: number
+}
+
+export interface AffiliateOrderSummary {
+  order_number: string
+  status: string
+  total_amount: number
+  currency_code: string
+  created_at: string
+  source_detail: string | null
+  total_count: number
+}
+
+export interface AffiliateOrderFormSubmission {
+  order_number: string
+  status: string
+  total_amount: number
+  currency_code: string
+  created_at: string
+  total_count: number
+}
+
 export interface AffiliateDashboard {
+  period_from: string
+  period_to: string
   total_orders: number
+  delivered_orders: number
   total_revenue: number
+  conversion_rate: number
+  prior_conversion_rate: number
+  best_day: string | null
+  best_day_revenue: number
+  avg_per_day: number
+  refund_rate: number
+  commission_earned: number
+  daily_revenue: Array<{ date: string; revenue: number }>
+  top_products: Array<{ product_name: string; orders: number; revenue: number }>
   wallet_balance: number
   wallet_reserved_balance: number
   wallet_currency_code: string | null
+  delivered_revenue: number
+  pending_orders: number
   recent_orders: Array<{
     order_number: string
     status: string

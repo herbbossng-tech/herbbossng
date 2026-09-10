@@ -1,4 +1,4 @@
-import { LayoutDashboard, Loader2, LogOut, SquareStack } from 'lucide-react'
+import { LayoutDashboard, Loader2, LogOut, Megaphone, Package, SquareStack } from 'lucide-react'
 import { NavLink, Outlet } from 'react-router-dom'
 
 import { Button } from '@/components/ui/button'
@@ -7,7 +7,9 @@ import { cn } from '@/lib/utils'
 
 const NAV_ITEMS = [
   { to: '/affiliate', label: 'Dashboard', icon: LayoutDashboard, end: true },
-  { to: '/affiliate/order-forms', label: 'Order Forms', icon: SquareStack, end: false },
+  { to: '/affiliate/campaigns', label: 'Campaigns', icon: Megaphone, end: false },
+  { to: '/affiliate/order-forms', label: 'My Forms', icon: SquareStack, end: false },
+  { to: '/affiliate/orders', label: 'My Orders', icon: Package, end: false },
 ]
 
 export function AffiliatePortalLayout() {
@@ -54,7 +56,7 @@ export function AffiliatePortalLayout() {
       </nav>
 
       <main className="flex-1 p-4 sm:p-6">
-        <div className="mx-auto w-full max-w-4xl">
+        <div className="mx-auto w-full max-w-6xl">
           <Outlet />
         </div>
       </main>
