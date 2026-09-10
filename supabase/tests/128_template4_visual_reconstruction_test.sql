@@ -283,4 +283,23 @@ begin
   raise notice 'OK 12: Template 4''s ritual section correctly uses layout=cards with eyebrow/title set, and the timeline section is untouched.';
 end $$;
 
+\echo '=== 13. Template 4''s scrolling ticker (TRUST_STRIP style=ticker) leads the section list ==='
+do $$
+declare v_sections jsonb; v_first jsonb; v_total int; v_ticker_count int;
+begin
+  select starter_sections into v_sections from public.landing_page_templates where template_key = 'template_4';
+  select jsonb_array_length(v_sections) into v_total;
+
+  select s into v_first from jsonb_array_elements(v_sections) with ordinality as t(s, ord) where ord = 1;
+  assert v_first->>'type' = 'TRUST_STRIP' and v_first->'config'->>'style' = 'ticker',
+    format('expected the ticker TRUST_STRIP to be the first section, got type=%s style=%s', v_first->>'type', v_first->'config'->>'style');
+
+  -- Reordering must not drop or duplicate anything else in the list.
+  assert v_total = 19, format('expected Template 4 to still have all 19 sections after reordering, got %s', v_total);
+  select count(*) into v_ticker_count from jsonb_array_elements(v_sections) s
+    where s->>'type' = 'TRUST_STRIP' and s->'config'->>'style' = 'ticker';
+  assert v_ticker_count = 1, format('expected exactly 1 ticker TRUST_STRIP section, got %s', v_ticker_count);
+  raise notice 'OK 13: Template 4''s scrolling ticker is the first section, with no sections lost or duplicated.';
+end $$;
+
 \echo '=== ALL TEMPLATE 4 VISUAL RECONSTRUCTION TESTS PASSED ==='

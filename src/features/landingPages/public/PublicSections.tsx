@@ -116,10 +116,14 @@ export function HeroSection({ config, onCtaClick }: { config: HeroConfig; onCtaC
 export function TrustStripSection({ config }: { config: TrustStripConfig }) {
   if (!config.items?.length) return null
 
+  /** Pinned to the top of the viewport for the rest of the scroll (not just where it sits in section order) — `--lp-sticky-top` lets an ancestor (e.g. the admin preview's own sticky banner) reserve space above it instead of the two overlapping. */
   if (config.style === 'ticker') {
     const loop = [...config.items, ...config.items]
     return (
-      <div className="overflow-hidden border-y border-border bg-secondary/40 py-2.5">
+      <div
+        className="sticky z-40 overflow-hidden border-y border-border bg-secondary/40 py-2.5"
+        style={{ top: 'var(--lp-sticky-top, 0px)' } as React.CSSProperties}
+      >
         <div className="animate-lp-ticker flex w-max items-center gap-8 whitespace-nowrap text-xs font-bold uppercase tracking-widest text-muted-foreground">
           {loop.map((item, i) => (
             <span key={i} className="flex items-center gap-2">

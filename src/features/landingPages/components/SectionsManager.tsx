@@ -20,6 +20,21 @@ import {
 import { sectionTypeLabels, singletonSectionTypes } from '@/features/landingPages/sectionTypes'
 import type { LandingPageSection, LandingPageSectionType } from '@/types/database'
 
+/**
+ * TRUST_STRIP has two very different-looking renders (a static row of
+ * checkmarks vs. a continuously-scrolling ticker), picked by config.style —
+ * but both showed the same "Trust Strip" badge here, so a page with one of
+ * each was impossible to tell apart in this list without opening each one.
+ * Give the ticker variant its own label; everything else still falls back
+ * to the plain type label.
+ */
+function sectionLabel(section: Pick<LandingPageSection, 'type' | 'config'>): string {
+  if (section.type === 'TRUST_STRIP' && (section.config as { style?: string } | null)?.style === 'ticker') {
+    return 'Scrolling Ticker'
+  }
+  return sectionTypeLabels[section.type]
+}
+
 export function SectionsManager({ landingPageId }: { landingPageId: string }) {
   const { data: sections, isLoading } = useLandingPageSections(landingPageId)
   const createSection = useCreateSection(landingPageId)
@@ -113,7 +128,7 @@ export function SectionsManager({ landingPageId }: { landingPageId: string }) {
                 </Button>
               </div>
               <Badge variant="secondary" className="shrink-0">
-                {sectionTypeLabels[section.type]}
+                {sectionLabel(section)}
               </Badge>
               <div className="flex-1" />
               <Switch checked={section.enabled} onCheckedChange={(checked) => updateSection.mutate({ id: section.id, enabled: checked })} />
@@ -134,7 +149,7 @@ export function SectionsManager({ landingPageId }: { landingPageId: string }) {
       <Dialog open={!!editingSection} onOpenChange={(open) => !open && setEditingSection(null)}>
         <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Edit {editingSection && sectionTypeLabels[editingSection.type]}</DialogTitle>
+            <DialogTitle>Edit {editingSection && sectionLabel(editingSection)}</DialogTitle>
           </DialogHeader>
           <div className="px-6 pb-6">
             {editingSection && (
