@@ -75,14 +75,15 @@ function TemplateGalleryContent() {
           {template.description && <p className="text-sm text-muted-foreground">{template.description}</p>}
           <p className="text-xs text-muted-foreground">{template.starter_sections.length} sections</p>
         </CardHeader>
-        <CardFooter className="flex gap-2">
-          <Button size="sm" className="flex-1" asChild>
+        <CardFooter className="flex flex-col gap-2">
+          <Button size="sm" className="w-full" asChild>
             <Link to={`/landing-pages/new?template=${template.id}`}>Use This Template</Link>
           </Button>
           <PermissionGate permission="landing_pages.templates.manage">
             <Button
               size="sm"
               variant="outline"
+              className="w-full"
               onClick={() => {
                 setCloneTarget(template)
                 setCloneName(`My ${template.name}`)
