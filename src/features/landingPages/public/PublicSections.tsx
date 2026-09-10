@@ -1,4 +1,4 @@
-import { Check, ChevronDown, Image as ImageIcon, ShieldCheck, Star, Truck, X } from 'lucide-react'
+import { Check, ChevronDown, Image as ImageIcon, ShieldCheck, Star, X } from 'lucide-react'
 import * as React from 'react'
 
 import { Badge } from '@/components/ui/badge'
@@ -541,28 +541,16 @@ export function CtaBannerSection({ config, onCtaClick }: { config: CtaBannerConf
   )
 }
 
-/**
- * Closing band for the public page/thank-you page — uses only the page's
- * own name/description (already fetched) plus the one fact true of every
- * order this platform has ever placed (cash on delivery, no online
- * payment step exists anywhere in create_public_order()) — nothing
- * per-brand is fabricated, so every landing page gets a real, complete-
- * looking footer with zero extra config.
- */
+/** Closing band for the public page/thank-you page — uses only the page's own name/description (already fetched, nothing fabricated) so every landing page gets a real footer with zero extra config. */
 export function PublicFooter({ pageName, tagline }: { pageName: string; tagline?: string | null }) {
   return (
-    <footer className="px-5 py-10 text-center sm:px-8" style={darkSurfaceStyle()}>
+    <footer className="px-5 py-8 text-center sm:px-8" style={darkSurfaceStyle()}>
       <div className="mx-auto flex max-w-md flex-col items-center gap-1">
         <p className="text-base font-extrabold">{pageName}</p>
         {tagline && <p className="text-sm opacity-70">{tagline}</p>}
       </div>
-      <div className="mx-auto my-5 h-px w-16 bg-white/25" />
-      <div className="flex items-center justify-center gap-1.5 text-xs font-bold uppercase tracking-wide opacity-80">
-        <Truck className="h-3.5 w-3.5" />
-        Cash on Delivery
-      </div>
-      <p className="mx-auto mt-1 max-w-xs text-xs opacity-60">Pay only when your order arrives — no payment taken online.</p>
-      <p className="mt-4 text-xs opacity-60">© {new Date().getFullYear()} {pageName}. All rights reserved.</p>
+      <div className="mx-auto my-4 h-px w-16 bg-white/25" />
+      <p className="text-xs opacity-60">© {new Date().getFullYear()} {pageName}. All rights reserved.</p>
     </footer>
   )
 }
