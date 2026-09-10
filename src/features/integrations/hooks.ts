@@ -3,15 +3,23 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useWorkspace } from '@/contexts/WorkspaceContext'
 
 import {
+  disconnectExternalConnection,
   fetchCommunicationConfigStatus,
   fetchCommunicationLog,
   fetchCommunicationLogByActionIds,
+  fetchExternalConnections,
+  fetchExternalIngestionHealth,
+  fetchExternalIngestionLog,
   fetchQueueHealth,
   fetchTrackingDispatchEvents,
   retryCommunicationLogEntry,
+  retryExternalOrderIngestion,
   retryTrackingDispatchEvent,
   setBrandCommunicationConfig,
+  upsertExternalConnection,
+  upsertExternalProductMapping,
   type SetBrandCommunicationConfigInput,
+  type UpsertExternalConnectionInput,
 } from './api'
 
 /** See fetchCommunicationLogByActionIds — only render this for a caller who holds communications.view or integrations.view, otherwise RLS returns an empty (not honest-looking) list. */
@@ -82,5 +90,65 @@ export function useSetBrandCommunicationConfig(brandId: string) {
   return useMutation({
     mutationFn: (input: SetBrandCommunicationConfigInput) => setBrandCommunicationConfig(brandId, input),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['communication-config-status', brandId] }),
+  })
+}
+
+export function useExternalConnections(brandId: string | undefined) {
+  return useQuery({
+    queryKey: ['external-connections', brandId ?? ''],
+    queryFn: () => fetchExternalConnections(brandId as string),
+    enabled: Boolean(brandId),
+  })
+}
+
+export function useUpsertExternalConnection(brandId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: UpsertExternalConnectionInput) => upsertExternalConnection(brandId, input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['external-connections', brandId] }),
+  })
+}
+
+export function useDisconnectExternalConnection(brandId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: disconnectExternalConnection,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['external-connections', brandId] }),
+  })
+}
+
+export function useExternalIngestionHealth() {
+  const { activeWorkspace } = useWorkspace()
+  return useQuery({
+    queryKey: ['external-ingestion-health', activeWorkspace.id],
+    queryFn: () => fetchExternalIngestionHealth(activeWorkspace.id),
+    enabled: Boolean(activeWorkspace.id),
+    refetchInterval: 30_000,
+  })
+}
+
+export function useExternalIngestionLog(status?: string | null) {
+  const { activeWorkspace } = useWorkspace()
+  return useQuery({
+    queryKey: ['external-ingestion-log', activeWorkspace.id, status ?? 'all'],
+    queryFn: () => fetchExternalIngestionLog(activeWorkspace.id, status, 100),
+    enabled: Boolean(activeWorkspace.id),
+    refetchInterval: 30_000,
+  })
+}
+
+export function useRetryExternalOrderIngestion() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: retryExternalOrderIngestion,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['external-ingestion-log'] }),
+  })
+}
+
+export function useUpsertExternalProductMapping() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: upsertExternalProductMapping,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['external-ingestion-log'] }),
   })
 }

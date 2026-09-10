@@ -14,6 +14,7 @@ import { BrandLogoUploader } from '@/features/brands/components/BrandLogoUploade
 import { useBrand, useSetBrandMetaTracking, useSetBrandStatus, useSetBrandTiktokTracking, useUpdateBrand } from '@/features/brands/hooks'
 import type { BrandFormFields } from '@/features/brands/api'
 import { CommunicationConfigCard } from '@/features/integrations/components/CommunicationConfigCard'
+import { ExternalConnectionsCard } from '@/features/integrations/components/ExternalConnectionsCard'
 
 export function BrandDetailPage() {
   const canView = usePermission('brands.view')
@@ -261,6 +262,8 @@ function BrandDetailContent() {
       )}
 
       <CommunicationConfigCard brandId={brand.id} />
+
+      <ExternalConnectionsCard brandId={brand.id} />
 
       {canManage && (
         <div className="flex items-center gap-3">

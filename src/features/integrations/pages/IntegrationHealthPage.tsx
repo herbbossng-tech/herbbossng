@@ -1,23 +1,31 @@
 import { AlertTriangle, CheckCircle2, Clock, Lock, RefreshCcw, Send } from 'lucide-react'
+import * as React from 'react'
 import { Link } from 'react-router-dom'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/state'
 import { usePermission } from '@/contexts/PermissionsContext'
 import { useWorkspace } from '@/contexts/WorkspaceContext'
 import { fetchFailedAutomationExecutions } from '@/features/automation/api'
-import { summarizeByStatus, type QueueHealthRow } from '@/features/integrations/api'
+import { externalConnectionProviderLabel, summarizeByStatus, type QueueHealthRow } from '@/features/integrations/api'
 import {
   useCommunicationLog,
+  useExternalIngestionHealth,
+  useExternalIngestionLog,
   useQueueHealth,
   useRetryCommunicationLogEntry,
+  useRetryExternalOrderIngestion,
   useRetryTrackingDispatchEvent,
   useTrackingDispatchEvents,
+  useUpsertExternalProductMapping,
 } from '@/features/integrations/hooks'
+import { fetchProducts } from '@/features/products/api'
 import { useRealtimeInvalidate } from '@/hooks/useRealtimeInvalidate'
-import type { CommunicationLog, TrackingDispatchLog } from '@/types/database'
+import type { CommunicationLog, ExternalOrderIngestionLog, TrackingDispatchLog } from '@/types/database'
 import { useQuery } from '@tanstack/react-query'
 
 function StatTile({ label, value, tone }: { label: string; value: number; tone?: 'default' | 'warning' | 'destructive' | 'success' }) {
@@ -199,6 +207,192 @@ function ChannelCard({
   )
 }
 
+function OrderSourcesHealthCard() {
+  const { data: health } = useExternalIngestionHealth()
+  if (!health) return null
+  const failing = health.failed + health.permanently_failed
+  const overallHealth: 'healthy' | 'degraded' | 'failing' =
+    failing > 0 ? 'failing' : health.needs_review > 0 ? 'degraded' : 'healthy'
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-base">Order Sources (Shopify / WooCommerce / Google Sheets)</CardTitle>
+          <Badge variant={healthBadgeVariant[overallHealth]}>{healthLabel[overallHealth]}</Badge>
+        </div>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3">
+        <div className="grid grid-cols-4 gap-2">
+          <StatTile label="Needs Review" value={health.needs_review} tone={health.needs_review > 0 ? 'warning' : undefined} />
+          <StatTile label="Failed" value={health.failed} tone={health.failed > 0 ? 'warning' : undefined} />
+          <StatTile label="Permanently failed" value={health.permanently_failed} tone={health.permanently_failed > 0 ? 'destructive' : undefined} />
+          <StatTile label="Ingested (24h)" value={health.ingested_recent} tone="success" />
+        </div>
+        <div className="flex flex-col gap-1 text-xs text-muted-foreground">
+          <span>Oldest pending: {relativeTime(health.oldest_pending_at)}</span>
+          <span>Last success: {relativeTime(health.last_success_at)}</span>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function UnresolvedItemRow({ connectionId, brandId, item }: { connectionId: string; brandId: string; item: { external_product_id?: string; external_variant_id?: string; external_sku?: string; name?: string; quantity?: number } }) {
+  const { activeWorkspace } = useWorkspace()
+  const { data: products } = useQuery({
+    queryKey: ['products-for-mapping', activeWorkspace.id, brandId],
+    queryFn: () => fetchProducts(activeWorkspace.id, brandId),
+    enabled: Boolean(brandId),
+  })
+  const [productId, setProductId] = React.useState('')
+  const upsertMapping = useUpsertExternalProductMapping()
+  const [saved, setSaved] = React.useState(false)
+
+  return (
+    <div className="flex flex-col gap-2 rounded-md border border-border p-3 text-xs sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col">
+        <span className="font-medium text-foreground">{item.name ?? '(unnamed item)'}</span>
+        <span className="text-muted-foreground">
+          Qty {item.quantity ?? 1} · SKU: {item.external_sku ?? '(none)'} · External ID: {item.external_product_id ?? '(none)'}
+        </span>
+      </div>
+      <div className="flex items-center gap-2">
+        <Select value={productId} onValueChange={setProductId}>
+          <SelectTrigger className="h-8 w-48 text-xs">
+            <SelectValue placeholder="Map to product…" />
+          </SelectTrigger>
+          <SelectContent>
+            {(products ?? []).map((p) => (
+              <SelectItem key={p.id} value={p.id}>
+                {p.name} {p.sku ? `(${p.sku})` : ''}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={!productId || upsertMapping.isPending}
+          onClick={async () => {
+            await upsertMapping.mutateAsync({
+              connectionId,
+              externalProductId: item.external_product_id ?? null,
+              externalVariantId: item.external_variant_id ?? null,
+              externalSku: item.external_sku ?? null,
+              productId,
+            })
+            setSaved(true)
+          }}
+        >
+          {saved ? <CheckCircle2 className="h-3.5 w-3.5 text-success" /> : 'Map'}
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+function NeedsReviewDialog({ row, onClose }: { row: ExternalOrderIngestionLog; onClose: () => void }) {
+  const retry = useRetryExternalOrderIngestion()
+  const [error, setError] = React.useState<string | null>(null)
+  const unresolvedItems = Array.isArray(row.unresolved_items) ? (row.unresolved_items as Array<Record<string, unknown>>) : []
+
+  async function handleRetry() {
+    setError(null)
+    try {
+      const result = await retry.mutateAsync(row.id)
+      if (result.status === 'needs_review') {
+        setError('Still missing a mapping for one or more items — map every item below, then retry again.')
+      } else {
+        onClose()
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Retry failed')
+    }
+  }
+
+  return (
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>
+            {externalConnectionProviderLabel[row.provider]} order {row.external_order_number ?? row.external_order_id} needs product mapping
+          </DialogTitle>
+          <DialogDescription>
+            One or more line items on this order couldn't be matched to a product automatically. Map each one below, then retry — GCOS never
+            guesses a product match, so the order is not created until every item resolves.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex flex-col gap-2">
+          {unresolvedItems.map((item, idx) => (
+            <UnresolvedItemRow
+              key={idx}
+              connectionId={row.connection_id}
+              brandId={row.brand_id}
+              item={item as { external_product_id?: string; external_variant_id?: string; external_sku?: string; name?: string; quantity?: number }}
+            />
+          ))}
+        </div>
+        {error && <p className="text-xs text-destructive">{error}</p>}
+        <div className="flex justify-end gap-2">
+          <Button variant="ghost" onClick={onClose}>Close</Button>
+          <Button onClick={handleRetry} disabled={retry.isPending}>
+            <RefreshCcw className="h-3.5 w-3.5" />
+            {retry.isPending ? 'Retrying…' : 'Retry Order'}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function OrderSourcesReviewSection({ canManage }: { canManage: boolean }) {
+  const { data: needsReview } = useExternalIngestionLog('needs_review')
+  const { data: failed } = useExternalIngestionLog('failed')
+  const retry = useRetryExternalOrderIngestion()
+  const [reviewing, setReviewing] = React.useState<ExternalOrderIngestionLog | null>(null)
+
+  const rows = [...(needsReview ?? []), ...(failed ?? [])]
+  if (rows.length === 0) return null
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Orders Awaiting Review</CardTitle>
+        <CardDescription>Ingested orders that could not be created automatically — a product mapping is missing, or a genuine error occurred.</CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-2">
+        {rows.slice(0, 10).map((row) => (
+          <div key={row.id} className="flex items-center justify-between rounded-md border border-border p-3 text-xs">
+            <div className="flex flex-col">
+              <span className="font-medium text-foreground">
+                {externalConnectionProviderLabel[row.provider]} · {row.external_order_number ?? row.external_order_id}
+              </span>
+              <span className="text-muted-foreground">
+                {row.status === 'needs_review' ? 'Needs product mapping' : (row.error_message ?? 'Unknown error')}
+              </span>
+            </div>
+            {canManage && (
+              <div className="flex gap-2">
+                {row.status === 'needs_review' ? (
+                  <Button size="sm" variant="outline" onClick={() => setReviewing(row)}>
+                    Review
+                  </Button>
+                ) : (
+                  <Button size="sm" variant="outline" onClick={() => retry.mutate(row.id)} disabled={retry.isPending}>
+                    <RefreshCcw className="h-3 w-3" />
+                    Retry
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
+        ))}
+      </CardContent>
+      {reviewing && <NeedsReviewDialog row={reviewing} onClose={() => setReviewing(null)} />}
+    </Card>
+  )
+}
+
 export function IntegrationHealthPage() {
   const canView = usePermission('integrations.view')
   if (!canView) {
@@ -214,6 +408,7 @@ export function IntegrationHealthPage() {
 function IntegrationHealthContent() {
   const { activeWorkspace } = useWorkspace()
   const canManage = usePermission('integrations.manage')
+  const canManageOrderIngestion = usePermission('order_ingestion.manage')
   const { data: trackingEvents, isLoading: trackingLoading, isError: trackingError, refetch: refetchTracking } = useTrackingDispatchEvents()
   const { data: commLog, isLoading: commLoading, isError: commError, refetch: refetchComm } = useCommunicationLog()
   const { data: queueHealth } = useQueueHealth()
@@ -231,6 +426,10 @@ function IntegrationHealthContent() {
   useRealtimeInvalidate('tracking_dispatch_log', activeWorkspace.id, [['tracking-dispatch-events'], queueHealthKey])
   useRealtimeInvalidate('communication_log', activeWorkspace.id, [['communication-log'], queueHealthKey])
   useRealtimeInvalidate('automation_executions', activeWorkspace.id, [['integration-health-automation', activeWorkspace.id], queueHealthKey])
+  useRealtimeInvalidate('external_order_ingestion_log', activeWorkspace.id, [
+    ['external-ingestion-log', activeWorkspace.id],
+    ['external-ingestion-health', activeWorkspace.id],
+  ])
 
   if (trackingLoading || commLoading) return <LoadingState label="Loading integration health…" />
   if (trackingError || commError) return <ErrorState message="Couldn't load integration health." onRetry={() => { refetchTracking(); refetchComm() }} />
@@ -285,6 +484,9 @@ function IntegrationHealthContent() {
         <ChannelCard title="SMS" rows={commByChannel.sms} canManage={canManage} onRetry={(id) => retryComm.mutate(id)} retrying={retryComm.isPending} />
         <ChannelCard title="WhatsApp" rows={commByChannel.whatsapp} canManage={canManage} onRetry={(id) => retryComm.mutate(id)} retrying={retryComm.isPending} />
       </div>
+
+      <OrderSourcesHealthCard />
+      <OrderSourcesReviewSection canManage={canManageOrderIngestion} />
 
       <Card>
         <CardHeader>

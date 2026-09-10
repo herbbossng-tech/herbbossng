@@ -1887,6 +1887,68 @@ export interface TrackingDispatchLog {
 }
 
 // ---------------------------------------------------------------------
+// Omnichannel Order Ingestion (migration 0053) — Shopify/WooCommerce/
+// Google Sheets as external order sources feeding the SAME orders
+// table every other channel uses. Secret fields (access tokens, api
+// secrets, consumer secret, refresh token) are never selectable from
+// the client — get_external_connections() omits them from its result
+// shape entirely, so ExternalConnection below only has what that RPC
+// can actually return.
+// ---------------------------------------------------------------------
+export type ExternalConnectionProvider = 'shopify' | 'woocommerce' | 'google_sheets'
+export type ExternalConnectionStatus = 'disconnected' | 'connected' | 'error'
+
+export interface ExternalConnection {
+  id: string
+  provider: ExternalConnectionProvider
+  status: ExternalConnectionStatus
+  last_error: string | null
+  last_sync_at: string | null
+  shopify_shop_domain: string | null
+  woocommerce_store_url: string | null
+  google_spreadsheet_id: string | null
+  google_sheet_name: string | null
+  google_column_mapping: Record<string, string>
+  google_header_row: boolean
+  google_connected: boolean
+}
+
+export type ExternalIngestionStatus = 'pending' | 'processing' | 'ingested' | 'needs_review' | 'failed' | 'permanently_failed'
+
+export interface ExternalOrderIngestionLog {
+  id: string
+  workspace_id: string
+  brand_id: string
+  connection_id: string
+  provider: ExternalConnectionProvider
+  external_order_id: string
+  external_order_number: string | null
+  status: ExternalIngestionStatus
+  order_id: string | null
+  input_customer: { name?: string; phone?: string; email?: string | null; [key: string]: Json | undefined }
+  input_items: Json
+  normalized_items: Json | null
+  unresolved_items: Json | null
+  error_message: string | null
+  attempts: number
+  max_attempts: number
+  next_retry_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface ExternalIngestionHealth {
+  pending: number
+  processing: number
+  needs_review: number
+  failed: number
+  permanently_failed: number
+  ingested_recent: number
+  oldest_pending_at: string | null
+  last_success_at: string | null
+}
+
+// ---------------------------------------------------------------------
 // Phase 10 — Customer Support & Rescue Intelligence (migration 0030).
 // support_interactions is the one authoritative typed contact-history
 // log (orders AND customers); rescue_cases/rescue_attempts is the
