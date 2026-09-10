@@ -431,9 +431,9 @@ export function IngredientsSection({ config, onCtaClick }: { config: Ingredients
       <div className="mx-auto max-w-4xl">
         <Eyebrow tone="inverted">The Formula</Eyebrow>
         {config.headline && <h2 className="mb-8 text-center text-2xl font-extrabold sm:text-3xl">{config.headline}</h2>}
-        <div className="flex flex-col gap-4 sm:flex-row sm:flex-nowrap sm:justify-center">
+        <div className="flex flex-wrap justify-center gap-4">
           {config.items.map((item, i) => (
-            <div key={i} className="flex min-w-0 flex-1 basis-0 flex-col items-center gap-2 rounded-xl border border-white/15 bg-white/5 p-4 text-center">
+            <div key={i} className="flex w-36 flex-col items-center gap-2 rounded-xl border border-white/15 bg-white/5 p-4 text-center sm:w-40">
               <span className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-white/40 font-serif text-sm italic">
                 {toRoman(i + 1)}
               </span>
