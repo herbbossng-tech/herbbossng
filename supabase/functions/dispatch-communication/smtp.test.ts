@@ -1,10 +1,10 @@
 // Deterministic unit tests for the SMTP adapter's validation logic —
 // no live network call, no real mail server. Run locally via
-// `npx tsx smtp.test.ts`. Exercises the ACTUAL shipped module's
-// short-circuit guards — the only parts testable without a real SMTP
-// connection (dispatchSmtp's denomailer import is dynamic and never
-// reached by either guard below).
-import { dispatchSmtp } from './smtp.ts'
+// `npx tsx smtp.test.ts`. Tests smtp-guards.ts directly (zero
+// imports, safe under plain Node) rather than smtp.ts, which now
+// statically imports a Deno-only SMTP client and can no longer be
+// loaded outside Deno — see smtp.ts's header comment for why.
+import { validateSmtpRow } from './smtp-guards.ts'
 
 let failures = 0
 function assertEq(actual: unknown, expected: unknown, label: string) {
@@ -18,8 +18,8 @@ function assertEq(actual: unknown, expected: unknown, label: string) {
   }
 }
 
-async function assertMissingRecipientShortCircuit() {
-  const result = await dispatchSmtp({
+function assertMissingRecipientShortCircuit() {
+  const result = validateSmtpRow({
     recipient: null,
     subject: 'hi',
     body: 'hi',
@@ -31,12 +31,11 @@ async function assertMissingRecipientShortCircuit() {
     from_name: null,
     from_address: null,
   })
-  assertEq(result.status, null, 'missing recipient short-circuits before any smtp connection attempt')
-  assertEq(result.providerMessageId, null, 'no message id fabricated when nothing was sent')
+  assertEq(result.ok, false, 'missing recipient short-circuits before any smtp connection attempt')
 }
 
-async function assertMissingCredentialsShortCircuit() {
-  const result = await dispatchSmtp({
+function assertMissingCredentialsShortCircuit() {
+  const result = validateSmtpRow({
     recipient: 'customer@example.com',
     subject: 'hi',
     body: 'hi',
@@ -49,14 +48,31 @@ async function assertMissingCredentialsShortCircuit() {
     from_address: null,
   })
   assertEq(
-    result.errorMessage,
+    result.ok ? null : result.error,
     'missing smtp host/username/password/recipient at dispatch time',
     'an unconfigured smtp credential fails honestly before any connection attempt, never silently sends unauthenticated',
   )
 }
 
-await assertMissingRecipientShortCircuit()
-await assertMissingCredentialsShortCircuit()
+function assertCompleteRowValidates() {
+  const result = validateSmtpRow({
+    recipient: 'customer@example.com',
+    subject: 'hi',
+    body: 'hi',
+    host: 'smtp.example.com',
+    port: 587,
+    username: 'user',
+    password: 'pass',
+    secure: false,
+    from_name: null,
+    from_address: null,
+  })
+  assertEq(result.ok, true, 'a fully configured row validates successfully')
+}
+
+assertMissingRecipientShortCircuit()
+assertMissingCredentialsShortCircuit()
+assertCompleteRowValidates()
 
 console.log(failures === 0 ? '\n=== ALL SMTP ADAPTER TESTS PASSED ===' : `\n=== ${failures} TEST(S) FAILED ===`)
 if (failures > 0) throw new Error(`${failures} test(s) failed`)
