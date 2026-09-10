@@ -21,8 +21,8 @@ export function OrderStats() {
   const { data: stats, isLoading } = useOrderStats()
   const v = (n: number | undefined) => (isLoading || n === undefined ? '—' : n.toLocaleString())
 
-  const pendingConfirmation = stats && stats.pending_count + stats.will_call_back_count
-  const processing = stats && stats.processing_count + stats.scheduled_count
+  const pendingConfirmation = stats && stats.pending_count + stats.will_call_back_count + stats.needs_follow_up_count
+  const processing = stats && stats.confirmed_count + stats.processing_count + stats.scheduled_count
 
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-8">

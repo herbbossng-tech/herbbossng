@@ -329,7 +329,9 @@ export interface MediaLibraryItem extends Timestamped {
 export type OrderStatus =
   | 'NEW'
   | 'PENDING'
+  | 'CONFIRMED'
   | 'WILL_CALL_BACK'
+  | 'NEEDS_FOLLOW_UP'
   | 'SCHEDULED'
   | 'PROCESSING_FOR_DISPATCH'
   | 'DISPATCHED'
@@ -338,6 +340,7 @@ export type OrderStatus =
   | 'DELIVERED'
   | 'RETURNED'
   | 'CANCELLED'
+  | 'REPEATED_ORDER'
 
 export type OrderSource = 'website' | 'whatsapp' | 'phone' | 'facebook' | 'instagram' | 'tiktok' | 'walk_in' | 'manual' | 'affiliate' | 'other'
 export type OrderPriority = 'normal' | 'high' | 'urgent'
@@ -505,7 +508,9 @@ export interface OrderStats {
   today_orders: number
   new_count: number
   pending_count: number
+  confirmed_count: number
   will_call_back_count: number
+  needs_follow_up_count: number
   scheduled_count: number
   processing_count: number
   dispatched_count: number
@@ -514,6 +519,7 @@ export interface OrderStats {
   delivered_count: number
   returned_count: number
   cancelled_count: number
+  repeated_order_count: number
   /** All-time sum of total_amount for every non-cancelled order. Not the same as delivered_revenue. */
   total_sales_value: number
   /** total_sales_value scoped to orders created today. */
