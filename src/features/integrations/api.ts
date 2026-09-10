@@ -80,6 +80,14 @@ export interface SetBrandCommunicationConfigInput {
   whatsappProvider?: string | null
   whatsappApiKey?: string | null
   whatsappPhoneNumberId?: string | null
+  /** 'resend' (default, third-party API) or 'smtp' (a workspace's own mail server/relay) — see brand_communication_secrets (0050). */
+  emailProvider?: 'resend' | 'smtp' | null
+  smtpHost?: string | null
+  smtpPort?: number | null
+  smtpUsername?: string | null
+  smtpPassword?: string | null
+  /** true = implicit TLS (typically port 465); false = STARTTLS (typically port 587). */
+  smtpSecure?: boolean | null
 }
 
 export async function setBrandCommunicationConfig(brandId: string, input: SetBrandCommunicationConfigInput): Promise<void> {
@@ -92,6 +100,12 @@ export async function setBrandCommunicationConfig(brandId: string, input: SetBra
     p_whatsapp_provider: input.whatsappProvider ?? null,
     p_whatsapp_api_key: input.whatsappApiKey ?? null,
     p_whatsapp_phone_number_id: input.whatsappPhoneNumberId ?? null,
+    p_email_provider: input.emailProvider ?? null,
+    p_smtp_host: input.smtpHost ?? null,
+    p_smtp_port: input.smtpPort ?? null,
+    p_smtp_username: input.smtpUsername ?? null,
+    p_smtp_password: input.smtpPassword ?? null,
+    p_smtp_secure: input.smtpSecure ?? null,
   })
   if (error) throw error
 }

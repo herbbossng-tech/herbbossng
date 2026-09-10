@@ -413,4 +413,42 @@ begin
   raise notice 'OK 15: zero-data template resolution behaves honestly (system fallback, or template_found=false).';
 end $$;
 
+\echo '=== 16. SMTP as an alternative email provider: honestly not_configured until host+username+password are all set, then correctly resolved end to end by the dispatcher claim path ==='
+do $$
+declare v_brand uuid; v_configured boolean; v_provider text; v_row record; v_comm_id uuid;
+begin
+  select id into v_brand from public.brands where slug = 'p13-brand-a';
+  perform set_config('app.test_user_id', '00000000-0000-0000-0000-0000000000d1', false);
+
+  -- Switch to smtp but only supply the host — still honestly not_configured.
+  set role authenticated;
+  perform public.set_brand_communication_config(p_brand_id => v_brand, p_email_provider => 'smtp', p_smtp_host => 'smtp.example.com');
+  reset role;
+  select configured, provider into v_configured, v_provider from public.resolve_brand_communication_config_internal(v_brand, 'email');
+  assert not v_configured, 'smtp with only a host set (no username/password yet) must not report configured';
+  assert v_provider = 'smtp', format('expected provider=smtp, got %s', v_provider);
+
+  set role authenticated;
+  perform public.set_brand_communication_config(p_brand_id => v_brand, p_smtp_username => 'mailer@example.com', p_smtp_password => 'super-secret', p_smtp_port => 587);
+  reset role;
+  select configured into v_configured from public.resolve_brand_communication_config_internal(v_brand, 'email');
+  assert v_configured, 'smtp with host+username+password all set must report configured';
+
+  -- Queue a real email and confirm the dispatcher-facing claim resolves the
+  -- smtp credential shape, never the (now-stale, previous-provider) resend key.
+  insert into public.communication_log (workspace_id, brand_id, channel, recipient, subject, body, status, provider, is_transactional, triggered_by)
+    select workspace_id, v_brand, 'email', 'customer@example.com', 'Test', 'Body', 'queued', 'smtp', true, 'manual'
+    from public.brands where id = v_brand
+    returning id into v_comm_id;
+
+  select * into v_row from public.claim_communication_log_batch('smtp-test-worker', 50) where id = v_comm_id;
+  assert v_row.provider = 'smtp', format('expected provider=smtp on the claimed row, got %s', v_row.provider);
+  assert v_row.smtp_host = 'smtp.example.com', 'expected the saved smtp host to be resolved for the dispatcher';
+  assert v_row.smtp_username = 'mailer@example.com', 'expected the saved smtp username to be resolved for the dispatcher';
+  assert v_row.smtp_password = 'super-secret', 'expected the saved smtp password to be resolved for the dispatcher';
+  assert v_row.smtp_port = 587, 'expected the saved smtp port to be resolved for the dispatcher';
+  assert v_row.api_key is null, 'a brand on email_provider=smtp must never resolve a stale resend api_key for the dispatcher';
+  raise notice 'OK 16: SMTP is honestly not_configured until host+username+password are all present, then correctly resolved end to end by the dispatcher claim path.';
+end $$;
+
 \echo '=== ALL PHASE 13 COMMUNICATIONS TESTS PASSED ==='

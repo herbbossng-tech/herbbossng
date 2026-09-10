@@ -7,11 +7,12 @@
 // this code calls with elevated privilege.
 //
 // 'email' dispatches via Resend (the provider named in migration
-// 0006's email_templates comment and .env.example). Phase 13 adds
-// reference adapters for 'sms' (Twilio, twilio.ts) and 'whatsapp'
-// (Meta WhatsApp Business Cloud API, whatsapp.ts) — each channel's
-// provider name is DATA on brand_communication_secrets, never a
-// hardcoded assumption; a workspace that has not configured a
+// 0006's email_templates comment and .env.example) or, since 0050, via
+// raw SMTP (smtp.ts) for a brand that chose email_provider=smtp.
+// Phase 13 adds reference adapters for 'sms' (Twilio, twilio.ts) and
+// 'whatsapp' (Meta WhatsApp Business Cloud API, whatsapp.ts) — each
+// channel's provider name is DATA on brand_communication_secrets,
+// never a hardcoded assumption; a workspace that has not configured a
 // provider for a channel never has a row queued as 'queued' for it in
 // the first place (see resolve_brand_communication_config_internal(),
 // 0032), so claim_communication_log_batch() will not normally return
@@ -23,11 +24,12 @@
 // Trigger + secrets: identical pattern to dispatch-tracking-event
 // (shared CRON_CALLER_SECRET header, SUPABASE_URL/SERVICE_ROLE_KEY
 // auto-provided). Not deployed or live-tested against a real Twilio/
-// Meta/Resend account in this sandbox — see the Phase 13 report.
+// Meta/Resend/SMTP account in this sandbox — see the Phase 13 report.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4'
 import { classifyHttpResult } from '../_shared/http-classify.ts'
 import { buildResendPayload } from './resend.ts'
+import { dispatchSmtp } from './smtp.ts'
 import { dispatchTwilioSms } from './twilio.ts'
 import { dispatchWhatsApp } from './whatsapp.ts'
 
@@ -48,6 +50,11 @@ interface ClaimedCommunication {
   sender_id: string | null
   from_name: string | null
   from_address: string | null
+  smtp_host: string | null
+  smtp_port: number | null
+  smtp_username: string | null
+  smtp_password: string | null
+  smtp_secure: boolean | null
 }
 
 async function dispatchResend(row: ClaimedCommunication): Promise<{ status: number | null; body: unknown; errorMessage: string | null }> {
@@ -106,6 +113,22 @@ Deno.serve(async (req) => {
       if (result.status && result.status >= 200 && result.status < 300 && result.body && typeof result.body === 'object') {
         providerMessageId = (result.body as { id?: string }).id ?? null
       }
+    } else if (row.channel === 'email' && row.provider === 'smtp') {
+      const result = await dispatchSmtp({
+        recipient: row.recipient,
+        subject: row.subject,
+        body: row.body,
+        host: row.smtp_host,
+        port: row.smtp_port,
+        username: row.smtp_username,
+        password: row.smtp_password,
+        secure: row.smtp_secure,
+        from_name: row.from_name,
+        from_address: row.from_address,
+      })
+      status = result.status
+      errorMessage = result.errorMessage
+      providerMessageId = result.providerMessageId
     } else if (row.channel === 'sms' && row.provider === 'twilio') {
       const result = await dispatchTwilioSms(row)
       status = result.status
