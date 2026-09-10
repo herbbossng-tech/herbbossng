@@ -19,6 +19,7 @@ import {
   useSetCampaignAffiliateRelationships,
   useSetCampaignProducts,
   useSetCampaignStatus,
+  useUpdateCampaign,
   useUploadCampaignAsset,
 } from '@/features/campaigns/hooks'
 import { useProducts } from '@/features/products/hooks'
@@ -45,6 +46,7 @@ export function CampaignDetailPage() {
 
   const setStatus = useSetCampaignStatus(id ?? '')
   const setProducts = useSetCampaignProducts(id ?? '')
+  const updateCampaign = useUpdateCampaign(id ?? '')
   const setAffiliateRelationships = useSetCampaignAffiliateRelationships(id ?? '')
   const uploadAsset = useUploadCampaignAsset(id ?? '')
   const deleteAsset = useDeleteCampaignAsset(id ?? '')
@@ -183,6 +185,32 @@ export function CampaignDetailPage() {
               </label>
             ))
           )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Affiliate Activities</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <label className="flex items-start gap-2 text-sm">
+            <Checkbox
+              checked={campaign.allowed_activities.includes('CREATE_ORDER_FORMS')}
+              disabled={!canManage || updateCampaign.isPending}
+              onCheckedChange={(checked) => {
+                const next = checked
+                  ? Array.from(new Set([...campaign.allowed_activities, 'CREATE_ORDER_FORMS']))
+                  : campaign.allowed_activities.filter((a) => a !== 'CREATE_ORDER_FORMS')
+                updateCampaign.mutate({ allowed_activities: next })
+              }}
+            />
+            <span>
+              Create order forms
+              <span className="block text-xs text-muted-foreground">
+                Affiliates with access to this campaign can build their own embeddable order form and get their own dashboard.
+              </span>
+            </span>
+          </label>
         </CardContent>
       </Card>
 

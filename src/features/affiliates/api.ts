@@ -144,3 +144,10 @@ export async function fetchProductAffiliatePerformance(workspaceId: string, bran
   if (error) throw error
   return (data ?? []) as ProductAffiliatePerformanceRow[]
 }
+
+/** Returns the RAW one-time setup token — only its hash is stored server-side, so this is the only chance to see/share it. */
+export async function createAffiliatePortalSetupToken(affiliateId: string): Promise<string> {
+  const { data, error } = await supabase.rpc('create_affiliate_portal_setup_token', { p_affiliate_id: affiliateId })
+  if (error) throw error
+  return data as string
+}

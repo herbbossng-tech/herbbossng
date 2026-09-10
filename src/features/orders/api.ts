@@ -234,7 +234,6 @@ export async function createOrder(workspaceId: string, brandId: string, input: C
     p_internal_notes: input.internalNotes || null,
     p_priority: input.priority,
     p_idempotency_key: idempotencyKey,
-    p_affiliate_referral_code: input.affiliateReferralCode || null,
   })
 
   if (error) throw error

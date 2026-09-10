@@ -1,7 +1,9 @@
 import * as React from 'react'
 import { Route, Routes } from 'react-router-dom'
 
+import { AffiliateProtectedRoute } from '@/components/auth/AffiliateProtectedRoute'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
+import { AffiliatePortalLayout } from '@/components/layout/AffiliatePortalLayout'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { LoadingState } from '@/components/ui/state'
 import { allNavItems } from '@/data/navigation'
@@ -23,6 +25,26 @@ const HomePage = React.lazy(() => import('@/pages/marketing/HomePage').then((m) 
 const AcceptInvitationPage = React.lazy(() => import('@/pages/invitations/AcceptInvitationPage').then((m) => ({ default: m.AcceptInvitationPage })))
 const PublicLandingPage = React.lazy(() => import('@/features/landingPages/public/PublicLandingPage').then((m) => ({ default: m.PublicLandingPage })))
 const ThankYouPage = React.lazy(() => import('@/features/landingPages/public/ThankYouPage').then((m) => ({ default: m.ThankYouPage })))
+const PublicAffiliateOrderFormPage = React.lazy(() =>
+  import('@/features/affiliatePortal/public/PublicAffiliateOrderFormPage').then((m) => ({ default: m.PublicAffiliateOrderFormPage })),
+)
+
+const AffiliateLoginPage = React.lazy(() => import('@/features/affiliatePortal/pages/AffiliateLoginPage').then((m) => ({ default: m.AffiliateLoginPage })))
+const AffiliateSetupPasswordPage = React.lazy(() =>
+  import('@/features/affiliatePortal/pages/AffiliateSetupPasswordPage').then((m) => ({ default: m.AffiliateSetupPasswordPage })),
+)
+const AffiliateForgotPasswordPage = React.lazy(() =>
+  import('@/features/affiliatePortal/pages/AffiliateForgotPasswordPage').then((m) => ({ default: m.AffiliateForgotPasswordPage })),
+)
+const AffiliateResetPasswordPage = React.lazy(() =>
+  import('@/features/affiliatePortal/pages/AffiliateResetPasswordPage').then((m) => ({ default: m.AffiliateResetPasswordPage })),
+)
+const AffiliateDashboardPage = React.lazy(() =>
+  import('@/features/affiliatePortal/pages/AffiliateDashboardPage').then((m) => ({ default: m.AffiliateDashboardPage })),
+)
+const AffiliateOrderFormsPage = React.lazy(() =>
+  import('@/features/affiliatePortal/pages/AffiliateOrderFormsPage').then((m) => ({ default: m.AffiliateOrderFormsPage })),
+)
 
 const ProductsLayout = React.lazy(() => import('@/features/products/ProductsLayout').then((m) => ({ default: m.ProductsLayout })))
 const ProductsListPage = React.lazy(() => import('@/features/products/pages/ProductsListPage').then((m) => ({ default: m.ProductsListPage })))
@@ -146,6 +168,22 @@ function App() {
             concern from the admin shell (no sidebar/topbar/auth). */}
         <Route path="/l/:slug" element={<PublicLandingPage />} />
         <Route path="/l/:slug/thank-you" element={<ThankYouPage />} />
+        <Route path="/order/:formId" element={<PublicAffiliateOrderFormPage />} />
+
+        {/* Affiliate portal — a fully separate authenticated surface from
+            the staff app above (its own Supabase session, see
+            lib/supabaseAffiliate.ts), so it lives outside ProtectedRoute
+            and AppLayout entirely. */}
+        <Route path="/affiliate/login" element={<AffiliateLoginPage />} />
+        <Route path="/affiliate/setup-password" element={<AffiliateSetupPasswordPage />} />
+        <Route path="/affiliate/forgot-password" element={<AffiliateForgotPasswordPage />} />
+        <Route element={<AffiliateProtectedRoute />}>
+          <Route path="/affiliate/reset-password" element={<AffiliateResetPasswordPage />} />
+          <Route element={<AffiliatePortalLayout />}>
+            <Route path="/affiliate" element={<AffiliateDashboardPage />} />
+            <Route path="/affiliate/order-forms" element={<AffiliateOrderFormsPage />} />
+          </Route>
+        </Route>
 
         <Route element={<ProtectedRoute />}>
           {/* Deliberately outside AppLayout: a user accepting their first

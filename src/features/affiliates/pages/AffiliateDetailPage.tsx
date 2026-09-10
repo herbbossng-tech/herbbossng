@@ -1,4 +1,4 @@
-import { ArrowLeft, Banknote, CheckCircle2, Lock, PauseCircle, PlayCircle, Wallet, XCircle } from 'lucide-react'
+import { ArrowLeft, Banknote, CheckCircle2, Copy, Lock, PauseCircle, PlayCircle, Wallet, XCircle } from 'lucide-react'
 import * as React from 'react'
 import { Link, useParams } from 'react-router-dom'
 
@@ -6,6 +6,8 @@ import { AlertDialog, AlertDialogContent, AlertDialogFooter, AlertDialogHeader, 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/state'
 import { Textarea } from '@/components/ui/textarea'
 import { usePermission } from '@/contexts/PermissionsContext'
@@ -16,6 +18,7 @@ import {
   useAffiliateWallet,
   useAffiliateWalletTransactions,
   useApproveAffiliate,
+  useCreateAffiliatePortalSetupToken,
   useReactivateAffiliate,
   useRejectAffiliate,
   useSuspendAffiliate,
@@ -53,6 +56,12 @@ function AffiliateDetailContent() {
   const reject = useRejectAffiliate(id ?? '')
   const suspend = useSuspendAffiliate(id ?? '')
   const reactivate = useReactivateAffiliate(id ?? '')
+  const createPortalToken = useCreateAffiliatePortalSetupToken(id ?? '')
+  const canApprovePortalAccess = usePermission('affiliates.approve')
+  const canManageAffiliates = usePermission('affiliates.manage')
+  const canManagePortalAccess = canApprovePortalAccess || canManageAffiliates
+  const [portalLink, setPortalLink] = React.useState<string | null>(null)
+  const [portalLinkCopied, setPortalLinkCopied] = React.useState(false)
 
   const [rejectOpen, setRejectOpen] = React.useState(false)
   const [rejectReason, setRejectReason] = React.useState('')
@@ -170,6 +179,71 @@ function AffiliateDetailContent() {
           <p className="mt-1 text-2xl font-bold">{orders?.length ?? 0}</p>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Affiliate Portal Access</CardTitle>
+        </CardHeader>
+        <CardContent className="flex items-center justify-between gap-3">
+          {affiliate.portal_access_enabled ? (
+            <p className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Badge variant="success">Active</Badge>
+              This affiliate can sign in and create their own embeddable order forms.
+            </p>
+          ) : (
+            <>
+              <p className="text-sm text-muted-foreground">
+                Give this affiliate their own portal login to create embeddable order forms and track earnings.
+              </p>
+              {canManagePortalAccess && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="shrink-0"
+                  disabled={createPortalToken.isPending || !affiliate.email}
+                  onClick={async () => {
+                    const token = await createPortalToken.mutateAsync()
+                    setPortalLink(`${window.location.origin}/affiliate/setup-password?token=${token}`)
+                  }}
+                >
+                  Send portal setup link
+                </Button>
+              )}
+            </>
+          )}
+          {!affiliate.email && !affiliate.portal_access_enabled && (
+            <p className="text-xs text-destructive">Add an email address before issuing portal access.</p>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={!!portalLink} onOpenChange={(open) => !open && setPortalLink(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Portal setup link</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-3 p-6 pt-2">
+            <p className="text-sm text-muted-foreground">
+              Share this link with {affiliate.full_name} directly (WhatsApp, email). It expires in 7 days and can only be used once.
+            </p>
+            <div className="flex gap-2">
+              <Input readOnly value={portalLink ?? ''} className="font-mono text-xs" />
+              <Button
+                type="button"
+                size="icon"
+                variant="outline"
+                onClick={async () => {
+                  if (portalLink) await navigator.clipboard.writeText(portalLink)
+                  setPortalLinkCopied(true)
+                  setTimeout(() => setPortalLinkCopied(false), 1500)
+                }}
+              >
+                {portalLinkCopied ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Card>
         <CardHeader>

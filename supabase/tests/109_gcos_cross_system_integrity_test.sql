@@ -98,17 +98,44 @@ begin
     returning id into v_aff_b;
 
   -- Campaign A: PER_ORDER_CREATED, FIXED_AMOUNT 500, Product A only, open to all approved affiliates.
-  insert into public.affiliate_campaigns (workspace_id, brand_id, name, slug, status, commission_type, commission_value, qualifying_event, affiliate_access, created_by, updated_by)
-    values (v_ws_a, v_brand_a, 'P9 Campaign A', 'p9-campaign-a', 'ACTIVE', 'FIXED_AMOUNT', 500, 'PER_ORDER_CREATED', 'ALL_APPROVED_AFFILIATES', '00000000-0000-0000-0000-0000000000e1', '00000000-0000-0000-0000-0000000000e1')
+  insert into public.affiliate_campaigns (workspace_id, brand_id, name, slug, status, commission_type, commission_value, qualifying_event, affiliate_access, allowed_activities, created_by, updated_by)
+    values (v_ws_a, v_brand_a, 'P9 Campaign A', 'p9-campaign-a', 'ACTIVE', 'FIXED_AMOUNT', 500, 'PER_ORDER_CREATED', 'ALL_APPROVED_AFFILIATES', array['CREATE_ORDER_FORMS'], '00000000-0000-0000-0000-0000000000e1', '00000000-0000-0000-0000-0000000000e1')
     returning id into v_camp_a;
   insert into public.affiliate_campaign_products (campaign_id, product_id) values (v_camp_a, v_prod_a);
 
   -- Campaign B: PER_DELIVERED_ORDER, PERCENTAGE 10, Product B only, SELECTED_AFFILIATES_ONLY (Affiliate A granted access).
-  insert into public.affiliate_campaigns (workspace_id, brand_id, name, slug, status, commission_type, commission_value, qualifying_event, affiliate_access, created_by, updated_by)
-    values (v_ws_a, v_brand_a, 'P9 Campaign B', 'p9-campaign-b', 'ACTIVE', 'PERCENTAGE', 10, 'PER_DELIVERED_ORDER', 'SELECTED_AFFILIATES_ONLY', '00000000-0000-0000-0000-0000000000e1', '00000000-0000-0000-0000-0000000000e1')
+  insert into public.affiliate_campaigns (workspace_id, brand_id, name, slug, status, commission_type, commission_value, qualifying_event, affiliate_access, allowed_activities, created_by, updated_by)
+    values (v_ws_a, v_brand_a, 'P9 Campaign B', 'p9-campaign-b', 'ACTIVE', 'PERCENTAGE', 10, 'PER_DELIVERED_ORDER', 'SELECTED_AFFILIATES_ONLY', array['CREATE_ORDER_FORMS'], '00000000-0000-0000-0000-0000000000e1', '00000000-0000-0000-0000-0000000000e1')
     returning id into v_camp_b;
   insert into public.affiliate_campaign_products (campaign_id, product_id) values (v_camp_b, v_prod_b);
   insert into public.affiliate_campaign_affiliates (campaign_id, affiliate_id, relationship) values (v_camp_b, v_aff_a, 'ACCESS');
+
+  -- 0056: affiliate order attribution now flows entirely through the
+  -- affiliate's own embeddable order forms, not a referral code — give
+  -- Affiliate A a portal login and let them build one form per campaign.
+  insert into auth.users (id, email) values ('00000000-0000-0000-0000-0000000000e2', 'p9-aff-a-portal@test.local') on conflict do nothing;
+  update public.affiliates set auth_user_id = '00000000-0000-0000-0000-0000000000e2', portal_access_enabled = true where id = v_aff_a;
+end $$;
+
+create or replace function auth.uid() returns uuid language sql stable as $$ select '00000000-0000-0000-0000-0000000000e2'::uuid $$;
+
+do $$
+declare
+  v_camp_a uuid; v_camp_b uuid; v_prod_a uuid; v_prod_b uuid;
+begin
+  select id into v_camp_a from public.affiliate_campaigns where slug = 'p9-campaign-a';
+  select id into v_camp_b from public.affiliate_campaigns where slug = 'p9-campaign-b';
+  select id into v_prod_a from public.products where sku = 'P9A-1';
+  select id into v_prod_b from public.products where sku = 'P9B-1';
+
+  perform public.create_affiliate_order_form(
+    v_camp_a, v_prod_a, 'P9 Campaign A Form',
+    jsonb_build_array(jsonb_build_object('name', 'Buy 1', 'quantity', 1, 'price', 5000))
+  );
+  perform public.create_affiliate_order_form(
+    v_camp_b, v_prod_b, 'P9 Campaign B Form',
+    jsonb_build_array(jsonb_build_object('name', 'Buy 2', 'quantity', 2, 'price', 6000))
+  );
 end $$;
 
 create or replace function auth.uid() returns uuid language sql stable as $$ select '00000000-0000-0000-0000-0000000000e1'::uuid $$;
@@ -358,11 +385,17 @@ begin
   select coalesce(balance, 0) into v_wallet_before from public.affiliate_wallets where affiliate_id = v_aff_id;
   v_wallet_before := coalesce(v_wallet_before, 0);
 
-  v_order := public.create_order(v_ws, v_brand, 'manual', 'P9 Affiliate Buyer 1', '08011110006', '6 P9 Street',
-    jsonb_build_array(jsonb_build_object('product_id', v_prod, 'quantity', 1)),
-    p_affiliate_referral_code => 'P9AFFA');
+  declare
+    v_form_id uuid; v_pkg_id uuid;
+  begin
+    select id into v_form_id from public.affiliate_order_forms where internal_title = 'P9 Campaign A Form';
+    select id into v_pkg_id from public.affiliate_order_form_packages where order_form_id = v_form_id;
+    v_order := public.create_affiliate_order_form_order(
+      v_form_id, v_pkg_id, 'P9 Affiliate Buyer 1', '08011110006', '6 P9 Street', 'Lagos', 'Lagos'
+    );
+  end;
 
-  assert v_order.affiliate_id = v_aff_id, 'order must be attributed to the referring affiliate';
+  assert v_order.affiliate_id = v_aff_id, 'order must be attributed to the affiliate that owns the order form';
   assert v_order.affiliate_campaign_id is not null, 'order must resolve the matching ACTIVE campaign';
 
   select * into v_commission from public.affiliate_commissions where order_id = v_order.id;
@@ -404,9 +437,15 @@ begin
 
   select coalesce(balance, 0) into v_wallet_before from public.affiliate_wallets where affiliate_id = v_aff_id;
 
-  v_order := public.create_order(v_ws, v_brand, 'manual', 'P9 Affiliate Buyer 2', '08011110007', '7 P9 Street',
-    jsonb_build_array(jsonb_build_object('product_id', v_prod, 'quantity', 2)),
-    p_affiliate_referral_code => 'P9AFFA');
+  declare
+    v_form_id uuid; v_pkg_id uuid;
+  begin
+    select id into v_form_id from public.affiliate_order_forms where internal_title = 'P9 Campaign B Form';
+    select id into v_pkg_id from public.affiliate_order_form_packages where order_form_id = v_form_id;
+    v_order := public.create_affiliate_order_form_order(
+      v_form_id, v_pkg_id, 'P9 Affiliate Buyer 2', '08011110007', '7 P9 Street', 'Lagos', 'Lagos'
+    );
+  end;
 
   assert v_order.affiliate_campaign_id is not null, 'order must attribute to Campaign B (SELECTED_AFFILIATES_ONLY, Affiliate A has ACCESS)';
 
@@ -455,9 +494,15 @@ begin
 
   select coalesce(balance, 0) into v_wallet_before from public.affiliate_wallets where affiliate_id = v_aff_id;
 
-  v_order := public.create_order(v_ws, v_brand, 'manual', 'P9 Excluded Affiliate Buyer', '08011110008', '8 P9 Street',
-    jsonb_build_array(jsonb_build_object('product_id', v_prod, 'quantity', 1)),
-    p_affiliate_referral_code => 'P9AFFA');
+  declare
+    v_form_id uuid; v_pkg_id uuid;
+  begin
+    select id into v_form_id from public.affiliate_order_forms where internal_title = 'P9 Campaign A Form';
+    select id into v_pkg_id from public.affiliate_order_form_packages where order_form_id = v_form_id;
+    v_order := public.create_affiliate_order_form_order(
+      v_form_id, v_pkg_id, 'P9 Excluded Affiliate Buyer', '08011110008', '8 P9 Street', 'Lagos', 'Lagos'
+    );
+  end;
 
   assert v_order.affiliate_id = v_aff_id, 'attribution still happens even for an excepted affiliate';
 

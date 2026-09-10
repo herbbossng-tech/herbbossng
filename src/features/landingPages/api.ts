@@ -585,8 +585,6 @@ export interface PublicOrderInput {
   /** Meta/TikTok click identifiers — attribution only, never treated as payment truth. */
   fbclid?: string
   ttclid?: string
-  /** ?ref= affiliate referral code. Resolved server-side through the exact same rules as the internal create_order(); an unknown/expired code is silently ignored, never blocking checkout. */
-  affiliateReferralCode?: string
 }
 
 /**
@@ -617,7 +615,6 @@ export async function createPublicOrder(slug: string, input: PublicOrderInput): 
     p_utm_term: input.utmTerm || null,
     p_fbclid: input.fbclid || null,
     p_ttclid: input.ttclid || null,
-    p_affiliate_referral_code: input.affiliateReferralCode || null,
   })
   if (error) throw error
   return data as Order

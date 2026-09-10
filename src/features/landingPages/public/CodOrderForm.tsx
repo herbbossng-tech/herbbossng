@@ -126,7 +126,6 @@ export function CodOrderForm({
         utmTerm: searchParams.get('utm_term') ?? undefined,
         fbclid: searchParams.get('fbclid') ?? undefined,
         ttclid: searchParams.get('ttclid') ?? undefined,
-        affiliateReferralCode: searchParams.get('ref') ?? undefined,
       })
       await trackLandingPageEvent(slug, 'order_created', getSessionId(), { order_id: order.id })
       onOrderCreated(order)

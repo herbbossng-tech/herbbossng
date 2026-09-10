@@ -975,6 +975,8 @@ export interface Affiliate {
   payout_method: Json
   notes: string | null
   tags: string[]
+  auth_user_id: string | null
+  portal_access_enabled: boolean
   created_at: string
   updated_at: string
   created_by: string | null
@@ -1024,6 +1026,73 @@ export interface AffiliateCampaignAffiliate {
   relationship: 'ACCESS' | 'COMMISSION_EXCEPTION'
   created_at: string
   created_by: string | null
+}
+
+export interface AffiliateOrderForm {
+  id: string
+  workspace_id: string
+  brand_id: string
+  campaign_id: string
+  affiliate_id: string
+  product_id: string
+  internal_title: string
+  status: 'ACTIVE' | 'ARCHIVED'
+  theme_config: Json
+  form_config: Json
+  created_at: string
+  updated_at: string
+  deleted_at: string | null
+}
+
+export interface AffiliateOrderFormPackage {
+  id: string
+  order_form_id: string
+  name: string
+  quantity: number
+  price: number
+  compare_at_price: number | null
+  shipping_rule: Json
+  position: number
+  is_default: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface PublicAffiliateOrderForm {
+  id: string
+  internal_title: string
+  theme_config: Json
+  form_config: Json
+  product_id: string
+  product_name: string
+  product_image_path: string | null
+  brand_id: string
+  brand_name: string
+  workspace_country_code: string
+  workspace_currency_code: string
+  packages: Array<{
+    id: string
+    name: string
+    quantity: number
+    price: number
+    compare_at_price: number | null
+    is_default: boolean
+  }>
+}
+
+export interface AffiliateDashboard {
+  total_orders: number
+  total_revenue: number
+  wallet_balance: number
+  wallet_reserved_balance: number
+  wallet_currency_code: string | null
+  recent_orders: Array<{
+    order_number: string
+    status: string
+    total_amount: number
+    currency_code: string
+    created_at: string
+  }>
 }
 
 export interface AffiliateCampaignAsset {

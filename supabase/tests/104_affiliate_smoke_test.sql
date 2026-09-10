@@ -82,28 +82,64 @@ begin
   raise notice 'OK: campaign activated once a product is attached.';
 end $$;
 
-\echo '=== 3. Order attribution + PER_ORDER_CREATED commission (idempotent) ==='
+\echo '=== 3. Order attribution + PER_ORDER_CREATED commission (idempotent), via the affiliate''s own embeddable order form (0056) ==='
 do $$
 declare
-  v_ws1 uuid; v_brand1 uuid; v_prod_a uuid; v_code text;
-  v_order public.orders;
-  v_commission_count integer;
-  v_commission public.affiliate_commissions%rowtype;
+  v_ws1 uuid; v_brand1 uuid; v_prod_a uuid; v_aff_id uuid; v_campaign_id uuid;
 begin
   select id into v_ws1 from public.workspaces where slug = 'affiliate-test-ws';
   select id into v_brand1 from public.brands where slug = 'affiliate-test-brand';
   select id into v_prod_a from public.products where sku = 'AFF-SKU-A';
-  select referral_code into v_code from public.affiliates where email = 'chidi@aff.test';
+  select id into v_aff_id from public.affiliates where email = 'chidi@aff.test';
+  select id into v_campaign_id from public.affiliate_campaigns where slug = 'launch-campaign';
 
-  v_order := public.create_order(
-    v_ws1, v_brand1, 'manual', 'Buyer One', '08011110002', '1 Test Street',
-    jsonb_build_array(jsonb_build_object('product_id', v_prod_a, 'quantity', 2)),
-    p_affiliate_referral_code := v_code
+  update public.affiliate_campaigns set allowed_activities = array['CREATE_ORDER_FORMS'] where id = v_campaign_id;
+
+  insert into auth.users (id, email) values ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', 'chidi-portal@aff.test') on conflict do nothing;
+  update public.affiliates set auth_user_id = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', portal_access_enabled = true where id = v_aff_id;
+end $$;
+
+-- Impersonate the affiliate's own portal session to create their order form.
+create or replace function auth.uid() returns uuid language sql stable as $$
+  select 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'::uuid
+$$;
+
+do $$
+declare
+  v_campaign_id uuid; v_prod_a uuid; v_form_id uuid;
+begin
+  select id into v_campaign_id from public.affiliate_campaigns where slug = 'launch-campaign';
+  select id into v_prod_a from public.products where sku = 'AFF-SKU-A';
+
+  select (public.create_affiliate_order_form(
+    v_campaign_id, v_prod_a, 'Test Affiliate Form',
+    jsonb_build_array(jsonb_build_object('name', 'Buy 2', 'quantity', 2, 'price', 10000))
+  )).id into v_form_id;
+  raise notice 'OK: affiliate created their own embeddable order form (id=%).', v_form_id;
+end $$;
+
+-- Back to no session (a public embed visitor has none) to place the order.
+create or replace function auth.uid() returns uuid language sql stable as $$
+  select null::uuid
+$$;
+
+do $$
+declare
+  v_form_id uuid; v_pkg_id uuid;
+  v_order public.orders;
+  v_commission_count integer;
+  v_commission public.affiliate_commissions%rowtype;
+begin
+  select id into v_form_id from public.affiliate_order_forms where internal_title = 'Test Affiliate Form';
+  select id into v_pkg_id from public.affiliate_order_form_packages where order_form_id = v_form_id;
+
+  v_order := public.create_affiliate_order_form_order(
+    v_form_id, v_pkg_id, 'Buyer One', '08011110002', '1 Test Street', 'Lagos', 'Lagos'
   );
 
   assert v_order.affiliate_id is not null, 'order should be attributed to the affiliate';
   assert v_order.affiliate_campaign_id is not null, 'order should be attributed to the active campaign';
-  raise notice 'OK: order % attributed to campaign %', v_order.order_number, v_order.affiliate_campaign_id;
+  raise notice 'OK: order % attributed to campaign % via the affiliate''s own order form, no code involved', v_order.order_number, v_order.affiliate_campaign_id;
 
   select count(*) into v_commission_count from public.affiliate_commissions where order_id = v_order.id;
   assert v_commission_count = 1, 'expected exactly 1 commission row, got %', v_commission_count;
@@ -128,6 +164,11 @@ begin
   assert found, 'wallet balance should be 1000 after one commission';
   raise notice 'OK: wallet balance reflects the commission.';
 end $$;
+
+-- Restore the workspace-owner identity for the remaining scenarios.
+create or replace function auth.uid() returns uuid language sql stable as $$
+  select 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid
+$$;
 
 \echo '=== 4. Cancellation reverses a PER_ORDER_CREATED commission ==='
 do $$
@@ -278,30 +319,76 @@ end $$;
 \echo '=== 8. PER_DELIVERED_ORDER campaign: no commission until DELIVERED ==='
 do $$
 declare
-  v_ws1 uuid; v_brand1 uuid; v_prod_b uuid; v_aff_id uuid; v_code text;
+  v_ws1 uuid; v_brand1 uuid; v_prod_b uuid;
+  v_campaign public.affiliate_campaigns;
+begin
+  select id into v_ws1 from public.workspaces where slug = 'affiliate-test-ws';
+  select id into v_brand1 from public.brands where slug = 'affiliate-test-brand';
+  select id into v_prod_b from public.products where sku = 'AFF-SKU-B';
+
+  insert into public.affiliate_campaigns (workspace_id, brand_id, name, slug, commission_type, commission_value, qualifying_event, affiliate_access, allowed_activities, created_by)
+    values (v_ws1, v_brand1, 'Delivered Campaign', 'delivered-campaign', 'FIXED_AMOUNT', 250, 'PER_DELIVERED_ORDER', 'ALL_APPROVED_AFFILIATES', array['CREATE_ORDER_FORMS'], auth.uid())
+    returning * into v_campaign;
+  insert into public.affiliate_campaign_products (campaign_id, product_id) values (v_campaign.id, v_prod_b);
+  update public.affiliate_campaigns set status = 'ACTIVE' where id = v_campaign.id;
+end $$;
+
+-- The affiliate's portal identity was already established in scenario 3.
+create or replace function auth.uid() returns uuid language sql stable as $$
+  select 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'::uuid
+$$;
+
+do $$
+declare
+  v_campaign_id uuid; v_prod_b uuid;
+begin
+  select id into v_campaign_id from public.affiliate_campaigns where slug = 'delivered-campaign';
+  select id into v_prod_b from public.products where sku = 'AFF-SKU-B';
+
+  perform public.create_affiliate_order_form(
+    v_campaign_id, v_prod_b, 'Delivered Campaign Form',
+    jsonb_build_array(jsonb_build_object('name', 'Buy 1', 'quantity', 1, 'price', 3000))
+  );
+end $$;
+
+create or replace function auth.uid() returns uuid language sql stable as $$
+  select null::uuid
+$$;
+
+do $$
+declare
+  v_campaign public.affiliate_campaigns;
+  v_form_id uuid; v_pkg_id uuid;
+  v_order_id uuid;
+begin
+  select * into v_campaign from public.affiliate_campaigns where slug = 'delivered-campaign';
+  select id into v_form_id from public.affiliate_order_forms where internal_title = 'Delivered Campaign Form';
+  select id into v_pkg_id from public.affiliate_order_form_packages where order_form_id = v_form_id;
+
+  v_order_id := (public.create_affiliate_order_form_order(
+    v_form_id, v_pkg_id, 'Buyer Two', '08011110003', '1 Test Street', 'Lagos', 'Lagos'
+  )).id;
+
+  create temp table if not exists tmp_scenario8 (order_id uuid);
+  insert into tmp_scenario8 values (v_order_id);
+end $$;
+
+-- The lifecycle walk below requires orders.approve (staff-only) — switch back to the workspace owner.
+create or replace function auth.uid() returns uuid language sql stable as $$
+  select 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid
+$$;
+
+do $$
+declare
   v_campaign public.affiliate_campaigns;
   v_order public.orders;
   v_commission_count integer;
   v_commission public.affiliate_commissions%rowtype;
   v_wallet_balance numeric;
 begin
-  select id into v_ws1 from public.workspaces where slug = 'affiliate-test-ws';
-  select id into v_brand1 from public.brands where slug = 'affiliate-test-brand';
-  select id into v_prod_b from public.products where sku = 'AFF-SKU-B';
-  select id into v_aff_id from public.affiliates where email = 'chidi@aff.test';
-  select referral_code into v_code from public.affiliates where email = 'chidi@aff.test';
+  select * into v_campaign from public.affiliate_campaigns where slug = 'delivered-campaign';
+  select * into v_order from public.orders where id = (select order_id from tmp_scenario8);
 
-  insert into public.affiliate_campaigns (workspace_id, brand_id, name, slug, commission_type, commission_value, qualifying_event, affiliate_access, created_by)
-    values (v_ws1, v_brand1, 'Delivered Campaign', 'delivered-campaign', 'FIXED_AMOUNT', 250, 'PER_DELIVERED_ORDER', 'ALL_APPROVED_AFFILIATES', auth.uid())
-    returning * into v_campaign;
-  insert into public.affiliate_campaign_products (campaign_id, product_id) values (v_campaign.id, v_prod_b);
-  update public.affiliate_campaigns set status = 'ACTIVE' where id = v_campaign.id;
-
-  v_order := public.create_order(
-    v_ws1, v_brand1, 'manual', 'Buyer Two', '08011110003', '1 Test Street',
-    jsonb_build_array(jsonb_build_object('product_id', v_prod_b, 'quantity', 1)),
-    p_affiliate_referral_code := v_code
-  );
   assert v_order.affiliate_campaign_id = v_campaign.id, 'order should attribute to the delivered-campaign';
 
   select count(*) into v_commission_count from public.affiliate_commissions where order_id = v_order.id;

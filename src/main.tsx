@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 
 import App from './App.tsx'
+import { AffiliateAuthProvider } from './contexts/AffiliateAuthContext'
 import { AuthProvider } from './contexts/AuthContext'
 import { PermissionsProvider } from './contexts/PermissionsContext'
 import { WorkspaceProvider } from './contexts/WorkspaceContext'
@@ -16,11 +17,16 @@ createRoot(document.getElementById('root')!).render(
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <AuthProvider>
-          <WorkspaceProvider>
-            <PermissionsProvider>
-              <App />
-            </PermissionsProvider>
-          </WorkspaceProvider>
+          {/* Independent of AuthProvider — a separate Supabase client/session
+              (see lib/supabaseAffiliate.ts) for the affiliate portal, which
+              WorkspaceProvider/PermissionsProvider below never read from. */}
+          <AffiliateAuthProvider>
+            <WorkspaceProvider>
+              <PermissionsProvider>
+                <App />
+              </PermissionsProvider>
+            </WorkspaceProvider>
+          </AffiliateAuthProvider>
         </AuthProvider>
       </BrowserRouter>
     </QueryClientProvider>

@@ -5,6 +5,7 @@ import { useWorkspace } from '@/contexts/WorkspaceContext'
 import {
   approveAffiliate,
   createAffiliate,
+  createAffiliatePortalSetupToken,
   fetchAffiliate,
   fetchAffiliateCommissions,
   fetchAffiliateOrders,
@@ -144,5 +145,13 @@ export function useProductAffiliatePerformance() {
     queryKey: ['product-affiliate-performance', activeWorkspace.id, activeBrand?.id ?? null],
     queryFn: () => fetchProductAffiliatePerformance(activeWorkspace.id, activeBrand?.id ?? null),
     enabled: Boolean(activeWorkspace.id),
+  })
+}
+
+export function useCreateAffiliatePortalSetupToken(id: string) {
+  const invalidate = useInvalidateAffiliates(id)
+  return useMutation({
+    mutationFn: () => createAffiliatePortalSetupToken(id),
+    onSuccess: invalidate,
   })
 }

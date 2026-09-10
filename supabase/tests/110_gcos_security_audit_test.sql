@@ -57,10 +57,15 @@ begin
   insert into public.affiliates (workspace_id, full_name, referral_code, approval_status, status, created_by, updated_by)
     values (v_ws_a, 'Sec9 Affiliate', 'SEC9AFF', 'approved', 'active', '00000000-0000-0000-0000-0000000000f1', '00000000-0000-0000-0000-0000000000f1')
     returning id into v_aff_a;
-  insert into public.affiliate_campaigns (workspace_id, brand_id, name, slug, status, commission_type, commission_value, qualifying_event, affiliate_access, created_by, updated_by)
-    values (v_ws_a, v_brand_a, 'Sec9 Campaign', 'sec9-campaign', 'ACTIVE', 'FIXED_AMOUNT', 300, 'PER_ORDER_CREATED', 'ALL_APPROVED_AFFILIATES', '00000000-0000-0000-0000-0000000000f1', '00000000-0000-0000-0000-0000000000f1')
+  insert into public.affiliate_campaigns (workspace_id, brand_id, name, slug, status, commission_type, commission_value, qualifying_event, affiliate_access, allowed_activities, created_by, updated_by)
+    values (v_ws_a, v_brand_a, 'Sec9 Campaign', 'sec9-campaign', 'ACTIVE', 'FIXED_AMOUNT', 300, 'PER_ORDER_CREATED', 'ALL_APPROVED_AFFILIATES', array['CREATE_ORDER_FORMS'], '00000000-0000-0000-0000-0000000000f1', '00000000-0000-0000-0000-0000000000f1')
     returning id into v_camp_a;
   insert into public.affiliate_campaign_products (campaign_id, product_id) values (v_camp_a, v_prod_a);
+
+  -- 0056: affiliate attribution flows through the affiliate's own
+  -- order form now, not a referral code.
+  insert into auth.users (id, email) values ('00000000-0000-0000-0000-0000000000f9', 'sec9-aff-portal@test.local') on conflict do nothing;
+  update public.affiliates set auth_user_id = '00000000-0000-0000-0000-0000000000f9', portal_access_enabled = true where id = v_aff_a;
 end $$;
 
 \set owner_a '00000000-0000-0000-0000-0000000000f1'
@@ -71,20 +76,39 @@ end $$;
 \set viewer_a '00000000-0000-0000-0000-0000000000f6'
 \set suspended_a '00000000-0000-0000-0000-0000000000f7'
 \set nomembership '00000000-0000-0000-0000-0000000000f8'
+\set aff_portal_a '00000000-0000-0000-0000-0000000000f9'
+
+-- Affiliate builds their own order form from the portal.
+select set_config('app.test_user_id', :'aff_portal_a', false);
+set role authenticated;
+do $$
+declare v_camp_a uuid; v_prod_a uuid;
+begin
+  select id into v_camp_a from public.affiliate_campaigns where slug = 'sec9-campaign';
+  select id into v_prod_a from public.products where sku = 'SEC9-1';
+  perform public.create_affiliate_order_form(
+    v_camp_a, v_prod_a, 'Sec9 Affiliate Form',
+    jsonb_build_array(jsonb_build_object('name', 'Buy 2', 'quantity', 2, 'price', 10000))
+  );
+end $$;
+reset role;
+select set_config('app.test_user_id', '', false);
 
 -- Seed order/finance/affiliate activity as Owner so there is real money on the books to try to leak.
 select set_config('app.test_user_id', :'owner_a', false);
 set role authenticated;
 do $$
-declare v_ws uuid; v_brand uuid; v_prod uuid; v_order public.orders;
+declare v_ws uuid; v_brand uuid; v_prod uuid; v_order public.orders; v_form_id uuid; v_pkg_id uuid;
 begin
   select id into v_ws from public.workspaces where slug = 'sec9-ws-a';
   select id into v_brand from public.brands where slug = 'sec9-brand-a';
   select id into v_prod from public.products where sku = 'SEC9-1';
+  select id into v_form_id from public.affiliate_order_forms where internal_title = 'Sec9 Affiliate Form';
+  select id into v_pkg_id from public.affiliate_order_form_packages where order_form_id = v_form_id;
 
-  v_order := public.create_order(v_ws, v_brand, 'manual', 'Sec9 Buyer', '08099990101', '1 Sec9 Street',
-    jsonb_build_array(jsonb_build_object('product_id', v_prod, 'quantity', 2)),
-    p_affiliate_referral_code => 'SEC9AFF');
+  v_order := public.create_affiliate_order_form_order(
+    v_form_id, v_pkg_id, 'Sec9 Buyer', '08099990101', '1 Sec9 Street', 'Lagos', 'Lagos'
+  );
   update public.orders set status = 'PENDING' where id = v_order.id;
   update public.orders set status = 'SCHEDULED', scheduled_at = now() where id = v_order.id;
   update public.orders set status = 'PROCESSING_FOR_DISPATCH' where id = v_order.id;

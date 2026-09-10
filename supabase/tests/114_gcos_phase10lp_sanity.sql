@@ -104,7 +104,7 @@ begin
 
   v_order := public.create_public_order(
     v_slug, v_pkg1, 'Jane Doe', '0712345678', '123 Moi Avenue', 'Nairobi', 'Nairobi', null, null, null, null,
-    'sub-token-1', 'facebook', 'cpc', 'gcos-launch', null, null, 'fb.1.111', 'tt.1.222', null
+    'sub-token-1', 'facebook', 'cpc', 'gcos-launch', null, null, 'fb.1.111', 'tt.1.222'
   );
 
   assert v_order.total_amount = 8500, format('order total must equal the authoritative package price (8500), got %s — a client could never have influenced this since create_public_order takes no price parameter at all', v_order.total_amount);
@@ -313,37 +313,37 @@ begin
 end $$;
 
 -- ============================================================
--- 19-20: affiliate attribution through the public order form — the
--- SAME resolution rules as the internal create_order() (0024), no
--- second affiliate system. Commission calculation itself is untouched
--- (still driven by the existing order-delivery trigger machinery).
+-- 19-20 (0056): code-based affiliate attribution on the public
+-- landing-page order form was removed entirely, replaced by
+-- affiliate-created embeddable order forms (see 104/109/110 for that
+-- path's coverage). Confirm the removal actually stuck: no ref-code
+-- parameter remains callable, and a normal landing-page order never
+-- carries affiliate attribution.
 -- ============================================================
 do $$
-declare v_ws uuid; v_brand uuid; v_aff_id uuid; v_order public.orders;
+declare v_ws uuid; v_brand uuid; v_order public.orders;
 begin
   select id into v_ws from public.workspaces where slug = 'lp-ws';
   select id into v_brand from public.brands where slug = 'lp-brand';
 
-  insert into public.affiliates (workspace_id, full_name, referral_code, approval_status, status)
-    values (v_ws, 'LP Affiliate', 'LPAFF1', 'approved', 'active') returning id into v_aff_id;
-
   perform set_config('app.test_user_id', '', true);
+
+  begin
+    perform public.create_public_order(
+      'ginseng-five-tea-kenya', gen_random_uuid(), 'x', 'x', 'x', 'x', 'x',
+      p_affiliate_referral_code => 'ANYTHING'
+    );
+    raise exception 'create_public_order must no longer accept an affiliate referral code parameter';
+  exception when undefined_function then
+    raise notice 'OK 19: create_public_order() no longer accepts an affiliate-referral-code parameter — the old attribution path is gone, not just unused.';
+  end;
+
   v_order := public.create_public_order(
     'ginseng-five-tea-kenya', (select id from public.landing_page_packages where landing_page_id = (select id from public.landing_pages where slug = 'ginseng-five-tea-kenya') and name = '1 Pack'),
-    'Affiliate Buyer', '0712340077', 'addr', 'Nairobi', 'Nairobi', null, null, null, null, 'aff-token-1', null, null, null, null, null, null, null, 'lpaff1'
+    'No Affiliate Buyer', '0712340078', 'addr', 'Nairobi', 'Nairobi', null, null, null, null, 'aff-token-2', null, null, null, null, null, null, null
   );
-
-  assert v_order.affiliate_id = v_aff_id, 'a valid, approved+active referral code must attribute the order to that affiliate (case-insensitive)';
-  assert v_order.affiliate_referral_code_used = 'LPAFF1', 'the referral code actually used must be recorded on the order';
-  raise notice 'OK 19: affiliate attribution resolves through the public order form using the EXACT same rules as the existing internal create_order()';
-
-  -- 20. An unknown/garbage referral code never blocks the order — it is silently ignored.
-  v_order := public.create_public_order(
-    'ginseng-five-tea-kenya', (select id from public.landing_page_packages where landing_page_id = (select id from public.landing_pages where slug = 'ginseng-five-tea-kenya') and name = '1 Pack'),
-    'No Affiliate Buyer', '0712340078', 'addr', 'Nairobi', 'Nairobi', null, null, null, null, 'aff-token-2', null, null, null, null, null, null, null, 'NOT-A-REAL-CODE'
-  );
-  assert v_order.affiliate_id is null, 'an unknown referral code must never block checkout — it is simply ignored';
-  raise notice 'OK 20: an invalid/unknown referral code is silently ignored, never blocking a real customer''s checkout';
+  assert v_order.affiliate_id is null, 'a landing-page order must never carry affiliate attribution — that only happens via an affiliate''s own order form now';
+  raise notice 'OK 20: a normal landing-page order correctly carries no affiliate attribution.';
 end $$;
 
 do $$ begin raise notice '=== GCOS LANDING PAGE TEMPLATE/TRACKING SANITY SUITE PASSED ==='; end $$;
