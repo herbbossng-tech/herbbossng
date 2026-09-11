@@ -1,0 +1,255 @@
+import { useQuery } from '@tanstack/react-query'
+import * as React from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+
+import { fetchLandingPageBySlug, fetchPublicLandingPagePackages, fetchPublicLandingPageSections, trackLandingPageEvent } from '@/features/landingPages/api'
+import { CodOrderForm } from '@/features/landingPages/public/CodOrderForm'
+import { FloatingOrderCta, WhatsappCta } from '@/features/landingPages/public/FloatingCtas'
+import { PackageSelectorSection } from '@/features/landingPages/public/PackageSelectorSection'
+import {
+  BenefitsSection,
+  ComparisonSection,
+  CtaBannerSection,
+  FaqSection,
+  GuaranteeSection,
+  HeroSection,
+  HowItWorksSection,
+  ImageTextSection,
+  IngredientsSection,
+  ProblemAwarenessSection,
+  PublicFooter,
+  TestimonialsSection,
+  TextSection,
+  TrustStripSection,
+} from '@/features/landingPages/public/PublicSections'
+import { getSessionId } from '@/features/landingPages/public/scroll'
+import { firePixelOrderCreated, firePixelPageView, firePixelSelectPackage, firePixelViewContent, initTrackingRuntime } from '@/features/landingPages/public/tracking'
+import type {
+  BenefitsConfig,
+  ComparisonConfig,
+  CtaBannerConfig,
+  FaqConfig,
+  GuaranteeConfig,
+  HeroConfig,
+  HowItWorksConfig,
+  ImageTextConfig,
+  IngredientsConfig,
+  OrderFormConfig,
+  PackageSelectorConfig,
+  ProblemAwarenessConfig,
+  TestimonialsConfig,
+  TextConfig,
+  TrustStripConfig,
+} from '@/features/landingPages/sectionTypes'
+import type { LandingPageSection, Order } from '@/types/database'
+
+interface LandingPageThemeConfig {
+  primaryColor?: string
+  radius?: 'sm' | 'md' | 'lg' | 'xl'
+}
+
+const RADIUS_REM: Record<NonNullable<LandingPageThemeConfig['radius']>, string> = {
+  sm: '0.375rem',
+  md: '0.5rem',
+  lg: '0.75rem',
+  xl: '1rem',
+}
+
+/**
+ * Turns a landing page's theme_config (inherited from its template's
+ * default_theme at creation time — see createLandingPage()) into the
+ * scoped CSS variable overrides that give each template its own
+ * accent color/roundedness on top of the shared .lp-storefront light
+ * base (index.css). Every public section component already renders
+ * via bg-primary/rounded-lg/etc., so this is the only change needed
+ * for genuine per-template visual differentiation.
+ */
+function landingPageThemeStyle(themeConfig: unknown): React.CSSProperties {
+  const config = (themeConfig ?? {}) as LandingPageThemeConfig
+  const style: Record<string, string> = {}
+  if (config.primaryColor) {
+    style['--primary'] = config.primaryColor
+    style['--ring'] = config.primaryColor
+  }
+  if (config.radius && RADIUS_REM[config.radius]) {
+    style['--radius'] = RADIUS_REM[config.radius]
+  }
+  return style as React.CSSProperties
+}
+
+export function PublicLandingPage() {
+  const { slug } = useParams<{ slug: string }>()
+  const navigate = useNavigate()
+  const [selectedPackageId, setSelectedPackageId] = React.useState<string | null>(null)
+
+  const {
+    data: page,
+    isLoading: pageLoading,
+    isError: pageError,
+  } = useQuery({
+    queryKey: ['public-landing-page', slug],
+    queryFn: () => fetchLandingPageBySlug(slug as string),
+    enabled: Boolean(slug),
+    retry: false,
+  })
+
+  const { data: sections } = useQuery({
+    queryKey: ['public-landing-page-sections', page?.id],
+    queryFn: () => fetchPublicLandingPageSections(page!.id),
+    enabled: Boolean(page?.id),
+  })
+
+  const { data: packages } = useQuery({
+    queryKey: ['public-landing-page-packages', page?.id],
+    queryFn: () => fetchPublicLandingPagePackages(page!.id),
+    enabled: Boolean(page?.id),
+  })
+
+  React.useEffect(() => {
+    if (page) {
+      document.title = page.seo_config?.metaTitle || page.title || page.name
+      trackLandingPageEvent(page.slug, 'page_view', getSessionId())
+      initTrackingRuntime(page.slug).then(() => firePixelPageView())
+    }
+  }, [page])
+
+  React.useEffect(() => {
+    if (packages && packages.length > 0 && !selectedPackageId) {
+      const preferred = packages.find((p) => p.is_default) ?? packages[0]
+      setSelectedPackageId(preferred.id)
+      firePixelViewContent({ productName: page?.name, currency: page?.market_currency_code, value: preferred.price })
+    }
+  }, [packages, selectedPackageId, page])
+
+  function handleSelectPackage(packageId: string) {
+    setSelectedPackageId(packageId)
+    if (page) {
+      trackLandingPageEvent(page.slug, 'package_selected', getSessionId(), { package_id: packageId })
+      const pkg = (packages ?? []).find((p) => p.id === packageId)
+      firePixelSelectPackage({ packageName: pkg?.name, currency: page.market_currency_code, value: pkg?.price })
+    }
+  }
+
+  function handleOrderCreated(order: Order) {
+    if (page) {
+      trackLandingPageEvent(page.slug, 'thank_you_view', getSessionId())
+      firePixelOrderCreated({ orderId: order.id, currency: order.currency_code, value: order.total_amount })
+    }
+    navigate(`/l/${slug}/thank-you?order=${order.id}`, { state: { order, packageName: selectedPackage?.name } })
+  }
+
+  if (pageLoading) {
+    return (
+      <div className="lp-storefront flex min-h-screen items-center justify-center bg-background text-muted-foreground">
+        <p className="text-sm">Loading…</p>
+      </div>
+    )
+  }
+
+  if (pageError || !page) {
+    return (
+      <div className="lp-storefront flex min-h-screen flex-col items-center justify-center gap-2 bg-background px-6 text-center text-foreground">
+        <p className="text-xl font-bold">This page isn&apos;t available</p>
+        <p className="text-sm text-muted-foreground">It may have been unpublished or the link may be incorrect.</p>
+      </div>
+    )
+  }
+
+  const selectedPackage = (packages ?? []).find((p) => p.id === selectedPackageId) ?? null
+  const orderedSections = [...(sections ?? [])].sort((a, b) => a.position - b.position)
+
+  return (
+    <div className="lp-storefront min-h-screen bg-background text-foreground" style={landingPageThemeStyle(page.theme_config)}>
+      {orderedSections.map((section) => (
+        <RenderSection
+          key={section.id}
+          section={section}
+          packages={packages ?? []}
+          currencyCode={page.market_currency_code}
+          selectedPackageId={selectedPackageId}
+          onSelectPackage={handleSelectPackage}
+          onCtaClick={() => trackLandingPageEvent(page.slug, 'cta_click', getSessionId())}
+          renderOrderForm={(cfg) => (
+            <CodOrderForm
+              slug={page.slug}
+              sectionConfig={cfg}
+              formConfig={page.form_config}
+              orderSummaryEnabled={page.order_summary_enabled}
+              countryCode={page.market_country_code}
+              currencyCode={page.market_currency_code}
+              selectedPackage={selectedPackage}
+              onOrderCreated={handleOrderCreated}
+            />
+          )}
+        />
+      ))}
+
+      <PublicFooter pageName={page.name} tagline={page.description} />
+
+      <FloatingOrderCta config={page.floating_cta_config} price={selectedPackage?.price} currencyCode={page.market_currency_code} />
+      <WhatsappCta config={page.whatsapp_config} />
+    </div>
+  )
+}
+
+function RenderSection({
+  section,
+  packages,
+  currencyCode,
+  selectedPackageId,
+  onSelectPackage,
+  onCtaClick,
+  renderOrderForm,
+}: {
+  section: LandingPageSection
+  packages: import('@/types/database').LandingPagePackage[]
+  currencyCode: string | null
+  selectedPackageId: string | null
+  onSelectPackage: (id: string) => void
+  onCtaClick: () => void
+  renderOrderForm: (config: OrderFormConfig) => React.ReactNode
+}) {
+  const config = section.config as Record<string, unknown>
+  switch (section.type) {
+    case 'HERO':
+      return <HeroSection config={config as unknown as HeroConfig} onCtaClick={onCtaClick} />
+    case 'TRUST_STRIP':
+      return <TrustStripSection config={config as unknown as TrustStripConfig} />
+    case 'TEXT':
+      return <TextSection config={config as unknown as TextConfig} onCtaClick={onCtaClick} />
+    case 'IMAGE_TEXT':
+      return <ImageTextSection config={config as unknown as ImageTextConfig} onCtaClick={onCtaClick} />
+    case 'BENEFITS':
+      return <BenefitsSection config={config as unknown as BenefitsConfig} onCtaClick={onCtaClick} />
+    case 'HOW_IT_WORKS':
+      return <HowItWorksSection config={config as unknown as HowItWorksConfig} onCtaClick={onCtaClick} />
+    case 'TESTIMONIALS':
+      return <TestimonialsSection config={config as unknown as TestimonialsConfig} onCtaClick={onCtaClick} />
+    case 'FAQ':
+      return <FaqSection config={config as unknown as FaqConfig} onCtaClick={onCtaClick} />
+    case 'CTA_BANNER':
+      return <CtaBannerSection config={config as unknown as CtaBannerConfig} onCtaClick={onCtaClick} />
+    case 'PACKAGE_SELECTOR':
+      return (
+        <PackageSelectorSection
+          config={config as unknown as PackageSelectorConfig}
+          packages={packages}
+          currencyCode={currencyCode}
+          selectedPackageId={selectedPackageId}
+          onSelect={onSelectPackage}
+        />
+      )
+    case 'ORDER_FORM':
+      return <>{renderOrderForm(config as unknown as OrderFormConfig)}</>
+    case 'PROBLEM_AWARENESS':
+      return <ProblemAwarenessSection config={config as unknown as ProblemAwarenessConfig} onCtaClick={onCtaClick} />
+    case 'INGREDIENTS':
+      return <IngredientsSection config={config as unknown as IngredientsConfig} onCtaClick={onCtaClick} />
+    case 'COMPARISON':
+      return <ComparisonSection config={config as unknown as ComparisonConfig} onCtaClick={onCtaClick} />
+    case 'GUARANTEE':
+      return <GuaranteeSection config={config as unknown as GuaranteeConfig} onCtaClick={onCtaClick} />
+    default:
+      return null
+  }
+}

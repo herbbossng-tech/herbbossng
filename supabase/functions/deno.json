@@ -1,0 +1,9 @@
+{
+  "compilerOptions": {
+    "lib": ["deno.window"],
+    "strict": true
+  },
+  "tasks": {
+    "test": "deno test --allow-net=none dispatch-tracking-event/payloads.test.ts dispatch-communication/resend.test.ts"
+  }
+}

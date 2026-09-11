@@ -1,0 +1,20 @@
+# SPA routing fallback for Apache-based hosting (e.g. Namecheap shared
+# hosting/cPanel). A single-page app's client-side router (react-router)
+# handles URLs like /orders or /brands/123 in the browser — the server
+# never has a real file at those paths, so without this rewrite, a
+# direct visit or refresh on any route other than "/" returns a 404
+# instead of index.html.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # Real files/directories (assets, images, etc.) are served as-is.
+  RewriteCond %{REQUEST_FILENAME} -f
+  RewriteRule ^ - [L]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # Everything else falls back to index.html so the app's own router
+  # can render the correct page.
+  RewriteRule ^ index.html [L]
+</IfModule>
