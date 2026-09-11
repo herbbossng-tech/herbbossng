@@ -1,4 +1,4 @@
-import { LayoutDashboard, Loader2, LogOut, Megaphone, Package, SquareStack } from 'lucide-react'
+import { LayoutDashboard, Layers, Loader2, LogOut, Megaphone, Package, Settings, SquareStack, TrendingUp, Wallet } from 'lucide-react'
 import { NavLink, Outlet } from 'react-router-dom'
 
 import { Button } from '@/components/ui/button'
@@ -9,7 +9,11 @@ const NAV_ITEMS = [
   { to: '/affiliate', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/affiliate/campaigns', label: 'Campaigns', icon: Megaphone, end: false },
   { to: '/affiliate/order-forms', label: 'My Forms', icon: SquareStack, end: false },
+  { to: '/affiliate/offers', label: 'My Offers', icon: Layers, end: false },
   { to: '/affiliate/orders', label: 'My Orders', icon: Package, end: false },
+  { to: '/affiliate/wallet', label: 'Wallet', icon: Wallet, end: false },
+  { to: '/affiliate/ad-costs', label: 'Ad Costs', icon: TrendingUp, end: false },
+  { to: '/affiliate/settings', label: 'Settings', icon: Settings, end: false },
 ]
 
 export function AffiliatePortalLayout() {

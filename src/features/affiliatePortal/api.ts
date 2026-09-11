@@ -2,15 +2,22 @@ import { supabase } from '@/lib/supabase'
 import { supabaseAffiliate } from '@/lib/supabaseAffiliate'
 import type {
   Affiliate,
+  AffiliateBankAccount,
   AffiliateCampaign,
   AffiliateCampaignAsset,
   AffiliateDashboard,
+  AffiliateOfferType,
+  AffiliateOfferWithStats,
   AffiliateOrderForm,
   AffiliateOrderFormAddon,
   AffiliateOrderFormPackage,
   AffiliateOrderFormSubmission,
   AffiliateOrderFormWithStats,
   AffiliateOrderSummary,
+  MyAdCost,
+  MyAffiliateWithdrawal,
+  MyWalletSummary,
+  MyWalletTransaction,
   PublicAffiliateOrderForm,
 } from '@/types/database'
 
@@ -206,6 +213,7 @@ export interface PublicAffiliateOrderInput {
   customerNotes?: string
   submissionToken: string
   addonIds?: string[]
+  offerIds?: string[]
 }
 
 export async function submitPublicAffiliateOrder(input: PublicAffiliateOrderInput) {
@@ -223,6 +231,7 @@ export async function submitPublicAffiliateOrder(input: PublicAffiliateOrderInpu
     p_customer_notes: input.customerNotes || null,
     p_submission_token: input.submissionToken,
     p_addon_ids: input.addonIds ?? [],
+    p_offer_ids: input.offerIds ?? [],
   })
   if (error) throw error
   return data
@@ -230,4 +239,197 @@ export async function submitPublicAffiliateOrder(input: PublicAffiliateOrderInpu
 
 export function getProductImageUrl(filePath: string): string {
   return supabase.storage.from('products').getPublicUrl(filePath).data.publicUrl
+}
+
+// ---- Bank accounts ----
+
+export async function fetchMyBankAccounts(): Promise<AffiliateBankAccount[]> {
+  const { data, error } = await supabaseAffiliate.from('affiliate_bank_accounts').select('*').order('created_at', { ascending: true })
+  if (error) throw error
+  return (data ?? []) as AffiliateBankAccount[]
+}
+
+export async function createMyBankAccount(input: { bankName: string; accountNumber: string; accountName: string }): Promise<AffiliateBankAccount> {
+  const { data, error } = await supabaseAffiliate.rpc('create_my_bank_account', {
+    p_bank_name: input.bankName,
+    p_account_number: input.accountNumber,
+    p_account_name: input.accountName,
+  })
+  if (error) throw error
+  return data as AffiliateBankAccount
+}
+
+export async function deleteMyBankAccount(accountId: string): Promise<void> {
+  const { error } = await supabaseAffiliate.rpc('delete_my_bank_account', { p_account_id: accountId })
+  if (error) throw error
+}
+
+export async function setMyDefaultBankAccount(accountId: string): Promise<void> {
+  const { error } = await supabaseAffiliate.rpc('set_my_default_bank_account', { p_account_id: accountId })
+  if (error) throw error
+}
+
+// ---- Withdrawals / wallet transactions ----
+
+export async function requestMyWithdrawal(amount: number, bankAccountId: string, note?: string): Promise<MyAffiliateWithdrawal> {
+  const { data, error } = await supabaseAffiliate.rpc('request_my_affiliate_withdrawal', {
+    p_amount: amount,
+    p_bank_account_id: bankAccountId,
+    p_note: note || null,
+  })
+  if (error) throw error
+  return data as MyAffiliateWithdrawal
+}
+
+export async function fetchMyWithdrawals(limit = 20, offset = 0): Promise<MyAffiliateWithdrawal[]> {
+  const { data, error } = await supabaseAffiliate.rpc('get_my_affiliate_withdrawals', { p_limit: limit, p_offset: offset })
+  if (error) throw error
+  return (data ?? []) as MyAffiliateWithdrawal[]
+}
+
+export async function fetchMyWalletSummary(): Promise<MyWalletSummary> {
+  const { data, error } = await supabaseAffiliate.rpc('get_my_wallet_summary').single()
+  if (error) throw error
+  return data as MyWalletSummary
+}
+
+export async function fetchMyWalletTransactions(limit = 20, offset = 0): Promise<MyWalletTransaction[]> {
+  const { data, error } = await supabaseAffiliate.rpc('get_my_wallet_transactions', { p_limit: limit, p_offset: offset })
+  if (error) throw error
+  return (data ?? []) as MyWalletTransaction[]
+}
+
+// ---- Ad costs ----
+
+export async function submitMyAdCost(input: {
+  campaignId: string
+  periodStart: string
+  periodEnd: string
+  costAmount: number
+  ordersCount: number
+  notes?: string
+}): Promise<MyAdCost> {
+  const { data, error } = await supabaseAffiliate.rpc('submit_my_ad_cost', {
+    p_campaign_id: input.campaignId,
+    p_period_start: input.periodStart,
+    p_period_end: input.periodEnd,
+    p_cost_amount: input.costAmount,
+    p_orders_count: input.ordersCount,
+    p_notes: input.notes || null,
+  })
+  if (error) throw error
+  return data as MyAdCost
+}
+
+export async function fetchMyAdCosts(status?: string | null, limit = 20, offset = 0): Promise<MyAdCost[]> {
+  const { data, error } = await supabaseAffiliate.rpc('get_my_ad_costs', { p_status: status ?? null, p_limit: limit, p_offset: offset })
+  if (error) throw error
+  return (data ?? []) as MyAdCost[]
+}
+
+// ---- Manual order entry ----
+
+export interface ManualOrderInput {
+  campaignId: string
+  productId: string
+  quantity: number
+  customerName: string
+  customerPhone: string
+  customerAddress: string
+  customerState: string
+  customerCity: string
+  customerEmail?: string
+  customerNotes?: string
+  idempotencyKey?: string
+}
+
+export async function createManualOrder(input: ManualOrderInput) {
+  const { data, error } = await supabaseAffiliate.rpc('create_affiliate_manual_order', {
+    p_campaign_id: input.campaignId,
+    p_product_id: input.productId,
+    p_quantity: input.quantity,
+    p_customer_name: input.customerName,
+    p_customer_phone: input.customerPhone,
+    p_customer_address: input.customerAddress,
+    p_customer_state: input.customerState,
+    p_customer_city: input.customerCity,
+    p_customer_email: input.customerEmail || null,
+    p_customer_notes: input.customerNotes || null,
+    p_idempotency_key: input.idempotencyKey || null,
+  })
+  if (error) throw error
+  return data
+}
+
+// ---- Offers (order bumps / upsells / downsells) ----
+
+export interface OfferInput {
+  offerType: AffiliateOfferType
+  productId: string
+  internalName: string
+  headline: string
+  description?: string | null
+  imageUrl?: string | null
+  ctaText?: string
+  declineText?: string
+  quantity: number
+  price: number
+  compareAtPrice?: number | null
+  maxQuantity?: number | null
+  formIds?: string[]
+}
+
+export async function createMyOffer(input: OfferInput): Promise<AffiliateOfferWithStats> {
+  const { data, error } = await supabaseAffiliate.rpc('create_my_offer', {
+    p_offer_type: input.offerType,
+    p_product_id: input.productId,
+    p_internal_name: input.internalName,
+    p_headline: input.headline,
+    p_description: input.description || null,
+    p_image_url: input.imageUrl || null,
+    p_cta_text: input.ctaText || 'Yes, add this to my order!',
+    p_decline_text: input.declineText || 'No thanks',
+    p_quantity: input.quantity,
+    p_price: input.price,
+    p_compare_at_price: input.compareAtPrice ?? null,
+    p_max_quantity: input.maxQuantity ?? null,
+    p_form_ids: input.formIds ?? [],
+  })
+  if (error) throw error
+  return data as AffiliateOfferWithStats
+}
+
+export async function updateMyOffer(
+  offerId: string,
+  input: Omit<OfferInput, 'offerType' | 'productId'> & { status?: 'ACTIVE' | 'PAUSED' },
+): Promise<AffiliateOfferWithStats> {
+  const { data, error } = await supabaseAffiliate.rpc('update_my_offer', {
+    p_offer_id: offerId,
+    p_internal_name: input.internalName,
+    p_headline: input.headline,
+    p_description: input.description || null,
+    p_image_url: input.imageUrl || null,
+    p_cta_text: input.ctaText || 'Yes, add this to my order!',
+    p_decline_text: input.declineText || 'No thanks',
+    p_quantity: input.quantity,
+    p_price: input.price,
+    p_compare_at_price: input.compareAtPrice ?? null,
+    p_max_quantity: input.maxQuantity ?? null,
+    p_status: input.status ?? 'ACTIVE',
+    p_form_ids: input.formIds ?? null,
+  })
+  if (error) throw error
+  return data as AffiliateOfferWithStats
+}
+
+export async function fetchMyOffers(offerType?: AffiliateOfferType | null): Promise<AffiliateOfferWithStats[]> {
+  const { data, error } = await supabaseAffiliate.rpc('get_my_offers_with_stats', { p_offer_type: offerType ?? null })
+  if (error) throw error
+  return (data ?? []) as AffiliateOfferWithStats[]
+}
+
+export async function fetchOfferLinkedFormIds(offerId: string): Promise<string[]> {
+  const { data, error } = await supabaseAffiliate.rpc('get_offer_linked_form_ids', { p_offer_id: offerId })
+  if (error) throw error
+  return (data ?? []) as string[]
 }

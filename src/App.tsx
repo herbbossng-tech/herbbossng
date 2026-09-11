@@ -54,6 +54,21 @@ const AffiliateCampaignDetailPage = React.lazy(() =>
 const AffiliateMyOrdersPage = React.lazy(() =>
   import('@/features/affiliatePortal/pages/AffiliateMyOrdersPage').then((m) => ({ default: m.AffiliateMyOrdersPage })),
 )
+const AffiliateImportOrdersPage = React.lazy(() =>
+  import('@/features/affiliatePortal/pages/AffiliateImportOrdersPage').then((m) => ({ default: m.AffiliateImportOrdersPage })),
+)
+const AffiliateOffersPage = React.lazy(() =>
+  import('@/features/affiliatePortal/pages/AffiliateOffersPage').then((m) => ({ default: m.AffiliateOffersPage })),
+)
+const AffiliateWalletPage = React.lazy(() =>
+  import('@/features/affiliatePortal/pages/AffiliateWalletPage').then((m) => ({ default: m.AffiliateWalletPage })),
+)
+const AffiliateAdCostsPage = React.lazy(() =>
+  import('@/features/affiliatePortal/pages/AffiliateAdCostsPage').then((m) => ({ default: m.AffiliateAdCostsPage })),
+)
+const AffiliateSettingsPage = React.lazy(() =>
+  import('@/features/affiliatePortal/pages/AffiliateSettingsPage').then((m) => ({ default: m.AffiliateSettingsPage })),
+)
 
 const ProductsLayout = React.lazy(() => import('@/features/products/ProductsLayout').then((m) => ({ default: m.ProductsLayout })))
 const ProductsListPage = React.lazy(() => import('@/features/products/pages/ProductsListPage').then((m) => ({ default: m.ProductsListPage })))
@@ -193,7 +208,12 @@ function App() {
             <Route path="/affiliate/campaigns" element={<AffiliateCampaignsPage />} />
             <Route path="/affiliate/campaigns/:campaignId" element={<AffiliateCampaignDetailPage />} />
             <Route path="/affiliate/order-forms" element={<AffiliateOrderFormsPage />} />
+            <Route path="/affiliate/offers" element={<AffiliateOffersPage />} />
             <Route path="/affiliate/orders" element={<AffiliateMyOrdersPage />} />
+            <Route path="/affiliate/orders/import" element={<AffiliateImportOrdersPage />} />
+            <Route path="/affiliate/wallet" element={<AffiliateWalletPage />} />
+            <Route path="/affiliate/ad-costs" element={<AffiliateAdCostsPage />} />
+            <Route path="/affiliate/settings" element={<AffiliateSettingsPage />} />
           </Route>
         </Route>
 

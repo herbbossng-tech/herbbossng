@@ -1,23 +1,42 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
+import type { AffiliateOfferType } from '@/types/database'
+
 import {
   archiveMyOrderForm,
+  createManualOrder,
+  createMyBankAccount,
+  createMyOffer,
   createMyOrderForm,
+  deleteMyBankAccount,
   fetchCampaign,
   fetchCampaignAssets,
   fetchCampaignProducts,
+  fetchMyAdCosts,
   fetchMyAffiliateOrders,
   fetchMyAvailableCampaigns,
+  fetchMyBankAccounts,
   fetchMyDashboard,
+  fetchMyOffers,
   fetchMyOrderFormSubmissions,
   fetchMyOrderFormsWithStats,
+  fetchMyWalletSummary,
+  fetchMyWalletTransactions,
+  fetchMyWithdrawals,
+  fetchOfferLinkedFormIds,
   fetchOrderFormAddons,
   fetchOrderFormPackages,
   fetchPublicOrderForm,
   getMyAffiliateProfile,
   recordPublicOrderFormView,
+  requestMyWithdrawal,
+  setMyDefaultBankAccount,
+  submitMyAdCost,
   submitPublicAffiliateOrder,
+  updateMyOffer,
   updateMyOrderForm,
+  type ManualOrderInput,
+  type OfferInput,
   type OrderFormAddonInput,
   type OrderFormPackageInput,
   type PublicAffiliateOrderInput,
@@ -36,6 +55,13 @@ export const affiliatePortalKeys = {
   orderFormSubmissions: (formId: string) => ['affiliate-portal', 'order-form-submissions', formId] as const,
   myOrders: (status?: string | null) => ['affiliate-portal', 'my-orders', status ?? null] as const,
   publicForm: (formId: string) => ['public-affiliate-order-form', formId] as const,
+  bankAccounts: ['affiliate-portal', 'bank-accounts'] as const,
+  walletSummary: ['affiliate-portal', 'wallet-summary'] as const,
+  withdrawals: ['affiliate-portal', 'withdrawals'] as const,
+  walletTransactions: ['affiliate-portal', 'wallet-transactions'] as const,
+  adCosts: (status?: string | null) => ['affiliate-portal', 'ad-costs', status ?? null] as const,
+  offers: (offerType?: AffiliateOfferType | null) => ['affiliate-portal', 'offers', offerType ?? null] as const,
+  offerLinkedForms: (offerId: string) => ['affiliate-portal', 'offer-linked-forms', offerId] as const,
 }
 
 export function useMyAffiliateProfile() {
@@ -171,5 +197,119 @@ export function useRecordPublicOrderFormView() {
 export function useSubmitPublicAffiliateOrder() {
   return useMutation({
     mutationFn: (input: PublicAffiliateOrderInput) => submitPublicAffiliateOrder(input),
+  })
+}
+
+// ---- Bank accounts ----
+
+export function useMyBankAccounts() {
+  return useQuery({ queryKey: affiliatePortalKeys.bankAccounts, queryFn: fetchMyBankAccounts })
+}
+
+export function useCreateMyBankAccount() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: { bankName: string; accountNumber: string; accountName: string }) => createMyBankAccount(input),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: affiliatePortalKeys.bankAccounts }),
+  })
+}
+
+export function useDeleteMyBankAccount() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (accountId: string) => deleteMyBankAccount(accountId),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: affiliatePortalKeys.bankAccounts }),
+  })
+}
+
+export function useSetMyDefaultBankAccount() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (accountId: string) => setMyDefaultBankAccount(accountId),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: affiliatePortalKeys.bankAccounts }),
+  })
+}
+
+// ---- Withdrawals / wallet transactions ----
+
+export function useMyWalletSummary() {
+  return useQuery({ queryKey: affiliatePortalKeys.walletSummary, queryFn: fetchMyWalletSummary })
+}
+
+export function useMyWithdrawals() {
+  return useQuery({ queryKey: affiliatePortalKeys.withdrawals, queryFn: () => fetchMyWithdrawals() })
+}
+
+export function useMyWalletTransactions() {
+  return useQuery({ queryKey: affiliatePortalKeys.walletTransactions, queryFn: () => fetchMyWalletTransactions() })
+}
+
+export function useRequestMyWithdrawal() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: { amount: number; bankAccountId: string; note?: string }) =>
+      requestMyWithdrawal(input.amount, input.bankAccountId, input.note),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: affiliatePortalKeys.withdrawals })
+      void queryClient.invalidateQueries({ queryKey: affiliatePortalKeys.walletTransactions })
+      void queryClient.invalidateQueries({ queryKey: affiliatePortalKeys.walletSummary })
+      void queryClient.invalidateQueries({ queryKey: affiliatePortalKeys.dashboard() })
+    },
+  })
+}
+
+// ---- Ad costs ----
+
+export function useMyAdCosts(status?: string | null) {
+  return useQuery({ queryKey: affiliatePortalKeys.adCosts(status), queryFn: () => fetchMyAdCosts(status ?? null) })
+}
+
+export function useSubmitMyAdCost() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: { campaignId: string; periodStart: string; periodEnd: string; costAmount: number; ordersCount: number; notes?: string }) =>
+      submitMyAdCost(input),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['affiliate-portal', 'ad-costs'] }),
+  })
+}
+
+// ---- Manual order entry ----
+
+export function useCreateManualOrder() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: ManualOrderInput) => createManualOrder(input),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['affiliate-portal', 'my-orders'] }),
+  })
+}
+
+// ---- Offers ----
+
+export function useMyOffers(offerType?: AffiliateOfferType | null) {
+  return useQuery({ queryKey: affiliatePortalKeys.offers(offerType), queryFn: () => fetchMyOffers(offerType ?? null) })
+}
+
+export function useOfferLinkedFormIds(offerId: string | null) {
+  return useQuery({
+    queryKey: affiliatePortalKeys.offerLinkedForms(offerId ?? ''),
+    queryFn: () => fetchOfferLinkedFormIds(offerId as string),
+    enabled: Boolean(offerId),
+  })
+}
+
+export function useCreateMyOffer() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: OfferInput) => createMyOffer(input),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['affiliate-portal', 'offers'] }),
+  })
+}
+
+export function useUpdateMyOffer() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: { offerId: string } & Omit<OfferInput, 'offerType' | 'productId'> & { status?: 'ACTIVE' | 'PAUSED' }) =>
+      updateMyOffer(input.offerId, input),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['affiliate-portal', 'offers'] }),
   })
 }

@@ -1095,6 +1095,17 @@ export interface PublicAffiliateOrderForm {
     name: string
     price: number
   }>
+  offers: Array<{
+    id: string
+    headline: string
+    description: string | null
+    image_url: string | null
+    cta_text: string
+    decline_text: string
+    quantity: number
+    price: number
+    compare_at_price: number | null
+  }>
 }
 
 export interface AffiliateOrderFormWithStats {
@@ -1155,6 +1166,83 @@ export interface AffiliateDashboard {
     currency_code: string
     created_at: string
   }>
+}
+
+export interface MyWalletSummary {
+  wallet_balance: number
+  wallet_reserved_balance: number
+  wallet_currency_code: string | null
+  lifetime_earned: number
+  lifetime_paid: number
+}
+
+export interface AffiliateBankAccount {
+  id: string
+  affiliate_id: string
+  bank_name: string
+  account_number: string
+  account_name: string
+  is_default: boolean
+  created_at: string
+}
+
+export interface MyAffiliateWithdrawal {
+  id: string
+  amount: number
+  currency_code: string
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'PAID'
+  note: string | null
+  requested_at: string
+  reviewed_at: string | null
+  rejection_reason: string | null
+  paid_at: string | null
+  payment_reference: string | null
+  total_count: number
+}
+
+export interface MyWalletTransaction {
+  id: string
+  transaction_type: WalletTransactionType
+  amount: number
+  reserved_delta: number
+  description: string | null
+  created_at: string
+  total_count: number
+}
+
+export interface MyAdCost {
+  id: string
+  campaign_id: string
+  period_start: string
+  period_end: string
+  initial_cost_amount: number
+  initial_orders_count: number
+  currency_code: string
+  status: 'PENDING' | 'APPROVED' | 'REJECTED'
+  notes: string | null
+  rejection_reason: string | null
+  submitted_at: string
+  total_count: number
+}
+
+export type AffiliateOfferType = 'ORDER_BUMP' | 'UPSELL' | 'DOWNSELL'
+
+export interface AffiliateOfferWithStats {
+  id: string
+  offer_type: AffiliateOfferType
+  product_id: string
+  internal_name: string
+  headline: string
+  status: 'ACTIVE' | 'PAUSED'
+  price: number
+  compare_at_price: number | null
+  max_quantity: number | null
+  redeemed_count: number
+  revenue_generated: number
+  linked_form_count: number
+  linked_orders_count: number
+  conversion_rate: number
+  created_at: string
 }
 
 export interface AffiliateCampaignAsset {
